@@ -1,37 +1,40 @@
-# IPTV Playlist Generator
+# IPTV Playlist Generator v2
 
-A modern web application for creating, editing, and exporting IPTV playlists in multiple formats with EPG matching and logo auto-detection.
+## Čo je hotové
+- Apple-style statický frontend bez Python backendu
+- Ukladanie dát do localStorage, vhodné pre Netlify static hosting
+- Import `.m3u`, `.m3u8`, `.txt`, `.xspf`
+- Export do M3U a XSPF
+- PWA manifest + service worker
+- Electron príprava pre Windows desktop app
+- Capacitor config pre Android Studio
 
-## Features
+## Netlify deploy
+1. Nahraj obsah repozitára na GitHub.
+2. V Netlify nastav publish directory na root projektu.
+3. `netlify.toml` už obsahuje SPA fallback.
 
-- **Import**: M3U, M3U8, XSPF, TXT (URL list or `name|url` format)
-- **Export**: M3U, M3U8, XSPF, CSV
-- **Channel management**: Full CRUD with inline editing, sorting, filtering, pagination
-- **Auto-quality detection**: Detects 4K / FHD / HD / SD from channel names
-- **EPG auto-matching**: Matches TVG-IDs and logos against the [iptv-org](https://github.com/iptv-org/iptv) database (~11 000 channels)
-- **Bulk operations**: Edit group/quality/status/country for multiple channels at once
-- **Catchup / User-Agent / Referer** support per channel
-
-## Quick Start
-
+## Lokálny preview
 ```bash
-pip install -r requirements.txt
-python main.py
+npm install
+npm run start
 ```
 
-Open **http://localhost:8000** in your browser.
+## Windows app
+```bash
+npm install
+npm run win:build
+```
+Výstup bude v `dist-electron/`.
 
-## Usage
+## Android Studio
+```bash
+npm install
+npm run android:add
+npm run android:sync
+npm run android:open
+```
+Potom buildni APK alebo AAB priamo v Android Studio.
 
-1. **Import** your existing playlist via ⬆ Import (drag & drop or file browser)
-2. **Edit** channels by double-clicking a row or clicking ✎
-3. **Auto-match** EPG/logos with ⚡ Auto-Match EPG (connects to iptv-org)
-4. **Filter** by group, quality, country, or active status
-5. **Export** in your desired format via ⬇ Export
-
-## Tech Stack
-
-- **Backend**: Python / FastAPI / SQLAlchemy (SQLite)
-- **Frontend**: Vue 3 (CDN) + Tailwind CSS (CDN) — no build step required
-- **EPG/logo source**: [iptv-org/iptv](https://github.com/iptv-org/iptv)
-- **Fuzzy matching**: [rapidfuzz](https://github.com/rapidfuzz/RapidFuzz)
+## Poznámka
+Táto verzia je plne statická. Pôvodný FastAPI backend nebeží na Netlify, preto bola logika import/export a správy playlistu presunutá do browseru.

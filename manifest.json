@@ -1,0 +1,17 @@
+{
+  "name": "IPTV Playlist Generator",
+  "short_name": "IPTVPlaylistgen",
+  "description": "Simple Apple style IPTV playlist manager prepared for Netlify, Windows and Android.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#f5f5f7",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

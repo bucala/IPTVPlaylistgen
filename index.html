@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f5f7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="IPTVPlaylistgen" />
+  <title>IPTV Playlist Generator</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --surface: rgba(255,255,255,0.76);
+      --surface-strong: rgba(255,255,255,0.92);
+      --surface-muted: rgba(248,248,250,0.86);
+      --border: rgba(15,23,42,0.08);
+      --border-strong: rgba(15,23,42,0.12);
+      --text: #111827;
+      --text-muted: #6b7280;
+      --text-soft: #94a3b8;
+      --primary: #0071e3;
+      --primary-hover: #0062c4;
+      --danger: #d92d20;
+      --success: #17a34a;
+      --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.06);
+      --shadow-md: 0 18px 45px rgba(15, 23, 42, 0.1);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f1115;
+      --surface: rgba(28,29,32,0.72);
+      --surface-strong: rgba(32,33,36,0.88);
+      --surface-muted: rgba(22,23,26,0.86);
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.12);
+      --text: #f5f7fa;
+      --text-muted: #a1a9b8;
+      --text-soft: #798394;
+      --primary: #4da3ff;
+      --primary-hover: #7cbcff;
+      --danger: #ff6159;
+      --success: #32d583;
+      --shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.28);
+      --shadow-md: 0 20px 50px rgba(0, 0, 0, 0.38);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(0,113,227,0.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(99,102,241,0.08), transparent 22%),
+        linear-gradient(180deg, rgba(255,255,255,0.55), transparent 25%),
+        var(--bg);
+      transition: background 180ms ease, color 180ms ease;
+    }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.35); border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    .glass {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: saturate(180%) blur(24px);
+      -webkit-backdrop-filter: saturate(180%) blur(24px);
+    }
+
+    .glass-strong {
+      background: var(--surface-strong);
+      border: 1px solid var(--border-strong);
+      box-shadow: var(--shadow-md);
+      backdrop-filter: saturate(180%) blur(28px);
+      -webkit-backdrop-filter: saturate(180%) blur(28px);
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: .78rem 1.1rem;
+      font-size: .92rem;
+      font-weight: 600;
+      transition: all .18s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 10px 25px rgba(0,113,227,.22); }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-secondary { background: var(--surface-strong); color: var(--text); border-color: var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-muted); }
+    .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border); }
+    .btn-ghost:hover:not(:disabled) { color: var(--text); background: var(--surface-muted); }
+    .btn-danger { background: rgba(217,45,32,.12); color: var(--danger); border-color: rgba(217,45,32,.16); }
+    .btn-danger:hover:not(:disabled) { background: rgba(217,45,32,.18); }
+
+    .field, .select, textarea {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface-strong);
+      color: var(--text);
+      padding: .92rem 1rem;
+      font-size: .94rem;
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+    }
+
+    .field:focus, .select:focus, textarea:focus {
+      border-color: rgba(0,113,227,.44);
+      box-shadow: 0 0 0 4px rgba(0,113,227,.12);
+    }
+
+    .label {
+      font-size: .73rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      font-weight: 700;
+      margin-bottom: .45rem;
+      display: block;
+    }
+
+    .stat-pill {
+      border-radius: 999px;
+      padding: .55rem .85rem;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      font-size: .82rem;
+      color: var(--text-muted);
+    }
+
+    .quality-pill {
+      border-radius: 999px;
+      padding: .28rem .65rem;
+      font-size: .74rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 58px;
+    }
+
+    .q-4K { background: rgba(124,58,237,.14); color: #6d28d9; }
+    .q-FHD { background: rgba(37,99,235,.14); color: #1d4ed8; }
+    .q-HD { background: rgba(22,163,74,.14); color: #15803d; }
+    .q-SD { background: rgba(100,116,139,.16); color: #475569; }
+
+    [data-theme="dark"] .q-4K { color: #d8b4fe; }
+    [data-theme="dark"] .q-FHD { color: #93c5fd; }
+    [data-theme="dark"] .q-HD { color: #86efac; }
+    [data-theme="dark"] .q-SD { color: #cbd5e1; }
+
+    .sidebar-tab {
+      width: 100%;
+      text-align: left;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      padding: .85rem 1rem;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 600;
+      transition: .18s ease;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .sidebar-tab.active {
+      background: var(--surface-strong);
+      border-color: var(--border);
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .section-card {
+      border-radius: var(--radius-xl);
+      padding: 1.15rem;
+    }
+
+    .table-shell {
+      border-radius: 28px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1080px; }
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--surface-strong);
+      color: var(--text-soft);
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th, td { padding: .92rem .9rem; text-align: left; }
+    tbody tr { transition: background .15s ease; }
+    tbody tr:hover { background: rgba(0,113,227,.045); }
+    tbody tr.selected { background: rgba(0,113,227,.08); }
+    tbody tr + tr td { border-top: 1px solid var(--border); }
+    .muted { color: var(--text-muted); }
+    .soft { color: var(--text-soft); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    .logo-badge {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #1d9bf0 0%, #0071e3 100%);
+      color: white;
+      box-shadow: 0 14px 30px rgba(0,113,227,.28);
+      flex-shrink: 0;
+    }
+
+    .mini-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+    }
+
+    .segmented {
+      display: inline-flex;
+      padding: .25rem;
+      border-radius: 999px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      gap: .25rem;
+      flex-wrap: wrap;
+    }
+
+    .segmented button {
+      border: 0;
+      background: transparent;
+      color: var(--text-muted);
+      padding: .62rem .9rem;
+      border-radius: 999px;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+
+    .segmented button.active {
+      background: white;
+      color: #111827;
+      box-shadow: 0 4px 12px rgba(15,23,42,.08);
+    }
+
+    [data-theme="dark"] .segmented button.active {
+      background: rgba(255,255,255,.1);
+      color: white;
+    }
+
+    .modal-wrap {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, .34);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 60;
+      backdrop-filter: blur(10px);
+    }
+
+    .modal-card {
+      width: min(760px, 100%);
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+      border-radius: 30px;
+      padding: 1.2rem;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: max(20px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      border-radius: 999px;
+      padding: .85rem 1.1rem;
+      color: white;
+      background: rgba(17,24,39,.92);
+      box-shadow: var(--shadow-md);
+      font-size: .9rem;
+    }
+
+    .empty-state {
+      padding: 4rem 1rem;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .header-safe { padding-top: max(1rem, env(safe-area-inset-top)); }
+
+    @media (max-width: 1024px) {
+      .app-grid { grid-template-columns: 1fr !important; }
+      .sidebar-stack { order: 2; }
+      .content-stack { order: 1; }
+      table { min-width: 900px; }
+    }
+
+    @media (max-width: 640px) {
+      .header-actions, .top-stats { width: 100%; }
+      .header-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .header-actions .btn:nth-child(3), .header-actions .btn:nth-child(4) { grid-column: span 1; }
+      .filters-grid { grid-template-columns: 1fr !important; }
+      .hero-stack { flex-direction: column; align-items: flex-start !important; }
+      .title-copy h1 { font-size: 1.7rem !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="min-h-screen px-3 md:px-5 lg:px-6 pb-6">
+    <div class="max-w-[1680px] mx-auto header-safe pt-4 md:pt-5">
+      <header class="glass-strong rounded-[32px] px-4 md:px-6 py-4 md:py-5 mb-4 md:mb-5">
+        <div class="flex flex-wrap gap-4 items-start md:items-center justify-between hero-stack">
+          <div class="flex items-center gap-4 min-w-0 title-copy">
+            <div class="logo-badge" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1.8"></rect>
+                <rect x="14" y="3" width="7" height="7" rx="1.8"></rect>
+                <rect x="3" y="14" width="7" height="7" rx="1.8"></rect>
+                <path d="M17 14v3"></path>
+                <path d="M14 17h3"></path>
+                <path d="M17 20h4"></path>
+                <path d="M20 17v4"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">Simple Apple Style</div>
+              <h1 class="text-[2rem] md:text-[2.35rem] leading-tight font-extrabold tracking-[-0.04em] m-0">IPTV Playlist Generator</h1>
+              <p class="muted mt-1 mb-0 text-sm md:text-[0.95rem] max-w-2xl">Statická SPA verzia pripravená pre Netlify, s offline PWA režimom a balením pre Windows aj Android.</p>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-3 items-stretch md:items-end min-w-[280px] header-actions">
+            <div class="flex flex-wrap gap-2 justify-start md:justify-end">
+              <button class="btn btn-primary" @click="triggerImport">Import playlist</button>
+              <button class="btn btn-secondary" @click="exportPlaylist('m3u')" :disabled="stats.total === 0">Export M3U</button>
+              <button class="btn btn-secondary" @click="exportPlaylist('xspf')" :disabled="stats.total === 0">Export XSPF</button>
+              <button class="btn btn-ghost" @click="openAddChannel">Add channel</button>
+            </div>
+            <div class="flex items-center gap-2 justify-start md:justify-end">
+              <button class="btn btn-ghost" @click="toggleTheme" :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+                <span v-if="theme === 'dark'">☀︎ Light</span>
+                <span v-else>☾ Dark</span>
+              </button>
+              <button class="btn btn-danger" @click="clearAll" :disabled="stats.total === 0">Clear all</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mt-4 top-stats">
+          <div class="stat-pill"><strong>{{ stats.total }}</strong> total</div>
+          <div class="stat-pill"><strong>{{ stats.active }}</strong> active</div>
+          <div class="stat-pill"><strong>{{ stats.groups }}</strong> groups</div>
+          <div class="stat-pill" v-for="(count, quality) in stats.qualities" :key="quality" v-if="count">
+            <span class="quality-pill" :class="qualityClass(quality)">{{ quality }}</span>
+            <span class="ml-2">{{ count }}</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-[290px_1fr] gap-4 md:gap-5 app-grid">
+        <aside class="sidebar-stack space-y-4">
+          <section class="glass rounded-[28px] p-4 md:p-5">
+            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">Workspace</div>
+            <div class="space-y-2">
+              <button v-for="tab in tabs" :key="tab.id" class="sidebar-tab" :class="{ active: activeTab === tab.id }" @click="activeTab = tab.id">
+                <span>{{ tab.icon }}</span>
+                <span>{{ tab.label }}</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="glass rounded-[28px] p-4 md:p-5" v-if="activeTab === 'library' || activeTab === 'content'">
+            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">Filter set</div>
+            <div class="grid gap-3 filters-grid">
+              <div>
+                <label class="label">Search</label>
+                <input class="field" v-model.trim="filters.search" placeholder="Name, group, TVG-ID, URL" />
+              </div>
+              <div>
+                <label class="label">Group</label>
+                <select class="select" v-model="filters.group">
+                  <option value="">All groups</option>
+                  <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="label">Quality</label>
+                <select class="select" v-model="filters.quality">
+                  <option value="">All quality</option>
+                  <option value="4K">4K</option>
+                  <option value="FHD">FHD</option>
+                  <option value="HD">HD</option>
+                  <option value="SD">SD</option>
+                </select>
+              </div>
+              <div>
+                <label class="label">Status</label>
+                <div class="segmented w-full">
+                  <button :class="{ active: filters.status === 'all' }" @click="filters.status = 'all'">All</button>
+                  <button :class="{ active: filters.status === 'active' }" @click="filters.status = 'active'">Active</button>
+                  <button :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'">Inactive</button>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="label">Country</label>
+                  <input class="field" v-model.trim="filters.country" placeholder="SK, CZ..." />
+                </div>
+                <div>
+                  <label class="label">Per page</label>
+                  <select class="select" v-model.number="pagination.limit">
+                    <option :value="50">50</option>
+                    <option :value="100">100</option>
+                    <option :value="200">200</option>
+                    <option :value="500">500</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn btn-ghost w-full" @click="resetFilters">Reset filters</button>
+            </div>
+          </section>
+
+          <section class="glass rounded-[28px] p-4 md:p-5" v-if="activeTab === 'design' || activeTab === 'platforms'">
+            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">Platform prep</div>
+            <div class="space-y-3 text-sm muted">
+              <div class="section-card" style="background:var(--surface-strong); border:1px solid var(--border);">
+                <strong class="block text-[var(--text)] text-base mb-1">Netlify ready</strong>
+                SPA fallback, cache headers, PWA manifest a Service Worker sú už zapojené.
+              </div>
+              <div class="section-card" style="background:var(--surface-strong); border:1px solid var(--border);">
+                <strong class="block text-[var(--text)] text-base mb-1">Windows ready</strong>
+                Electron wrapper je pripravený na build do desktop aplikácie.
+              </div>
+              <div class="section-card" style="background:var(--surface-strong); border:1px solid var(--border);">
+                <strong class="block text-[var(--text)] text-base mb-1">Android ready</strong>
+                Capacitor config je pripravený na otvorenie v Android Studio.
+              </div>
+            </div>
+          </section>
+        </aside>
+
+        <main class="content-stack space-y-4 md:space-y-5">
+          <section class="glass rounded-[30px] p-4 md:p-5">
+            <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
+              <div>
+                <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">Channel library</div>
+                <h2 class="text-[1.25rem] md:text-[1.45rem] tracking-[-0.03em] font-bold m-0">Curated playlist workspace</h2>
+              </div>
+              <div class="segmented">
+                <button :class="{ active: sort.by === 'name' }" @click="setSort('name')">Sort name</button>
+                <button :class="{ active: sort.by === 'group' }" @click="setSort('group')">Sort group</button>
+                <button :class="{ active: sort.by === 'quality' }" @click="setSort('quality')">Sort quality</button>
+                <button :class="{ active: sort.by === 'country' }" @click="setSort('country')">Sort country</button>
+              </div>
+            </div>
+
+            <div class="table-shell overflow-auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="w-14">#</th>
+                    <th class="w-16">Logo</th>
+                    <th>Name</th>
+                    <th class="w-[160px]">Group</th>
+                    <th class="w-[110px]">Quality</th>
+                    <th class="w-[180px]">TVG-ID</th>
+                    <th class="w-[90px]">Country</th>
+                    <th>URL</th>
+                    <th class="w-[110px] text-center">Status</th>
+                    <th class="w-[170px] text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody v-if="paginatedChannels.length">
+                  <tr v-for="(channel, index) in paginatedChannels" :key="channel.id" :class="{ selected: selectedId === channel.id }">
+                    <td class="soft">{{ ((pagination.page - 1) * pagination.limit) + index + 1 }}</td>
+                    <td>
+                      <img v-if="channel.tvg_logo" :src="channel.tvg_logo" class="mini-logo" loading="lazy" alt="Channel logo" />
+                      <div v-else class="mini-logo flex items-center justify-center">📺</div>
+                    </td>
+                    <td>
+                      <div class="font-semibold">{{ channel.name || 'Untitled channel' }}</div>
+                      <div class="text-xs muted">{{ channel.tvg_name || 'No TVG name' }}</div>
+                    </td>
+                    <td><span class="muted">{{ channel.group_title || '—' }}</span></td>
+                    <td>
+                      <span v-if="channel.quality" class="quality-pill" :class="qualityClass(channel.quality)">{{ channel.quality }}</span>
+                      <span v-else class="soft">—</span>
+                    </td>
+                    <td class="mono text-xs muted">{{ channel.tvg_id || '—' }}</td>
+                    <td class="uppercase text-xs muted">{{ channel.tvg_country || '—' }}</td>
+                    <td class="mono text-xs muted max-w-[280px] truncate">{{ channel.url }}</td>
+                    <td class="text-center">
+                      <button class="btn btn-ghost !py-2 !px-3" @click="toggleChannel(channel)">
+                        <span :style="{ color: channel.is_active ? 'var(--success)' : 'var(--text-soft)' }">{{ channel.is_active ? '● Active' : '○ Off' }}</span>
+                      </button>
+                    </td>
+                    <td>
+                      <div class="flex gap-2 justify-end">
+                        <button class="btn btn-secondary !py-2 !px-3" @click="editChannel(channel)">Edit</button>
+                        <button class="btn btn-danger !py-2 !px-3" @click="removeChannel(channel.id)">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+                <tbody v-else>
+                  <tr>
+                    <td colspan="10">
+                      <div class="empty-state">
+                        <div style="font-size:3rem; margin-bottom: .8rem;">📺</div>
+                        <div class="text-lg font-semibold mb-1" style="color:var(--text)">No channels in library</div>
+                        <div>Import an M3U, TXT or XSPF file to start building your playlist.</div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="flex flex-wrap gap-3 items-center justify-between mt-4">
+              <div class="muted text-sm">Showing <strong>{{ paginatedChannels.length }}</strong> of <strong>{{ filteredChannels.length }}</strong> filtered channels.</div>
+              <div class="flex items-center gap-2">
+                <button class="btn btn-secondary !py-2 !px-4" @click="prevPage" :disabled="pagination.page === 1">Previous</button>
+                <div class="stat-pill">Page {{ pagination.page }} / {{ totalPages }}</div>
+                <button class="btn btn-secondary !py-2 !px-4" @click="nextPage" :disabled="pagination.page >= totalPages">Next</button>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <input ref="fileInput" type="file" class="hidden" accept=".m3u,.m3u8,.txt,.xspf" @change="handleImportFile" />
+
+    <div v-if="modal.open" class="modal-wrap" @click.self="closeModal">
+      <div class="modal-card glass-strong">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">Editor</div>
+            <h3 class="text-[1.35rem] tracking-[-0.03em] font-bold m-0">{{ modal.mode === 'create' ? 'Add channel' : 'Edit channel' }}</h3>
+          </div>
+          <button class="btn btn-ghost !px-4" @click="closeModal">Close</button>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="label">Name</label>
+            <input class="field" v-model.trim="form.name" placeholder="Channel name" />
+          </div>
+          <div>
+            <label class="label">Stream URL</label>
+            <input class="field" v-model.trim="form.url" placeholder="https://..." />
+          </div>
+          <div>
+            <label class="label">Group</label>
+            <input class="field" v-model.trim="form.group_title" placeholder="Movies, Sports..." />
+          </div>
+          <div>
+            <label class="label">Quality</label>
+            <select class="select" v-model="form.quality">
+              <option value="">No label</option>
+              <option value="4K">4K</option>
+              <option value="FHD">FHD</option>
+              <option value="HD">HD</option>
+              <option value="SD">SD</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">TVG ID</label>
+            <input class="field mono" v-model.trim="form.tvg_id" placeholder="channel.id" />
+          </div>
+          <div>
+            <label class="label">TVG name</label>
+            <input class="field" v-model.trim="form.tvg_name" placeholder="Display guide name" />
+          </div>
+          <div>
+            <label class="label">Logo URL</label>
+            <input class="field mono" v-model.trim="form.tvg_logo" placeholder="https://.../logo.png" />
+          </div>
+          <div>
+            <label class="label">Country</label>
+            <input class="field" v-model.trim="form.tvg_country" placeholder="SK" />
+          </div>
+          <div>
+            <label class="label">Language</label>
+            <input class="field" v-model.trim="form.tvg_language" placeholder="sk" />
+          </div>
+          <div>
+            <label class="label">User agent</label>
+            <input class="field" v-model.trim="form.user_agent" placeholder="Optional" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="label">Referer</label>
+            <input class="field" v-model.trim="form.referer" placeholder="Optional referer" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="label">Playback options</label>
+            <div class="segmented">
+              <button :class="{ active: form.is_active }" @click="form.is_active = true">Active</button>
+              <button :class="{ active: !form.is_active }" @click="form.is_active = false">Inactive</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-5">
+          <button class="btn btn-ghost" @click="closeModal">Cancel</button>
+          <button class="btn btn-primary" @click="saveChannel">{{ modal.mode === 'create' ? 'Create channel' : 'Save changes' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <transition name="fade">
+      <div v-if="toast.show" class="toast">{{ toast.message }}</div>
+    </transition>
+  </div>
+
+  <script>
+    const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const STORAGE_KEY = 'iptv-playlistgen-v2';
+        const THEME_KEY = 'iptv-playlistgen-theme';
+
+        const fileInput = ref(null);
+        const theme = ref(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+        const activeTab = ref('library');
+        const tabs = [
+          { id: 'library', label: 'Library', icon: '⌘' },
+          { id: 'content', label: 'Content', icon: '▣' },
+          { id: 'design', label: 'Design', icon: '✦' },
+          { id: 'platforms', label: 'Platforms', icon: '◉' },
+        ];
+
+        const channels = ref([]);
+        const selectedId = ref(null);
+        const sort = reactive({ by: 'name', dir: 'asc' });
+        const filters = reactive({ search: '', group: '', quality: '', status: 'all', country: '' });
+        const pagination = reactive({ page: 1, limit: 100 });
+        const modal = reactive({ open: false, mode: 'create' });
+        const toast = reactive({ show: false, message: '' });
+        const form = reactive(createEmptyChannel());
+
+        function createEmptyChannel() {
+          return {
+            id: null,
+            name: '',
+            url: '',
+            tvg_id: '',
+            tvg_name: '',
+            tvg_logo: '',
+            tvg_country: '',
+            tvg_language: '',
+            group_title: '',
+            quality: '',
+            user_agent: '',
+            referer: '',
+            catchup: '',
+            catchup_source: '',
+            is_active: true,
+          };
+        }
+
+        function qualityClass(quality) {
+          return quality ? `q-${quality}` : '';
+        }
+
+        function saveToStorage() {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value));
+        }
+
+        function loadFromStorage() {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) channels.value = parsed;
+          } catch {}
+        }
+
+        function showToast(message) {
+          toast.message = message;
+          toast.show = true;
+          clearTimeout(showToast._timer);
+          showToast._timer = setTimeout(() => toast.show = false, 2200);
+        }
+
+        function normalizeQuality(value, name = '') {
+          const source = `${value || ''} ${name || ''}`.toUpperCase();
+          if (source.includes('4K') || source.includes('UHD')) return '4K';
+          if (source.includes('FHD') || source.includes('1080')) return 'FHD';
+          if (source.includes('HD') || source.includes('720')) return 'HD';
+          if (source.includes('SD') || source.includes('576') || source.includes('480')) return 'SD';
+          return '';
+        }
+
+        function triggerImport() {
+          fileInput.value?.click();
+        }
+
+        async function handleImportFile(event) {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          const text = await file.text();
+          const ext = (file.name.split('.').pop() || '').toLowerCase();
+          let imported = [];
+
+          if (['m3u', 'm3u8', 'txt'].includes(ext)) {
+            imported = parseM3U(text);
+          } else if (ext === 'xspf') {
+            imported = parseXSPF(text);
+          } else {
+            imported = parseM3U(text);
+          }
+
+          if (!imported.length) {
+            showToast('No channels detected in file.');
+            event.target.value = '';
+            return;
+          }
+
+          const now = Date.now();
+          channels.value = imported.map((item, index) => ({
+            ...createEmptyChannel(),
+            ...item,
+            id: `${now}-${index}`,
+            quality: normalizeQuality(item.quality, item.name),
+            is_active: item.is_active !== false,
+          }));
+          saveToStorage();
+          pagination.page = 1;
+          showToast(`Imported ${channels.value.length} channels.`);
+          event.target.value = '';
+        }
+
+        function parseM3U(text) {
+          const lines = text.replace(/\r/g, '').split('\n');
+          const items = [];
+          let current = null;
+
+          const parseAttrs = (line) => {
+            const attrs = {};
+            const attrRegex = /(\w[\w-]*)="([^"]*)"/g;
+            let match;
+            while ((match = attrRegex.exec(line))) {
+              attrs[match[1]] = match[2];
+            }
+            return attrs;
+          };
+
+          for (const lineRaw of lines) {
+            const line = lineRaw.trim();
+            if (!line) continue;
+            if (line.startsWith('#EXTINF')) {
+              const attrs = parseAttrs(line);
+              const name = line.includes(',') ? line.split(',').slice(1).join(',').trim() : '';
+              current = {
+                name,
+                tvg_id: attrs['tvg-id'] || '',
+                tvg_name: attrs['tvg-name'] || '',
+                tvg_logo: attrs['tvg-logo'] || '',
+                tvg_country: attrs['tvg-country'] || '',
+                tvg_language: attrs['tvg-language'] || '',
+                group_title: attrs['group-title'] || '',
+                quality: attrs['quality'] || '',
+              };
+            } else if (line.startsWith('#EXTVLCOPT')) {
+              if (!current) current = {};
+              const [, payload = ''] = line.split(':');
+              if (payload.startsWith('http-user-agent=')) current.user_agent = payload.replace('http-user-agent=', '');
+              if (payload.startsWith('http-referrer=')) current.referer = payload.replace('http-referrer=', '');
+            } else if (line.startsWith('#')) {
+              continue;
+            } else {
+              if (current) {
+                items.push({ ...current, url: line });
+                current = null;
+              } else {
+                const parts = line.split('|');
+                if (parts.length === 2) items.push({ name: parts[0].trim(), url: parts[1].trim() });
+                else items.push({ name: line, url: line });
+              }
+            }
+          }
+          return items.filter(item => item.url);
+        }
+
+        function parseXSPF(text) {
+          const parser = new DOMParser();
+          const xml = parser.parseFromString(text, 'application/xml');
+          const tracks = Array.from(xml.querySelectorAll('track'));
+          return tracks.map((track) => ({
+            name: track.querySelector('title')?.textContent?.trim() || '',
+            url: track.querySelector('location')?.textContent?.trim() || '',
+            tvg_logo: track.querySelector('image')?.textContent?.trim() || '',
+            group_title: track.querySelector('annotation')?.textContent?.trim() || '',
+          })).filter(item => item.url);
+        }
+
+        function exportPlaylist(format = 'm3u') {
+          if (!channels.value.length) return;
+          const active = channels.value.filter(item => item.is_active);
+          const source = active.length ? active : channels.value;
+          let content = '';
+          let mime = 'text/plain;charset=utf-8';
+          let filename = 'iptv-playlist';
+
+          if (format === 'xspf') {
+            filename += '.xspf';
+            content = `<?xml version="1.0" encoding="UTF-8"?>\n<playlist version="1" xmlns="http://xspf.org/ns/0/">\n  <trackList>\n${source.map(item => `    <track>\n      <title>${escapeXml(item.name || '')}</title>\n      <location>${escapeXml(item.url || '')}</location>\n      <image>${escapeXml(item.tvg_logo || '')}</image>\n      <annotation>${escapeXml(item.group_title || '')}</annotation>\n    </track>`).join('\n')}\n  </trackList>\n</playlist>`;
+          } else {
+            filename += '.m3u';
+            content = '#EXTM3U\n' + source.map(item => {
+              const attrs = [
+                item.tvg_id ? `tvg-id="${item.tvg_id}"` : '',
+                item.tvg_name ? `tvg-name="${item.tvg_name}"` : '',
+                item.tvg_logo ? `tvg-logo="${item.tvg_logo}"` : '',
+                item.tvg_country ? `tvg-country="${item.tvg_country}"` : '',
+                item.tvg_language ? `tvg-language="${item.tvg_language}"` : '',
+                item.group_title ? `group-title="${item.group_title}"` : '',
+                item.quality ? `quality="${item.quality}"` : '',
+              ].filter(Boolean).join(' ');
+              const options = [
+                item.user_agent ? `#EXTVLCOPT:http-user-agent=${item.user_agent}` : '',
+                item.referer ? `#EXTVLCOPT:http-referrer=${item.referer}` : '',
+              ].filter(Boolean).join('\n');
+              return `#EXTINF:-1 ${attrs},${item.name || 'Untitled'}\n${options ? options + '\n' : ''}${item.url}`;
+            }).join('\n');
+          }
+
+          const blob = new Blob([content], { type: mime });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast(`Exported ${source.length} channels.`);
+        }
+
+        function escapeXml(value) {
+          return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+        }
+
+        const groupOptions = computed(() => {
+          const groups = new Set(channels.value.map(item => item.group_title).filter(Boolean));
+          return Array.from(groups).sort((a, b) => a.localeCompare(b));
+        });
+
+        const filteredChannels = computed(() => {
+          let result = [...channels.value];
+          const q = filters.search.trim().toLowerCase();
+          if (q) {
+            result = result.filter(item => [item.name, item.group_title, item.tvg_id, item.url, item.tvg_name]
+              .filter(Boolean)
+              .some(field => field.toLowerCase().includes(q)));
+          }
+          if (filters.group) result = result.filter(item => item.group_title === filters.group);
+          if (filters.quality) result = result.filter(item => item.quality === filters.quality);
+          if (filters.status === 'active') result = result.filter(item => item.is_active);
+          if (filters.status === 'inactive') result = result.filter(item => !item.is_active);
+          if (filters.country) result = result.filter(item => (item.tvg_country || '').toLowerCase().includes(filters.country.toLowerCase()));
+
+          result.sort((a, b) => {
+            const key = sort.by;
+            const av = String(a[key === 'group' ? 'group_title' : key] || '').toLowerCase();
+            const bv = String(b[key === 'group' ? 'group_title' : key] || '').toLowerCase();
+            return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+          });
+          return result;
+        });
+
+        const totalPages = computed(() => Math.max(1, Math.ceil(filteredChannels.value.length / pagination.limit)));
+        const paginatedChannels = computed(() => {
+          const start = (pagination.page - 1) * pagination.limit;
+          return filteredChannels.value.slice(start, start + pagination.limit);
+        });
+
+        const stats = computed(() => {
+          const qualities = { '4K': 0, 'FHD': 0, 'HD': 0, 'SD': 0 };
+          channels.value.forEach(item => {
+            if (qualities[item.quality] !== undefined) qualities[item.quality] += 1;
+          });
+          return {
+            total: channels.value.length,
+            active: channels.value.filter(item => item.is_active).length,
+            groups: new Set(channels.value.map(item => item.group_title).filter(Boolean)).size,
+            qualities,
+          };
+        });
+
+        function resetFilters() {
+          filters.search = '';
+          filters.group = '';
+          filters.quality = '';
+          filters.status = 'all';
+          filters.country = '';
+          pagination.page = 1;
+        }
+
+        function setSort(by) {
+          if (sort.by === by) sort.dir = sort.dir === 'asc' ? 'desc' : 'asc';
+          else { sort.by = by; sort.dir = 'asc'; }
+        }
+
+        function prevPage() {
+          if (pagination.page > 1) pagination.page -= 1;
+        }
+
+        function nextPage() {
+          if (pagination.page < totalPages.value) pagination.page += 1;
+        }
+
+        function openAddChannel() {
+          Object.assign(form, createEmptyChannel());
+          modal.mode = 'create';
+          modal.open = true;
+        }
+
+        function editChannel(channel) {
+          Object.assign(form, JSON.parse(JSON.stringify(channel)));
+          selectedId.value = channel.id;
+          modal.mode = 'edit';
+          modal.open = true;
+        }
+
+        function closeModal() {
+          modal.open = false;
+        }
+
+        function saveChannel() {
+          if (!form.name || !form.url) {
+            showToast('Name and URL are required.');
+            return;
+          }
+
+          form.quality = normalizeQuality(form.quality, form.name);
+          if (modal.mode === 'create') {
+            channels.value.unshift({ ...JSON.parse(JSON.stringify(form)), id: `${Date.now()}-${Math.random().toString(16).slice(2)}` });
+            showToast('Channel created.');
+          } else {
+            const index = channels.value.findIndex(item => item.id === form.id);
+            if (index >= 0) channels.value[index] = { ...JSON.parse(JSON.stringify(form)) };
+            showToast('Channel updated.');
+          }
+          saveToStorage();
+          modal.open = false;
+        }
+
+        function removeChannel(id) {
+          if (!confirm('Delete this channel?')) return;
+          channels.value = channels.value.filter(item => item.id !== id);
+          if (selectedId.value === id) selectedId.value = null;
+          saveToStorage();
+          showToast('Channel deleted.');
+        }
+
+        function toggleChannel(channel) {
+          channel.is_active = !channel.is_active;
+          saveToStorage();
+        }
+
+        function clearAll() {
+          if (!confirm('Delete all channels from local library?')) return;
+          channels.value = [];
+          saveToStorage();
+          pagination.page = 1;
+          showToast('Library cleared.');
+        }
+
+        function toggleTheme() {
+          theme.value = theme.value === 'dark' ? 'light' : 'dark';
+        }
+
+        watch(theme, (value) => {
+          document.documentElement.setAttribute('data-theme', value);
+          localStorage.setItem(THEME_KEY, value);
+        }, { immediate: true });
+
+        watch([() => filters.search, () => filters.group, () => filters.quality, () => filters.status, () => filters.country, () => pagination.limit], () => {
+          pagination.page = 1;
+        });
+
+        watch(totalPages, (value) => {
+          if (pagination.page > value) pagination.page = value;
+        });
+
+        onMounted(() => {
+          loadFromStorage();
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+          }
+        });
+
+        return {
+          fileInput,
+          theme,
+          activeTab,
+          tabs,
+          channels,
+          selectedId,
+          filters,
+          sort,
+          pagination,
+          modal,
+          toast,
+          form,
+          groupOptions,
+          filteredChannels,
+          paginatedChannels,
+          totalPages,
+          stats,
+          qualityClass,
+          triggerImport,
+          handleImportFile,
+          exportPlaylist,
+          openAddChannel,
+          editChannel,
+          closeModal,
+          saveChannel,
+          removeChannel,
+          toggleChannel,
+          clearAll,
+          toggleTheme,
+          setSort,
+          resetFilters,
+          prevPage,
+          nextPage,
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

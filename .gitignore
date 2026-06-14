@@ -12,3 +12,6 @@ build/
 node_modules/
 dist-electron/
 dist/
+node_modules/
+
+dist-electron/

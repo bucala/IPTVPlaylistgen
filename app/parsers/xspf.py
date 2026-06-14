@@ -1,22 +1,22 @@
 from typing import List, Dict
 
+# Prefer defusedxml for XXE protection; fall back to stdlib
 try:
-    from lxml import etree as ET
-    _HAS_LXML = True
+    import defusedxml.ElementTree as ET
 except ImportError:
-    import xml.etree.ElementTree as ET  # type: ignore
-    _HAS_LXML = False
+    try:
+        from lxml import etree as ET  # type: ignore
+    except ImportError:
+        import xml.etree.ElementTree as ET  # type: ignore
 
 XSPF_NS = 'http://xspf.org/ns/0/'
-VLC_NS = 'http://www.videolan.org/vlc/playlist/ns/0/'
+VLC_NS  = 'http://www.videolan.org/vlc/playlist/ns/0/'
 
 
 def parse_xspf(content: str) -> List[Dict]:
-    channels = []
+    channels: List[Dict] = []
     try:
-        root = ET.fromstring(content.encode('utf-8'))
-        ns = {'x': XSPF_NS, 'vlc': VLC_NS}
-
+        root       = ET.fromstring(content.encode('utf-8'))
         track_list = root.find(f'{{{XSPF_NS}}}trackList')
         if track_list is None:
             return channels
@@ -33,23 +33,23 @@ def parse_xspf(content: str) -> List[Dict]:
                 el = track.find(f'{{{XSPF_NS}}}{tag}')
                 return (el.text or '').strip() if el is not None else ''
 
-            title = _text('title')
             location = _text('location')
-            image = _text('image')
-
             if not location:
                 continue
 
-            ch['name'] = title or f'Channel {i + 1}'
-            ch['url'] = location
-            ch['tvg_logo'] = image
+            ch['name']     = _text('title') or f'Channel {i + 1}'
+            ch['url']      = location
+            ch['tvg_logo'] = _text('image')
 
-            # VLC extension metadata
+            # VLC extension – order index
             ext = track.find(f'{{{XSPF_NS}}}extension')
             if ext is not None:
                 vlc_id = ext.find(f'{{{VLC_NS}}}id')
                 if vlc_id is not None:
-                    ch['order_index'] = int(vlc_id.text or 0)
+                    try:
+                        ch['order_index'] = max(0, int(vlc_id.text or 0))
+                    except (ValueError, TypeError):
+                        pass
 
             channels.append(ch)
     except Exception:

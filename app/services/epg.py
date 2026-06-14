@@ -2,17 +2,19 @@
 EPG & logo matching against the iptv-org channels database.
 https://iptv-org.github.io/api/channels.json
 """
+import json
 import threading
 import time
 from typing import Dict, List, Optional
 
 import requests
 
-CHANNELS_URL = 'https://iptv-org.github.io/api/channels.json'
-CACHE_TTL = 3600  # 1 hour
+CHANNELS_URL     = 'https://iptv-org.github.io/api/channels.json'
+CACHE_TTL        = 3600          # 1 hour
+MAX_DOWNLOAD     = 30 * 1024 * 1024  # 30 MB hard cap
 
-_cache: List[Dict] = []
-_cache_ts: float = 0
+_cache:    List[Dict] = []
+_cache_ts: float      = 0.0
 _lock = threading.Lock()
 
 try:
@@ -29,24 +31,38 @@ def _load_channels() -> List[Dict]:
         if _cache and (now - _cache_ts) < CACHE_TTL:
             return _cache
         try:
-            resp = requests.get(CHANNELS_URL, timeout=30)
+            resp = requests.get(CHANNELS_URL, timeout=30, stream=True)
             resp.raise_for_status()
-            _cache = resp.json()
+
+            # Reject oversized responses before reading body
+            cl = int(resp.headers.get('content-length', 0))
+            if cl and cl > MAX_DOWNLOAD:
+                raise ValueError(f'EPG response too large: {cl} bytes')
+
+            buf = bytearray()
+            for chunk in resp.iter_content(chunk_size=65_536):
+                buf.extend(chunk)
+                if len(buf) > MAX_DOWNLOAD:
+                    raise ValueError('EPG response exceeded size limit during download')
+
+            _cache    = json.loads(buf)
             _cache_ts = now
         except Exception:
-            pass
+            pass  # Return stale cache or empty list on error
         return _cache
 
 
 def _build_index(channels: List[Dict], country: Optional[str] = None) -> tuple:
     if country:
+        cu = country.strip().upper()
+        # Use exact country code match (not substring) to avoid false positives
         subset = [
             c for c in channels
-            if country.upper() in (c.get('country') or '').upper()
-            or country.upper() in ' '.join(c.get('broadcast_area', []))
+            if (c.get('country') or '').upper() == cu
+            or cu in [a.upper() for a in c.get('broadcast_area', [])]
         ]
         if not subset:
-            subset = channels
+            subset = channels  # fall back to global if no country match
     else:
         subset = channels
 
@@ -65,13 +81,12 @@ def find_channel(name: str, country: Optional[str] = None) -> Optional[Dict]:
         result = rfprocess.extractOne(
             name, names,
             scorer=fuzz.token_sort_ratio,
-            score_cutoff=65
+            score_cutoff=65,
         )
         if result:
-            match_name, score, idx = result
+            _, _score, idx = result
             return subset[idx]
     else:
-        # Fallback: simple lowercase containment
         name_lower = name.lower()
         for c in subset:
             if c.get('name', '').lower() == name_lower:
@@ -85,19 +100,19 @@ def find_channel(name: str, country: Optional[str] = None) -> Optional[Dict]:
 
 def auto_match(channel_list: List[Dict]) -> List[Dict]:
     """
-    Given a list of dicts with keys id, name, tvg_country,
-    return dicts with id + matched fields to update.
+    Given [{id, name, tvg_country}, …] return [{id, tvg_id, tvg_name, tvg_logo, …}, …]
+    only for channels that found a match.
     """
     results = []
     for item in channel_list:
         match = find_channel(item.get('name', ''), item.get('tvg_country'))
         if match:
             results.append({
-                'id': item['id'],
-                'tvg_id': match.get('id', ''),
-                'tvg_name': match.get('name', ''),
-                'tvg_logo': match.get('logo', ''),
-                'tvg_country': match.get('country', ''),
+                'id':           item['id'],
+                'tvg_id':       match.get('id', ''),
+                'tvg_name':     match.get('name', ''),
+                'tvg_logo':     match.get('logo', ''),
+                'tvg_country':  match.get('country', ''),
                 'tvg_language': ', '.join(match.get('languages', [])),
             })
     return results
@@ -115,9 +130,9 @@ def search_channels(query: str, country: Optional[str] = None, limit: int = 20) 
             query, names,
             scorer=fuzz.token_sort_ratio,
             score_cutoff=50,
-            limit=limit
+            limit=limit,
         )
         return [subset[m[2]] for m in matches]
     else:
-        query_lower = query.lower()
-        return [c for c in subset if query_lower in c.get('name', '').lower()][:limit]
+        q = query.lower()
+        return [c for c in subset if q in c.get('name', '').lower()][:limit]

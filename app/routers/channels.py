@@ -9,12 +9,24 @@ from app.database import get_db
 
 router = APIRouter(prefix='/channels', tags=['channels'])
 
+# Whitelist of allowed sort columns to prevent unsafe attribute access
+_SORTABLE = {
+    'order_index': models.Channel.order_index,
+    'name':        models.Channel.name,
+    'group_title': models.Channel.group_title,
+    'tvg_id':      models.Channel.tvg_id,
+    'tvg_country': models.Channel.tvg_country,
+    'quality':     models.Channel.quality,
+    'is_active':   models.Channel.is_active,
+    'created_at':  models.Channel.created_at,
+}
+
 
 @router.get('/', response_model=schemas.ChannelListResponse)
 def list_channels(
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(100, ge=1, le=500),
     search: Optional[str] = None,
     group: Optional[str] = None,
     quality: Optional[str] = None,
@@ -23,6 +35,11 @@ def list_channels(
     sort_by: str = 'order_index',
     sort_dir: str = 'asc',
 ):
+    if skip + limit > 100_000:
+        raise HTTPException(status_code=400, detail='skip + limit exceeds maximum (100 000)')
+
+    col = _SORTABLE.get(sort_by, models.Channel.order_index)
+
     q = db.query(models.Channel)
 
     if search:
@@ -42,10 +59,7 @@ def list_channels(
         q = q.filter(models.Channel.is_active == is_active)
 
     total = q.count()
-
-    col = getattr(models.Channel, sort_by, models.Channel.order_index)
     q = q.order_by(col.desc() if sort_dir == 'desc' else col)
-
     items = q.offset(skip).limit(limit).all()
     return {'total': total, 'items': items, 'skip': skip, 'limit': limit}
 
@@ -73,19 +87,20 @@ def list_groups(db: Session = Depends(get_db)):
 
 @router.get('/stats')
 def get_stats(db: Session = Depends(get_db)):
-    total = db.query(func.count(models.Channel.id)).scalar()
+    total  = db.query(func.count(models.Channel.id)).scalar()
     active = db.query(func.count(models.Channel.id)).filter(models.Channel.is_active == True).scalar()
     groups = db.query(func.count(func.distinct(models.Channel.group_title))).scalar()
     qualities = (
         db.query(models.Channel.quality, func.count(models.Channel.id))
+        .filter(models.Channel.quality != '')  # exclude unlabelled
         .group_by(models.Channel.quality)
         .all()
     )
     return {
-        'total': total,
-        'active': active,
-        'inactive': total - active,
-        'groups': groups,
+        'total':     total,
+        'active':    active,
+        'inactive':  total - active,
+        'groups':    groups,
         'qualities': {q: c for q, c in qualities},
     }
 
@@ -99,11 +114,7 @@ def get_channel(channel_id: int, db: Session = Depends(get_db)):
 
 
 @router.put('/{channel_id}', response_model=schemas.Channel)
-def update_channel(
-    channel_id: int,
-    body: schemas.ChannelUpdate,
-    db: Session = Depends(get_db),
-):
+def update_channel(channel_id: int, body: schemas.ChannelUpdate, db: Session = Depends(get_db)):
     ch = db.get(models.Channel, channel_id)
     if not ch:
         raise HTTPException(status_code=404, detail='Channel not found')
@@ -150,16 +161,30 @@ def bulk_update(body: schemas.BulkUpdateRequest, db: Session = Depends(get_db)):
 
 @router.post('/reorder', status_code=200)
 def reorder_channels(items: List[schemas.ReorderItem], db: Session = Depends(get_db)):
-    for item in items:
-        db.query(models.Channel).filter(models.Channel.id == item.id).update(
-            {'order_index': item.order_index}
-        )
-    db.commit()
+    try:
+        for item in items:
+            db.query(models.Channel).filter(models.Channel.id == item.id).update(
+                {'order_index': item.order_index}
+            )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail='Reorder failed – transaction rolled back')
     return {'reordered': len(items)}
 
 
-@router.delete('/', status_code=200)
+@router.post('/clear', status_code=200)
 def clear_all(db: Session = Depends(get_db)):
+    """Clear all channels (POST for safety)."""
+    count = db.query(models.Channel).count()
+    db.query(models.Channel).delete()
+    db.commit()
+    return {'deleted': count}
+
+
+# Keep DELETE / for backward-compat with existing frontend calls
+@router.delete('/', status_code=200)
+def clear_all_delete(db: Session = Depends(get_db)):
     count = db.query(models.Channel).count()
     db.query(models.Channel).delete()
     db.commit()

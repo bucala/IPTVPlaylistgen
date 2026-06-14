@@ -1,4 +1,5 @@
 from typing import List, Optional
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
@@ -15,6 +16,19 @@ from app.services import epg as epg_svc
 
 router = APIRouter(tags=['io'])
 
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+_ALLOWED_SCHEMES = {'http', 'https', 'rtmp', 'rtmps', 'rtsp', 'udp', 'rtp'}
+
+
+def _valid_url(url: str) -> bool:
+    """Accept common stream protocols; reject dangerous schemes (javascript:, file:, data:, etc.)."""
+    if not url:
+        return False
+    try:
+        return urlparse(url).scheme.lower() in _ALLOWED_SCHEMES
+    except Exception:
+        return False
+
 
 # ── Import ────────────────────────────────────────────────────────────────────
 
@@ -26,20 +40,33 @@ async def import_playlist(
     db: Session = Depends(get_db),
 ):
     raw = await file.read()
-    text = raw.decode('utf-8', errors='replace')
+
+    if len(raw) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f'File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)} MB.',
+        )
+
+    try:
+        text = raw.decode('utf-8', errors='replace')
+    except Exception:
+        raise HTTPException(status_code=400, detail='Cannot decode file as UTF-8.')
+
     name = (file.filename or '').lower()
 
     if name.endswith('.xspf'):
         channels = parse_xspf(text)
     elif name.endswith(('.m3u', '.m3u8', '.txt')):
         if name.endswith('.txt') and not text.startswith('#EXTM3U'):
-            # Plain URL list or "name|url" lines
             channels = _parse_txt(text)
         else:
             channels = parse_m3u(text)
     else:
-        # Try M3U by default
         channels = parse_m3u(text)
+
+    # Strip entries with dangerous/missing URLs
+    valid   = [ch for ch in channels if _valid_url(ch.get('url', ''))]
+    skipped = len(channels) - len(valid)
 
     if replace:
         db.query(models.Channel).delete()
@@ -54,16 +81,23 @@ async def import_playlist(
     }
 
     to_insert = []
-    for i, ch in enumerate(channels):
+    for i, ch in enumerate(valid):
         data = {k: ch.get(k, '') for k in _FIELDS}
         data['order_index'] = base_order + i + 1
-        data['is_active'] = True
+        data['is_active']   = True
         to_insert.append(data)
 
-    db.bulk_insert_mappings(models.Channel, to_insert)  # type: ignore[arg-type]
+    # Chunked bulk insert – prevents OOM on huge files
+    CHUNK = 1000
+    for idx in range(0, len(to_insert), CHUNK):
+        db.bulk_insert_mappings(models.Channel, to_insert[idx:idx + CHUNK])  # type: ignore[arg-type]
     db.commit()
 
-    return {'imported': len(to_insert)}
+    return {
+        'imported':     len(to_insert),
+        'skipped':      skipped,
+        'total_parsed': len(channels),
+    }
 
 
 def _parse_txt(text: str) -> list:
@@ -73,14 +107,14 @@ def _parse_txt(text: str) -> list:
         if not line or line.startswith('#'):
             continue
         if '|' in line:
-            parts = line.split('|', 1)
-            name, url = parts[0].strip(), parts[1].strip()
+            name, url = line.split('|', 1)
+            name, url = name.strip(), url.strip()
         elif '\t' in line:
-            parts = line.split('\t', 1)
-            name, url = parts[0].strip(), parts[1].strip()
+            name, url = line.split('\t', 1)
+            name, url = name.strip(), url.strip()
         else:
             name = f'Channel {i + 1}'
-            url = line
+            url  = line
         if url:
             channels.append({
                 'name': name, 'url': url,
@@ -114,17 +148,17 @@ def export_playlist(
 
     fmt = fmt.lower()
     if fmt in ('m3u', 'm3u8'):
-        content = export_m3u(channels)
+        content    = export_m3u(channels)
         media_type = 'audio/x-mpegurl'
-        ext = fmt
+        ext        = fmt
     elif fmt == 'xspf':
-        content = export_xspf(channels)
+        content    = export_xspf(channels)
         media_type = 'application/xspf+xml'
-        ext = 'xspf'
+        ext        = 'xspf'
     elif fmt == 'csv':
-        content = export_csv(channels)
+        content    = export_csv(channels)
         media_type = 'text/csv'
-        ext = 'csv'
+        ext        = 'csv'
     else:
         raise HTTPException(status_code=400, detail=f'Unsupported format: {fmt}')
 
@@ -141,10 +175,9 @@ def export_playlist(
 def epg_search(
     q: str = Query(..., min_length=2),
     country: Optional[str] = None,
-    limit: int = 20,
+    limit: int = Query(20, ge=1, le=50),
 ):
-    results = epg_svc.search_channels(q, country, limit)
-    return results
+    return epg_svc.search_channels(q, country, limit)
 
 
 @router.post('/epg/match')
@@ -159,26 +192,26 @@ def epg_match(
         q = q.filter(models.Channel.id.in_(ids))
 
     channels = q.all()
-    payload = [
+    payload  = [
         {'id': ch.id, 'name': ch.name, 'tvg_country': ch.tvg_country}
         for ch in channels
     ]
 
-    matches = epg_svc.auto_match(payload)
-
-    updated = 0
+    matches   = epg_svc.auto_match(payload)
     match_map = {m['id']: m for m in matches}
+    updated   = 0
+
     for ch in channels:
         m = match_map.get(ch.id)
         if not m:
             continue
         if overwrite or not ch.tvg_id:
-            ch.tvg_id = m.get('tvg_id', ch.tvg_id)
-            ch.tvg_name = m.get('tvg_name', ch.tvg_name)
+            ch.tvg_id   = m.get('tvg_id',   ch.tvg_id)
+            ch.tvg_name = m.get('tvg_name',  ch.tvg_name)
         if overwrite or not ch.tvg_logo:
-            ch.tvg_logo = m.get('tvg_logo', ch.tvg_logo)
+            ch.tvg_logo = m.get('tvg_logo',  ch.tvg_logo)
         if overwrite or not ch.tvg_country:
-            ch.tvg_country = m.get('tvg_country', ch.tvg_country)
+            ch.tvg_country  = m.get('tvg_country',  ch.tvg_country)
         if overwrite or not ch.tvg_language:
             ch.tvg_language = m.get('tvg_language', ch.tvg_language)
         updated += 1

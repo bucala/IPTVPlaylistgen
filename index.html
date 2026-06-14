@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="sk" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -185,6 +185,11 @@
       display: flex;
       align-items: center;
       gap: .75rem;
+      /* Fix: prevent text selection on tab clicks */
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
     }
 
     .sidebar-tab.active {
@@ -274,6 +279,8 @@
       font-weight: 600;
       cursor: pointer;
       transition: .18s ease;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .segmented button.active {
@@ -286,6 +293,79 @@
       background: rgba(255,255,255,.1);
       color: white;
     }
+
+    /* Language switcher */
+    .lang-switcher {
+      display: inline-flex;
+      padding: .2rem;
+      border-radius: 999px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      gap: .15rem;
+    }
+
+    .lang-switcher button {
+      border: 0;
+      background: transparent;
+      color: var(--text-muted);
+      padding: .42rem .75rem;
+      border-radius: 999px;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      cursor: pointer;
+      transition: .18s ease;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .lang-switcher button.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,113,227,.28);
+    }
+
+    /* Design tab styles */
+    .design-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .85rem 1rem;
+      border-radius: var(--radius-md);
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+    }
+
+    .design-row + .design-row { margin-top: .5rem; }
+
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--border-strong);
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+    .color-swatch:hover { transform: scale(1.12); box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+    .color-swatch.selected { box-shadow: 0 0 0 3px var(--primary); }
+
+    .color-swatches { display: flex; gap: .5rem; align-items: center; }
+
+    /* Content tab - group list */
+    .group-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .78rem 1rem;
+      border-radius: var(--radius-md);
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      transition: background .15s ease;
+    }
+
+    .group-item + .group-item { margin-top: .4rem; }
+    .group-item:hover { background: var(--surface-muted); }
 
     .modal-wrap {
       position: fixed;
@@ -366,31 +446,38 @@
             <div>
               <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">Simple Apple Style</div>
               <h1 class="text-[2rem] md:text-[2.35rem] leading-tight font-extrabold tracking-[-0.04em] m-0">IPTV Playlist Generator</h1>
-              <p class="muted mt-1 mb-0 text-sm md:text-[0.95rem] max-w-2xl">Statická SPA verzia pripravená pre Netlify, s offline PWA režimom a balením pre Windows aj Android.</p>
+              <p class="muted mt-1 mb-0 text-sm md:text-[0.95rem] max-w-2xl">{{ t('appSubtitle') }}</p>
             </div>
           </div>
 
           <div class="flex flex-col gap-3 items-stretch md:items-end min-w-[280px] header-actions">
+            <!-- Language switcher -->
+            <div class="flex items-center justify-start md:justify-end">
+              <div class="lang-switcher" role="group" :aria-label="t('languageSwitcher')">
+                <button :class="{ active: lang === 'sk' }" @click="setLang('sk')" aria-label="Slovenčina">SK</button>
+                <button :class="{ active: lang === 'en' }" @click="setLang('en')" aria-label="English">EN</button>
+              </div>
+            </div>
             <div class="flex flex-wrap gap-2 justify-start md:justify-end">
-              <button class="btn btn-primary" @click="triggerImport">Import playlist</button>
-              <button class="btn btn-secondary" @click="exportPlaylist('m3u')" :disabled="stats.total === 0">Export M3U</button>
-              <button class="btn btn-secondary" @click="exportPlaylist('xspf')" :disabled="stats.total === 0">Export XSPF</button>
-              <button class="btn btn-ghost" @click="openAddChannel">Add channel</button>
+              <button class="btn btn-primary" @click="triggerImport">{{ t('importPlaylist') }}</button>
+              <button class="btn btn-secondary" @click="exportPlaylist('m3u')" :disabled="stats.total === 0">{{ t('exportM3U') }}</button>
+              <button class="btn btn-secondary" @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
+              <button class="btn btn-ghost" @click="openAddChannel">{{ t('addChannel') }}</button>
             </div>
             <div class="flex items-center gap-2 justify-start md:justify-end">
-              <button class="btn btn-ghost" @click="toggleTheme" :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
-                <span v-if="theme === 'dark'">☀︎ Light</span>
-                <span v-else>☾ Dark</span>
+              <button class="btn btn-ghost" @click="toggleTheme" :aria-label="theme === 'dark' ? t('switchLight') : t('switchDark')">
+                <span v-if="theme === 'dark'">☀︎ {{ t('light') }}</span>
+                <span v-else>☾ {{ t('dark') }}</span>
               </button>
-              <button class="btn btn-danger" @click="clearAll" :disabled="stats.total === 0">Clear all</button>
+              <button class="btn btn-danger" @click="clearAll" :disabled="stats.total === 0">{{ t('clearAll') }}</button>
             </div>
           </div>
         </div>
 
         <div class="flex flex-wrap gap-2 mt-4 top-stats">
-          <div class="stat-pill"><strong>{{ stats.total }}</strong> total</div>
-          <div class="stat-pill"><strong>{{ stats.active }}</strong> active</div>
-          <div class="stat-pill"><strong>{{ stats.groups }}</strong> groups</div>
+          <div class="stat-pill"><strong>{{ stats.total }}</strong> {{ t('total') }}</div>
+          <div class="stat-pill"><strong>{{ stats.active }}</strong> {{ t('active') }}</div>
+          <div class="stat-pill"><strong>{{ stats.groups }}</strong> {{ t('groups') }}</div>
           <div class="stat-pill" v-for="(count, quality) in stats.qualities" :key="quality" v-if="count">
             <span class="quality-pill" :class="qualityClass(quality)">{{ quality }}</span>
             <span class="ml-2">{{ count }}</span>
@@ -401,33 +488,43 @@
       <div class="grid grid-cols-[290px_1fr] gap-4 md:gap-5 app-grid">
         <aside class="sidebar-stack space-y-4">
           <section class="glass rounded-[28px] p-4 md:p-5">
-            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">Workspace</div>
+            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">{{ t('workspace') }}</div>
             <div class="space-y-2">
-              <button v-for="tab in tabs" :key="tab.id" class="sidebar-tab" :class="{ active: activeTab === tab.id }" @click="activeTab = tab.id">
+              <button
+                v-for="tab in visibleTabs"
+                :key="tab.id"
+                class="sidebar-tab"
+                :class="{ active: activeTab === tab.id }"
+                @click="activeTab = tab.id"
+              >
                 <span>{{ tab.icon }}</span>
-                <span>{{ tab.label }}</span>
+                <div class="flex flex-col leading-tight">
+                  <span class="text-sm font-semibold">{{ t(tab.labelKey) }}</span>
+                  <span class="text-[0.68rem] font-normal" style="color:var(--text-soft)">{{ t(tab.descKey) }}</span>
+                </div>
               </button>
             </div>
           </section>
 
-          <section class="glass rounded-[28px] p-4 md:p-5" v-if="activeTab === 'library' || activeTab === 'content'">
-            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">Filter set</div>
+          <!-- Filter panel — Library tab only -->
+          <section class="glass rounded-[28px] p-4 md:p-5" v-if="activeTab === 'library'">
+            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">{{ t('filterSet') }}</div>
             <div class="grid gap-3 filters-grid">
               <div>
-                <label class="label">Search</label>
-                <input class="field" v-model.trim="filters.search" placeholder="Name, group, TVG-ID, URL" />
+                <label class="label">{{ t('search') }}</label>
+                <input class="field" v-model.trim="filters.search" :placeholder="t('searchPlaceholder')" />
               </div>
               <div>
-                <label class="label">Group</label>
+                <label class="label">{{ t('group') }}</label>
                 <select class="select" v-model="filters.group">
-                  <option value="">All groups</option>
+                  <option value="">{{ t('allGroups') }}</option>
                   <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
                 </select>
               </div>
               <div>
-                <label class="label">Quality</label>
+                <label class="label">{{ t('quality') }}</label>
                 <select class="select" v-model="filters.quality">
-                  <option value="">All quality</option>
+                  <option value="">{{ t('allQuality') }}</option>
                   <option value="4K">4K</option>
                   <option value="FHD">FHD</option>
                   <option value="HD">HD</option>
@@ -435,20 +532,20 @@
                 </select>
               </div>
               <div>
-                <label class="label">Status</label>
+                <label class="label">{{ t('status') }}</label>
                 <div class="segmented w-full">
-                  <button :class="{ active: filters.status === 'all' }" @click="filters.status = 'all'">All</button>
-                  <button :class="{ active: filters.status === 'active' }" @click="filters.status = 'active'">Active</button>
-                  <button :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'">Inactive</button>
+                  <button :class="{ active: filters.status === 'all' }" @click="filters.status = 'all'">{{ t('all') }}</button>
+                  <button :class="{ active: filters.status === 'active' }" @click="filters.status = 'active'">{{ t('active') }}</button>
+                  <button :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'">{{ t('inactive') }}</button>
                 </div>
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="label">Country</label>
+                  <label class="label">{{ t('country') }}</label>
                   <input class="field" v-model.trim="filters.country" placeholder="SK, CZ..." />
                 </div>
                 <div>
-                  <label class="label">Per page</label>
+                  <label class="label">{{ t('perPage') }}</label>
                   <select class="select" v-model.number="pagination.limit">
                     <option :value="50">50</option>
                     <option :value="100">100</option>
@@ -457,41 +554,56 @@
                   </select>
                 </div>
               </div>
-              <button class="btn btn-ghost w-full" @click="resetFilters">Reset filters</button>
+              <button class="btn btn-ghost w-full" @click="resetFilters">{{ t('resetFilters') }}</button>
             </div>
           </section>
 
-          <section class="glass rounded-[28px] p-4 md:p-5" v-if="activeTab === 'design' || activeTab === 'platforms'">
-            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">Platform prep</div>
-            <div class="space-y-3 text-sm muted">
-              <div class="section-card" style="background:var(--surface-strong); border:1px solid var(--border);">
-                <strong class="block text-[var(--text)] text-base mb-1">Netlify ready</strong>
-                SPA fallback, cache headers, PWA manifest a Service Worker sú už zapojené.
+          <!-- Design sidebar info -->
+          <section class="glass rounded-[28px] p-4 md:p-5" v-if="activeTab === 'design'">
+            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">{{ t('designInfo') }}</div>
+            <div class="space-y-2 text-sm muted">
+              <p>{{ t('designInfoDesc') }}</p>
+            </div>
+          </section>
+
+          <!-- Content sidebar quick-stats -->
+          <section class="glass rounded-[28px] p-4 md:p-5" v-if="activeTab === 'content'">
+            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">{{ t('quickStats') }}</div>
+            <div class="space-y-2">
+              <div class="design-row">
+                <span class="text-sm muted">{{ t('totalChannels') }}</span>
+                <strong>{{ stats.total }}</strong>
               </div>
-              <div class="section-card" style="background:var(--surface-strong); border:1px solid var(--border);">
-                <strong class="block text-[var(--text)] text-base mb-1">Windows ready</strong>
-                Electron wrapper je pripravený na build do desktop aplikácie.
+              <div class="design-row">
+                <span class="text-sm muted">{{ t('activeChannels') }}</span>
+                <strong style="color:var(--success)">{{ stats.active }}</strong>
               </div>
-              <div class="section-card" style="background:var(--surface-strong); border:1px solid var(--border);">
-                <strong class="block text-[var(--text)] text-base mb-1">Android ready</strong>
-                Capacitor config je pripravený na otvorenie v Android Studio.
+              <div class="design-row">
+                <span class="text-sm muted">{{ t('groups') }}</span>
+                <strong>{{ stats.groups }}</strong>
+              </div>
+              <div class="design-row" v-for="(count, quality) in stats.qualities" :key="quality" v-if="count">
+                <span class="quality-pill" :class="qualityClass(quality)">{{ quality }}</span>
+                <strong>{{ count }}</strong>
               </div>
             </div>
           </section>
         </aside>
 
         <main class="content-stack space-y-4 md:space-y-5">
-          <section class="glass rounded-[30px] p-4 md:p-5">
+
+          <!-- ══ LIBRARY TAB ══ Browse & filter channels -->
+          <section v-if="activeTab === 'library'" class="glass rounded-[30px] p-4 md:p-5">
             <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
               <div>
-                <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">Channel library</div>
-                <h2 class="text-[1.25rem] md:text-[1.45rem] tracking-[-0.03em] font-bold m-0">Curated playlist workspace</h2>
+                <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">{{ t('tabLibrary') }}</div>
+                <h2 class="text-[1.25rem] md:text-[1.45rem] tracking-[-0.03em] font-bold m-0">{{ t('libraryHeading') }}</h2>
               </div>
               <div class="segmented">
-                <button :class="{ active: sort.by === 'name' }" @click="setSort('name')">Sort name</button>
-                <button :class="{ active: sort.by === 'group' }" @click="setSort('group')">Sort group</button>
-                <button :class="{ active: sort.by === 'quality' }" @click="setSort('quality')">Sort quality</button>
-                <button :class="{ active: sort.by === 'country' }" @click="setSort('country')">Sort country</button>
+                <button :class="{ active: sort.by === 'name' }" @click="setSort('name')">{{ t('sortName') }}</button>
+                <button :class="{ active: sort.by === 'group' }" @click="setSort('group')">{{ t('sortGroup') }}</button>
+                <button :class="{ active: sort.by === 'quality' }" @click="setSort('quality')">{{ t('sortQuality') }}</button>
+                <button :class="{ active: sort.by === 'country' }" @click="setSort('country')">{{ t('sortCountry') }}</button>
               </div>
             </div>
 
@@ -500,15 +612,15 @@
                 <thead>
                   <tr>
                     <th class="w-14">#</th>
-                    <th class="w-16">Logo</th>
-                    <th>Name</th>
-                    <th class="w-[160px]">Group</th>
-                    <th class="w-[110px]">Quality</th>
+                    <th class="w-16">{{ t('logo') }}</th>
+                    <th>{{ t('name') }}</th>
+                    <th class="w-[160px]">{{ t('group') }}</th>
+                    <th class="w-[110px]">{{ t('quality') }}</th>
                     <th class="w-[180px]">TVG-ID</th>
-                    <th class="w-[90px]">Country</th>
+                    <th class="w-[90px]">{{ t('country') }}</th>
                     <th>URL</th>
-                    <th class="w-[110px] text-center">Status</th>
-                    <th class="w-[170px] text-right">Actions</th>
+                    <th class="w-[110px] text-center">{{ t('status') }}</th>
+                    <th class="w-[170px] text-right">{{ t('actions') }}</th>
                   </tr>
                 </thead>
                 <tbody v-if="paginatedChannels.length">
@@ -519,8 +631,8 @@
                       <div v-else class="mini-logo flex items-center justify-center">📺</div>
                     </td>
                     <td>
-                      <div class="font-semibold">{{ channel.name || 'Untitled channel' }}</div>
-                      <div class="text-xs muted">{{ channel.tvg_name || 'No TVG name' }}</div>
+                      <div class="font-semibold">{{ channel.name || t('untitled') }}</div>
+                      <div class="text-xs muted">{{ channel.tvg_name || t('noTvgName') }}</div>
                     </td>
                     <td><span class="muted">{{ channel.group_title || '—' }}</span></td>
                     <td>
@@ -532,13 +644,13 @@
                     <td class="mono text-xs muted max-w-[280px] truncate">{{ channel.url }}</td>
                     <td class="text-center">
                       <button class="btn btn-ghost !py-2 !px-3" @click="toggleChannel(channel)">
-                        <span :style="{ color: channel.is_active ? 'var(--success)' : 'var(--text-soft)' }">{{ channel.is_active ? '● Active' : '○ Off' }}</span>
+                        <span :style="{ color: channel.is_active ? 'var(--success)' : 'var(--text-soft)' }">{{ channel.is_active ? '● ' + t('activeLabel') : '○ ' + t('offLabel') }}</span>
                       </button>
                     </td>
                     <td>
                       <div class="flex gap-2 justify-end">
-                        <button class="btn btn-secondary !py-2 !px-3" @click="editChannel(channel)">Edit</button>
-                        <button class="btn btn-danger !py-2 !px-3" @click="removeChannel(channel.id)">Delete</button>
+                        <button class="btn btn-secondary !py-2 !px-3" @click="editChannel(channel)">{{ t('edit') }}</button>
+                        <button class="btn btn-danger !py-2 !px-3" @click="removeChannel(channel.id)">{{ t('delete') }}</button>
                       </div>
                     </td>
                   </tr>
@@ -548,8 +660,8 @@
                     <td colspan="10">
                       <div class="empty-state">
                         <div style="font-size:3rem; margin-bottom: .8rem;">📺</div>
-                        <div class="text-lg font-semibold mb-1" style="color:var(--text)">No channels in library</div>
-                        <div>Import an M3U, TXT or XSPF file to start building your playlist.</div>
+                        <div class="text-lg font-semibold mb-1" style="color:var(--text)">{{ t('emptyLibraryTitle') }}</div>
+                        <div>{{ t('emptyLibraryDesc') }}</div>
                       </div>
                     </td>
                   </tr>
@@ -558,14 +670,200 @@
             </div>
 
             <div class="flex flex-wrap gap-3 items-center justify-between mt-4">
-              <div class="muted text-sm">Showing <strong>{{ paginatedChannels.length }}</strong> of <strong>{{ filteredChannels.length }}</strong> filtered channels.</div>
+              <div class="muted text-sm">{{ t('showing') }} <strong>{{ paginatedChannels.length }}</strong> {{ t('of') }} <strong>{{ filteredChannels.length }}</strong> {{ t('filteredChannels') }}.</div>
               <div class="flex items-center gap-2">
-                <button class="btn btn-secondary !py-2 !px-4" @click="prevPage" :disabled="pagination.page === 1">Previous</button>
-                <div class="stat-pill">Page {{ pagination.page }} / {{ totalPages }}</div>
-                <button class="btn btn-secondary !py-2 !px-4" @click="nextPage" :disabled="pagination.page >= totalPages">Next</button>
+                <button class="btn btn-secondary !py-2 !px-4" @click="prevPage" :disabled="pagination.page === 1">{{ t('previous') }}</button>
+                <div class="stat-pill">{{ t('page') }} {{ pagination.page }} / {{ totalPages }}</div>
+                <button class="btn btn-secondary !py-2 !px-4" @click="nextPage" :disabled="pagination.page >= totalPages">{{ t('next') }}</button>
               </div>
             </div>
           </section>
+
+          <!-- ══ CONTENT TAB ══ Bulk editor / Groups / Stats -->
+          <template v-if="activeTab === 'content'">
+            <!-- Bulk actions -->
+            <section class="glass rounded-[30px] p-4 md:p-5">
+              <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">{{ t('tabContent') }}</div>
+              <h2 class="text-[1.25rem] md:text-[1.45rem] tracking-[-0.03em] font-bold mb-4">{{ t('contentHeading') }}</h2>
+
+              <div class="grid md:grid-cols-3 gap-3 mb-5">
+                <button class="btn btn-secondary w-full" @click="bulkActivateAll" :disabled="stats.total === 0">
+                  ✓ {{ t('activateAll') }}
+                </button>
+                <button class="btn btn-secondary w-full" @click="bulkDeactivateAll" :disabled="stats.total === 0">
+                  ✗ {{ t('deactivateAll') }}
+                </button>
+                <button class="btn btn-danger w-full" @click="clearAll" :disabled="stats.total === 0">
+                  🗑 {{ t('clearAll') }}
+                </button>
+              </div>
+
+              <!-- Bulk search & group reassign -->
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label class="label">{{ t('bulkSearch') }}</label>
+                  <input class="field" v-model.trim="bulkSearch" :placeholder="t('bulkSearchPlaceholder')" />
+                </div>
+                <div>
+                  <label class="label">{{ t('bulkAssignGroup') }}</label>
+                  <div class="flex gap-2">
+                    <input class="field" v-model.trim="bulkNewGroup" :placeholder="t('groupNamePlaceholder')" />
+                    <button class="btn btn-primary" @click="bulkAssignGroup" :disabled="!bulkSearch || !bulkNewGroup" style="flex-shrink:0">{{ t('apply') }}</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Groups overview -->
+            <section class="glass rounded-[30px] p-4 md:p-5">
+              <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">{{ t('groupsOverview') }}</div>
+              <h3 class="text-[1.1rem] tracking-[-0.03em] font-bold mb-4">{{ t('groupsHeading') }}</h3>
+
+              <div v-if="groupOptions.length === 0" class="empty-state" style="padding:2rem 1rem">
+                <div style="font-size:2rem; margin-bottom:.5rem">📂</div>
+                <div>{{ t('noGroups') }}</div>
+              </div>
+              <div v-else class="space-y-1">
+                <div v-for="g in groupOptions" :key="g" class="group-item">
+                  <div class="flex items-center gap-3">
+                    <span style="font-size:1.1rem">📁</span>
+                    <span class="font-semibold">{{ g }}</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span class="stat-pill text-xs">{{ groupCount(g) }} {{ t('channels') }}</span>
+                    <span class="stat-pill text-xs" style="color:var(--success)">{{ groupActiveCount(g) }} {{ t('active') }}</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Playlist stats -->
+            <section class="glass rounded-[30px] p-4 md:p-5">
+              <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">{{ t('playlistStats') }}</div>
+              <h3 class="text-[1.1rem] tracking-[-0.03em] font-bold mb-4">{{ t('statsHeading') }}</h3>
+
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="section-card text-center" style="background:var(--surface-strong); border:1px solid var(--border)">
+                  <div class="text-[2rem] font-extrabold" style="color:var(--primary)">{{ stats.total }}</div>
+                  <div class="text-xs muted mt-1">{{ t('totalChannels') }}</div>
+                </div>
+                <div class="section-card text-center" style="background:var(--surface-strong); border:1px solid var(--border)">
+                  <div class="text-[2rem] font-extrabold" style="color:var(--success)">{{ stats.active }}</div>
+                  <div class="text-xs muted mt-1">{{ t('activeChannels') }}</div>
+                </div>
+                <div class="section-card text-center" style="background:var(--surface-strong); border:1px solid var(--border)">
+                  <div class="text-[2rem] font-extrabold">{{ stats.total - stats.active }}</div>
+                  <div class="text-xs muted mt-1">{{ t('inactiveChannels') }}</div>
+                </div>
+                <div class="section-card text-center" style="background:var(--surface-strong); border:1px solid var(--border)">
+                  <div class="text-[2rem] font-extrabold">{{ stats.groups }}</div>
+                  <div class="text-xs muted mt-1">{{ t('totalGroups') }}</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                <div v-for="(count, quality) in stats.qualities" :key="quality" class="section-card text-center" style="background:var(--surface-strong); border:1px solid var(--border)">
+                  <div class="mb-1"><span class="quality-pill" :class="qualityClass(quality)">{{ quality }}</span></div>
+                  <div class="text-[1.5rem] font-bold">{{ count }}</div>
+                  <div class="text-xs muted">{{ t('channels') }}</div>
+                </div>
+              </div>
+            </section>
+          </template>
+
+          <!-- ══ DESIGN TAB ══ Theme / Colors / Fonts / Export -->
+          <template v-if="activeTab === 'design'">
+            <!-- Theme -->
+            <section class="glass rounded-[30px] p-4 md:p-5">
+              <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">{{ t('tabDesign') }}</div>
+              <h2 class="text-[1.25rem] md:text-[1.45rem] tracking-[-0.03em] font-bold mb-4">{{ t('designHeading') }}</h2>
+
+              <div class="design-row">
+                <div>
+                  <div class="font-semibold text-sm">{{ t('appTheme') }}</div>
+                  <div class="text-xs muted mt-0.5">{{ t('appThemeDesc') }}</div>
+                </div>
+                <div class="segmented">
+                  <button :class="{ active: theme === 'light' }" @click="theme = 'light'">☀︎ {{ t('light') }}</button>
+                  <button :class="{ active: theme === 'dark' }" @click="theme = 'dark'">☾ {{ t('dark') }}</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Accent color -->
+            <section class="glass rounded-[30px] p-4 md:p-5">
+              <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">{{ t('accentColor') }}</div>
+              <div class="design-row">
+                <div>
+                  <div class="font-semibold text-sm">{{ t('primaryAccent') }}</div>
+                  <div class="text-xs muted mt-0.5">{{ t('primaryAccentDesc') }}</div>
+                </div>
+                <div class="color-swatches">
+                  <button
+                    v-for="swatch in accentSwatches"
+                    :key="swatch.value"
+                    class="color-swatch"
+                    :class="{ selected: accentColor === swatch.value }"
+                    :style="{ background: swatch.value }"
+                    :title="swatch.label"
+                    :aria-label="swatch.label"
+                    @click="setAccentColor(swatch.value)"
+                  ></button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Typography -->
+            <section class="glass rounded-[30px] p-4 md:p-5">
+              <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">{{ t('typography') }}</div>
+              <div class="design-row">
+                <div>
+                  <div class="font-semibold text-sm">{{ t('fontFamily') }}</div>
+                  <div class="text-xs muted mt-0.5">Inter — system-ui</div>
+                </div>
+                <div class="flex gap-2">
+                  <div class="stat-pill text-xs">Regular 400</div>
+                  <div class="stat-pill text-xs">Semibold 600</div>
+                  <div class="stat-pill text-xs">Bold 700</div>
+                </div>
+              </div>
+              <div class="design-row mt-2">
+                <div>
+                  <div class="font-semibold text-sm">{{ t('uiScale') }}</div>
+                  <div class="text-xs muted mt-0.5">{{ t('uiScaleDesc') }}</div>
+                </div>
+                <div class="segmented">
+                  <button :class="{ active: uiScale === 'compact' }" @click="uiScale = 'compact'">{{ t('compact') }}</button>
+                  <button :class="{ active: uiScale === 'default' }" @click="uiScale = 'default'">{{ t('default') }}</button>
+                  <button :class="{ active: uiScale === 'large' }" @click="uiScale = 'large'">{{ t('large') }}</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Export settings -->
+            <section class="glass rounded-[30px] p-4 md:p-5">
+              <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">{{ t('exportSettings') }}</div>
+              <div class="design-row">
+                <div>
+                  <div class="font-semibold text-sm">{{ t('exportActiveOnly') }}</div>
+                  <div class="text-xs muted mt-0.5">{{ t('exportActiveOnlyDesc') }}</div>
+                </div>
+                <div class="segmented">
+                  <button :class="{ active: exportActiveOnly }" @click="exportActiveOnly = true">{{ t('yes') }}</button>
+                  <button :class="{ active: !exportActiveOnly }" @click="exportActiveOnly = false">{{ t('no') }}</button>
+                </div>
+              </div>
+              <div class="grid md:grid-cols-2 gap-3 mt-3">
+                <button class="btn btn-primary w-full" @click="exportPlaylist('m3u')" :disabled="stats.total === 0">
+                  ⬇ {{ t('exportM3U') }}
+                </button>
+                <button class="btn btn-secondary w-full" @click="exportPlaylist('xspf')" :disabled="stats.total === 0">
+                  ⬇ {{ t('exportXSPF') }}
+                </button>
+              </div>
+            </section>
+          </template>
+
         </main>
       </div>
     </div>
@@ -576,29 +874,29 @@
       <div class="modal-card glass-strong">
         <div class="flex items-center justify-between gap-3 mb-4">
           <div>
-            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">Editor</div>
-            <h3 class="text-[1.35rem] tracking-[-0.03em] font-bold m-0">{{ modal.mode === 'create' ? 'Add channel' : 'Edit channel' }}</h3>
+            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">{{ t('editor') }}</div>
+            <h3 class="text-[1.35rem] tracking-[-0.03em] font-bold m-0">{{ modal.mode === 'create' ? t('addChannel') : t('editChannel') }}</h3>
           </div>
-          <button class="btn btn-ghost !px-4" @click="closeModal">Close</button>
+          <button class="btn btn-ghost !px-4" @click="closeModal">{{ t('close') }}</button>
         </div>
 
         <div class="grid md:grid-cols-2 gap-4">
           <div>
-            <label class="label">Name</label>
-            <input class="field" v-model.trim="form.name" placeholder="Channel name" />
+            <label class="label">{{ t('name') }}</label>
+            <input class="field" v-model.trim="form.name" :placeholder="t('channelNamePlaceholder')" />
           </div>
           <div>
-            <label class="label">Stream URL</label>
+            <label class="label">{{ t('streamUrl') }}</label>
             <input class="field" v-model.trim="form.url" placeholder="https://..." />
           </div>
           <div>
-            <label class="label">Group</label>
-            <input class="field" v-model.trim="form.group_title" placeholder="Movies, Sports..." />
+            <label class="label">{{ t('group') }}</label>
+            <input class="field" v-model.trim="form.group_title" :placeholder="t('groupPlaceholder')" />
           </div>
           <div>
-            <label class="label">Quality</label>
+            <label class="label">{{ t('quality') }}</label>
             <select class="select" v-model="form.quality">
-              <option value="">No label</option>
+              <option value="">{{ t('noLabel') }}</option>
               <option value="4K">4K</option>
               <option value="FHD">FHD</option>
               <option value="HD">HD</option>
@@ -610,41 +908,41 @@
             <input class="field mono" v-model.trim="form.tvg_id" placeholder="channel.id" />
           </div>
           <div>
-            <label class="label">TVG name</label>
-            <input class="field" v-model.trim="form.tvg_name" placeholder="Display guide name" />
+            <label class="label">{{ t('tvgName') }}</label>
+            <input class="field" v-model.trim="form.tvg_name" :placeholder="t('tvgNamePlaceholder')" />
           </div>
           <div>
-            <label class="label">Logo URL</label>
+            <label class="label">{{ t('logoUrl') }}</label>
             <input class="field mono" v-model.trim="form.tvg_logo" placeholder="https://.../logo.png" />
           </div>
           <div>
-            <label class="label">Country</label>
+            <label class="label">{{ t('country') }}</label>
             <input class="field" v-model.trim="form.tvg_country" placeholder="SK" />
           </div>
           <div>
-            <label class="label">Language</label>
+            <label class="label">{{ t('language') }}</label>
             <input class="field" v-model.trim="form.tvg_language" placeholder="sk" />
           </div>
           <div>
-            <label class="label">User agent</label>
-            <input class="field" v-model.trim="form.user_agent" placeholder="Optional" />
+            <label class="label">{{ t('userAgent') }}</label>
+            <input class="field" v-model.trim="form.user_agent" :placeholder="t('optional')" />
           </div>
           <div class="md:col-span-2">
-            <label class="label">Referer</label>
-            <input class="field" v-model.trim="form.referer" placeholder="Optional referer" />
+            <label class="label">{{ t('referer') }}</label>
+            <input class="field" v-model.trim="form.referer" :placeholder="t('refererPlaceholder')" />
           </div>
           <div class="md:col-span-2">
-            <label class="label">Playback options</label>
+            <label class="label">{{ t('playbackOptions') }}</label>
             <div class="segmented">
-              <button :class="{ active: form.is_active }" @click="form.is_active = true">Active</button>
-              <button :class="{ active: !form.is_active }" @click="form.is_active = false">Inactive</button>
+              <button :class="{ active: form.is_active }" @click="form.is_active = true">{{ t('active') }}</button>
+              <button :class="{ active: !form.is_active }" @click="form.is_active = false">{{ t('inactive') }}</button>
             </div>
           </div>
         </div>
 
         <div class="flex justify-end gap-2 mt-5">
-          <button class="btn btn-ghost" @click="closeModal">Cancel</button>
-          <button class="btn btn-primary" @click="saveChannel">{{ modal.mode === 'create' ? 'Create channel' : 'Save changes' }}</button>
+          <button class="btn btn-ghost" @click="closeModal">{{ t('cancel') }}</button>
+          <button class="btn btn-primary" @click="saveChannel">{{ modal.mode === 'create' ? t('createChannel') : t('saveChanges') }}</button>
         </div>
       </div>
     </div>
@@ -657,20 +955,332 @@
   <script>
     const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
 
+    // ── Translations ──────────────────────────────────────────────────────────
+    const TRANSLATIONS = {
+      sk: {
+        appSubtitle: 'Statická SPA verzia pripravená pre Netlify, s offline PWA režimom a balením pre Windows aj Android.',
+        languageSwitcher: 'Prepínač jazyka',
+        workspace: 'Pracovný priestor',
+        filterSet: 'Sada filtrov',
+        designInfo: 'Informácie',
+        designInfoDesc: 'Nastavenia dizajnu menia vzhľad aplikácie v reálnom čase.',
+        quickStats: 'Rýchle štatistiky',
+        // Tabs
+        tabLibrary: 'Knižnica',
+        tabLibraryDesc: 'Prehľadávaj a filtruj',
+        tabContent: 'Obsah',
+        tabContentDesc: 'Editor a skupiny',
+        tabDesign: 'Dizajn',
+        tabDesignDesc: 'Téma a nastavenia',
+        tabPlatforms: 'Platformy',
+        tabPlatformsDesc: 'Nasadenie',
+        // Library
+        libraryHeading: 'Kanálová knižnica',
+        sortName: 'Meno',
+        sortGroup: 'Skupina',
+        sortQuality: 'Kvalita',
+        sortCountry: 'Krajina',
+        logo: 'Logo',
+        name: 'Názov',
+        group: 'Skupina',
+        quality: 'Kvalita',
+        country: 'Krajina',
+        status: 'Stav',
+        actions: 'Akcie',
+        activeLabel: 'Aktívny',
+        offLabel: 'Vypnutý',
+        untitled: 'Bez názvu',
+        noTvgName: 'Bez TVG mena',
+        emptyLibraryTitle: 'Knižnica je prázdna',
+        emptyLibraryDesc: 'Importuj M3U, TXT alebo XSPF súbor pre začatie práce s playlistom.',
+        showing: 'Zobrazujem',
+        of: 'z',
+        filteredChannels: 'filtrovaných kanálov',
+        previous: 'Predošlá',
+        next: 'Ďalšia',
+        page: 'Strana',
+        // Content
+        contentHeading: 'Hromadný editor a skupiny',
+        activateAll: 'Aktivovať všetky',
+        deactivateAll: 'Deaktivovať všetky',
+        bulkSearch: 'Hromadné vyhľadávanie',
+        bulkSearchPlaceholder: 'Hľadaj v názvoch kanálov...',
+        bulkAssignGroup: 'Priradiť skupinu',
+        groupNamePlaceholder: 'Nová skupina...',
+        apply: 'Použiť',
+        groupsOverview: 'Skupiny',
+        groupsHeading: 'Prehľad skupín',
+        noGroups: 'Zatiaľ žiadne skupiny. Importuj playlist pre začiatok.',
+        channels: 'kanálov',
+        playlistStats: 'Štatistiky playlistu',
+        statsHeading: 'Prehľad štatistík',
+        totalChannels: 'Kanálov celkom',
+        activeChannels: 'Aktívnych',
+        inactiveChannels: 'Neaktívnych',
+        totalGroups: 'Skupín',
+        // Design
+        designHeading: 'Dizajn a nastavenia',
+        appTheme: 'Téma aplikácie',
+        appThemeDesc: 'Prepínanie medzi svetlým a tmavým režimom.',
+        light: 'Svetlý',
+        dark: 'Tmavý',
+        accentColor: 'Farba akcentu',
+        primaryAccent: 'Primárna farba',
+        primaryAccentDesc: 'Farba tlačidiel a aktívnych prvkov.',
+        typography: 'Typografia',
+        fontFamily: 'Rodina písma',
+        uiScale: 'Mierka UI',
+        uiScaleDesc: 'Hustota rozloženia prvkov.',
+        compact: 'Kompaktné',
+        default: 'Štandard',
+        large: 'Veľké',
+        exportSettings: 'Nastavenia exportu',
+        exportActiveOnly: 'Exportovať iba aktívne',
+        exportActiveOnlyDesc: 'Ak je zapnuté, exportujú sa len aktívne kanály.',
+        yes: 'Áno',
+        no: 'Nie',
+        exportM3U: 'Export M3U',
+        exportXSPF: 'Export XSPF',
+        // Stats bar
+        total: 'celkom',
+        active: 'aktívnych',
+        groups: 'skupín',
+        inactive: 'neaktívnych',
+        // Filters
+        search: 'Hľadať',
+        searchPlaceholder: 'Meno, skupina, TVG-ID, URL',
+        allGroups: 'Všetky skupiny',
+        allQuality: 'Všetky kvality',
+        all: 'Všetky',
+        perPage: 'Na stranu',
+        resetFilters: 'Resetovať filtre',
+        // Buttons
+        importPlaylist: 'Importovať playlist',
+        addChannel: 'Pridať kanál',
+        clearAll: 'Vymazať všetko',
+        switchLight: 'Prepnúť na svetlý režim',
+        switchDark: 'Prepnúť na tmavý režim',
+        // Modal
+        editor: 'Editor',
+        editChannel: 'Upraviť kanál',
+        createChannel: 'Vytvoriť kanál',
+        saveChanges: 'Uložiť zmeny',
+        close: 'Zavrieť',
+        cancel: 'Zrušiť',
+        streamUrl: 'URL streamu',
+        tvgName: 'TVG meno',
+        tvgNamePlaceholder: 'Zobrazené meno v sprievodcovi',
+        logoUrl: 'URL loga',
+        language: 'Jazyk',
+        userAgent: 'User agent',
+        referer: 'Referer',
+        refererPlaceholder: 'Voliteľný referer',
+        playbackOptions: 'Možnosti prehrávania',
+        channelNamePlaceholder: 'Názov kanála',
+        groupPlaceholder: 'Filmy, Šport...',
+        noLabel: 'Bez označenia',
+        optional: 'Voliteľné',
+        // Toasts
+        noChannelsDetected: 'V súbore neboli detekované žiadne kanály.',
+        importedChannels: 'kanálov importovaných.',
+        exportedChannels: 'kanálov exportovaných.',
+        channelCreated: 'Kanál vytvorený.',
+        channelUpdated: 'Kanál aktualizovaný.',
+        channelDeleted: 'Kanál vymazaný.',
+        libraryCleared: 'Knižnica vymazaná.',
+        nameUrlRequired: 'Meno a URL sú povinné.',
+        deleteConfirm: 'Vymazať tento kanál?',
+        clearConfirm: 'Vymazať všetky kanály z knižnice?',
+        bulkApplied: 'Skupina priradená všetkým zodpovedajúcim kanálom.',
+      },
+      en: {
+        appSubtitle: 'Static SPA ready for Netlify, with offline PWA mode and packaging for Windows and Android.',
+        languageSwitcher: 'Language switcher',
+        workspace: 'Workspace',
+        filterSet: 'Filter set',
+        designInfo: 'Info',
+        designInfoDesc: 'Design settings change the app appearance in real time.',
+        quickStats: 'Quick stats',
+        // Tabs
+        tabLibrary: 'Library',
+        tabLibraryDesc: 'Browse & filter',
+        tabContent: 'Content',
+        tabContentDesc: 'Editor & groups',
+        tabDesign: 'Design',
+        tabDesignDesc: 'Theme & settings',
+        tabPlatforms: 'Platforms',
+        tabPlatformsDesc: 'Deploy',
+        // Library
+        libraryHeading: 'Channel library',
+        sortName: 'Sort name',
+        sortGroup: 'Sort group',
+        sortQuality: 'Sort quality',
+        sortCountry: 'Sort country',
+        logo: 'Logo',
+        name: 'Name',
+        group: 'Group',
+        quality: 'Quality',
+        country: 'Country',
+        status: 'Status',
+        actions: 'Actions',
+        activeLabel: 'Active',
+        offLabel: 'Off',
+        untitled: 'Untitled channel',
+        noTvgName: 'No TVG name',
+        emptyLibraryTitle: 'No channels in library',
+        emptyLibraryDesc: 'Import an M3U, TXT or XSPF file to start building your playlist.',
+        showing: 'Showing',
+        of: 'of',
+        filteredChannels: 'filtered channels',
+        previous: 'Previous',
+        next: 'Next',
+        page: 'Page',
+        // Content
+        contentHeading: 'Bulk editor & groups',
+        activateAll: 'Activate all',
+        deactivateAll: 'Deactivate all',
+        bulkSearch: 'Bulk search',
+        bulkSearchPlaceholder: 'Search in channel names...',
+        bulkAssignGroup: 'Assign group',
+        groupNamePlaceholder: 'New group name...',
+        apply: 'Apply',
+        groupsOverview: 'Groups',
+        groupsHeading: 'Groups overview',
+        noGroups: 'No groups yet. Import a playlist to get started.',
+        channels: 'channels',
+        playlistStats: 'Playlist stats',
+        statsHeading: 'Stats overview',
+        totalChannels: 'Total channels',
+        activeChannels: 'Active',
+        inactiveChannels: 'Inactive',
+        totalGroups: 'Groups',
+        // Design
+        designHeading: 'Design & settings',
+        appTheme: 'App theme',
+        appThemeDesc: 'Switch between light and dark mode.',
+        light: 'Light',
+        dark: 'Dark',
+        accentColor: 'Accent color',
+        primaryAccent: 'Primary accent',
+        primaryAccentDesc: 'Color of buttons and active elements.',
+        typography: 'Typography',
+        fontFamily: 'Font family',
+        uiScale: 'UI scale',
+        uiScaleDesc: 'Density of layout elements.',
+        compact: 'Compact',
+        default: 'Default',
+        large: 'Large',
+        exportSettings: 'Export settings',
+        exportActiveOnly: 'Export active only',
+        exportActiveOnlyDesc: 'When on, only active channels are exported.',
+        yes: 'Yes',
+        no: 'No',
+        exportM3U: 'Export M3U',
+        exportXSPF: 'Export XSPF',
+        // Stats bar
+        total: 'total',
+        active: 'active',
+        groups: 'groups',
+        inactive: 'inactive',
+        // Filters
+        search: 'Search',
+        searchPlaceholder: 'Name, group, TVG-ID, URL',
+        allGroups: 'All groups',
+        allQuality: 'All quality',
+        all: 'All',
+        perPage: 'Per page',
+        resetFilters: 'Reset filters',
+        // Buttons
+        importPlaylist: 'Import playlist',
+        addChannel: 'Add channel',
+        clearAll: 'Clear all',
+        switchLight: 'Switch to light mode',
+        switchDark: 'Switch to dark mode',
+        // Modal
+        editor: 'Editor',
+        editChannel: 'Edit channel',
+        createChannel: 'Create channel',
+        saveChanges: 'Save changes',
+        close: 'Close',
+        cancel: 'Cancel',
+        streamUrl: 'Stream URL',
+        tvgName: 'TVG name',
+        tvgNamePlaceholder: 'Display guide name',
+        logoUrl: 'Logo URL',
+        language: 'Language',
+        userAgent: 'User agent',
+        referer: 'Referer',
+        refererPlaceholder: 'Optional referer',
+        playbackOptions: 'Playback options',
+        channelNamePlaceholder: 'Channel name',
+        groupPlaceholder: 'Movies, Sports...',
+        noLabel: 'No label',
+        optional: 'Optional',
+        // Toasts
+        noChannelsDetected: 'No channels detected in file.',
+        importedChannels: 'channels imported.',
+        exportedChannels: 'channels exported.',
+        channelCreated: 'Channel created.',
+        channelUpdated: 'Channel updated.',
+        channelDeleted: 'Channel deleted.',
+        libraryCleared: 'Library cleared.',
+        nameUrlRequired: 'Name and URL are required.',
+        deleteConfirm: 'Delete this channel?',
+        clearConfirm: 'Delete all channels from local library?',
+        bulkApplied: 'Group assigned to all matching channels.',
+      },
+    };
+
     createApp({
       setup() {
         const STORAGE_KEY = 'iptv-playlistgen-v2';
         const THEME_KEY = 'iptv-playlistgen-theme';
+        const LANG_KEY = 'iptv-playlistgen-lang';
 
         const fileInput = ref(null);
         const theme = ref(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+        const lang = ref(localStorage.getItem(LANG_KEY) || 'sk');
         const activeTab = ref('library');
-        const tabs = [
-          { id: 'library', label: 'Library', icon: '⌘' },
-          { id: 'content', label: 'Content', icon: '▣' },
-          { id: 'design', label: 'Design', icon: '✦' },
-          { id: 'platforms', label: 'Platforms', icon: '◉' },
+        const uiScale = ref('default');
+        const exportActiveOnly = ref(true);
+        const accentColor = ref('#0071e3');
+        const bulkSearch = ref('');
+        const bulkNewGroup = ref('');
+
+        // Accent swatches
+        const accentSwatches = [
+          { label: 'Blue', value: '#0071e3' },
+          { label: 'Teal', value: '#01696f' },
+          { label: 'Purple', value: '#7a39bb' },
+          { label: 'Orange', value: '#da7101' },
+          { label: 'Green', value: '#17a34a' },
+          { label: 'Red', value: '#d92d20' },
         ];
+
+        // Tab definitions — Platforms has visible: false → hidden from UI
+        const tabs = [
+          { id: 'library',   labelKey: 'tabLibrary',   descKey: 'tabLibraryDesc',   icon: '⌘', visible: true  },
+          { id: 'content',   labelKey: 'tabContent',   descKey: 'tabContentDesc',   icon: '▣', visible: true  },
+          { id: 'design',    labelKey: 'tabDesign',    descKey: 'tabDesignDesc',    icon: '✦', visible: true  },
+          { id: 'platforms', labelKey: 'tabPlatforms', descKey: 'tabPlatformsDesc', icon: '◉', visible: false },
+        ];
+
+        const visibleTabs = computed(() => tabs.filter(tab => tab.visible));
+
+        // i18n helper
+        function t(key) {
+          return (TRANSLATIONS[lang.value] || TRANSLATIONS.sk)[key] ?? key;
+        }
+
+        function setLang(value) {
+          lang.value = value;
+          document.documentElement.lang = value;
+        }
+
+        function setAccentColor(value) {
+          accentColor.value = value;
+          document.documentElement.style.setProperty('--primary', value);
+        }
 
         const channels = ref([]);
         const selectedId = ref(null);
@@ -683,39 +1293,20 @@
 
         function createEmptyChannel() {
           return {
-            id: null,
-            name: '',
-            url: '',
-            tvg_id: '',
-            tvg_name: '',
-            tvg_logo: '',
-            tvg_country: '',
-            tvg_language: '',
-            group_title: '',
-            quality: '',
-            user_agent: '',
-            referer: '',
-            catchup: '',
-            catchup_source: '',
-            is_active: true,
+            id: null, name: '', url: '', tvg_id: '', tvg_name: '', tvg_logo: '',
+            tvg_country: '', tvg_language: '', group_title: '', quality: '',
+            user_agent: '', referer: '', catchup: '', catchup_source: '', is_active: true,
           };
         }
 
-        function qualityClass(quality) {
-          return quality ? `q-${quality}` : '';
-        }
+        function qualityClass(quality) { return quality ? `q-${quality}` : ''; }
 
-        function saveToStorage() {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value));
-        }
+        function saveToStorage() { localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value)); }
 
         function loadFromStorage() {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (!raw) return;
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) channels.value = parsed;
-          } catch {}
+          try { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) channels.value = parsed; } catch {}
         }
 
         function showToast(message) {
@@ -734,9 +1325,7 @@
           return '';
         }
 
-        function triggerImport() {
-          fileInput.value?.click();
-        }
+        function triggerImport() { fileInput.value?.click(); }
 
         async function handleImportFile(event) {
           const file = event.target.files?.[0];
@@ -745,31 +1334,22 @@
           const ext = (file.name.split('.').pop() || '').toLowerCase();
           let imported = [];
 
-          if (['m3u', 'm3u8', 'txt'].includes(ext)) {
-            imported = parseM3U(text);
-          } else if (ext === 'xspf') {
-            imported = parseXSPF(text);
-          } else {
-            imported = parseM3U(text);
-          }
+          if (['m3u', 'm3u8', 'txt'].includes(ext)) imported = parseM3U(text);
+          else if (ext === 'xspf') imported = parseXSPF(text);
+          else imported = parseM3U(text);
 
-          if (!imported.length) {
-            showToast('No channels detected in file.');
-            event.target.value = '';
-            return;
-          }
+          if (!imported.length) { showToast(t('noChannelsDetected')); event.target.value = ''; return; }
 
           const now = Date.now();
           channels.value = imported.map((item, index) => ({
-            ...createEmptyChannel(),
-            ...item,
+            ...createEmptyChannel(), ...item,
             id: `${now}-${index}`,
             quality: normalizeQuality(item.quality, item.name),
             is_active: item.is_active !== false,
           }));
           saveToStorage();
           pagination.page = 1;
-          showToast(`Imported ${channels.value.length} channels.`);
+          showToast(`${channels.value.length} ${t('importedChannels')}`);
           event.target.value = '';
         }
 
@@ -777,17 +1357,13 @@
           const lines = text.replace(/\r/g, '').split('\n');
           const items = [];
           let current = null;
-
           const parseAttrs = (line) => {
             const attrs = {};
             const attrRegex = /(\w[\w-]*)="([^"]*)"/g;
             let match;
-            while ((match = attrRegex.exec(line))) {
-              attrs[match[1]] = match[2];
-            }
+            while ((match = attrRegex.exec(line))) attrs[match[1]] = match[2];
             return attrs;
           };
-
           for (const lineRaw of lines) {
             const line = lineRaw.trim();
             if (!line) continue;
@@ -795,13 +1371,9 @@
               const attrs = parseAttrs(line);
               const name = line.includes(',') ? line.split(',').slice(1).join(',').trim() : '';
               current = {
-                name,
-                tvg_id: attrs['tvg-id'] || '',
-                tvg_name: attrs['tvg-name'] || '',
-                tvg_logo: attrs['tvg-logo'] || '',
-                tvg_country: attrs['tvg-country'] || '',
-                tvg_language: attrs['tvg-language'] || '',
-                group_title: attrs['group-title'] || '',
+                name, tvg_id: attrs['tvg-id'] || '', tvg_name: attrs['tvg-name'] || '',
+                tvg_logo: attrs['tvg-logo'] || '', tvg_country: attrs['tvg-country'] || '',
+                tvg_language: attrs['tvg-language'] || '', group_title: attrs['group-title'] || '',
                 quality: attrs['quality'] || '',
               };
             } else if (line.startsWith('#EXTVLCOPT')) {
@@ -812,10 +1384,8 @@
             } else if (line.startsWith('#')) {
               continue;
             } else {
-              if (current) {
-                items.push({ ...current, url: line });
-                current = null;
-              } else {
+              if (current) { items.push({ ...current, url: line }); current = null; }
+              else {
                 const parts = line.split('|');
                 if (parts.length === 2) items.push({ name: parts[0].trim(), url: parts[1].trim() });
                 else items.push({ name: line, url: line });
@@ -828,8 +1398,7 @@
         function parseXSPF(text) {
           const parser = new DOMParser();
           const xml = parser.parseFromString(text, 'application/xml');
-          const tracks = Array.from(xml.querySelectorAll('track'));
-          return tracks.map((track) => ({
+          return Array.from(xml.querySelectorAll('track')).map(track => ({
             name: track.querySelector('title')?.textContent?.trim() || '',
             url: track.querySelector('location')?.textContent?.trim() || '',
             tvg_logo: track.querySelector('image')?.textContent?.trim() || '',
@@ -839,18 +1408,16 @@
 
         function exportPlaylist(format = 'm3u') {
           if (!channels.value.length) return;
-          const active = channels.value.filter(item => item.is_active);
-          const source = active.length ? active : channels.value;
-          let content = '';
-          let mime = 'text/plain;charset=utf-8';
-          let filename = 'iptv-playlist';
+          const source = exportActiveOnly.value ? channels.value.filter(item => item.is_active) : channels.value;
+          const useChannels = source.length ? source : channels.value;
+          let content = '', filename = 'iptv-playlist';
 
           if (format === 'xspf') {
             filename += '.xspf';
-            content = `<?xml version="1.0" encoding="UTF-8"?>\n<playlist version="1" xmlns="http://xspf.org/ns/0/">\n  <trackList>\n${source.map(item => `    <track>\n      <title>${escapeXml(item.name || '')}</title>\n      <location>${escapeXml(item.url || '')}</location>\n      <image>${escapeXml(item.tvg_logo || '')}</image>\n      <annotation>${escapeXml(item.group_title || '')}</annotation>\n    </track>`).join('\n')}\n  </trackList>\n</playlist>`;
+            content = `<?xml version="1.0" encoding="UTF-8"?>\n<playlist version="1" xmlns="http://xspf.org/ns/0/">\n  <trackList>\n${useChannels.map(item => `    <track>\n      <title>${escapeXml(item.name || '')}</title>\n      <location>${escapeXml(item.url || '')}</location>\n      <image>${escapeXml(item.tvg_logo || '')}</image>\n      <annotation>${escapeXml(item.group_title || '')}</annotation>\n    </track>`).join('\n')}\n  </trackList>\n</playlist>`;
           } else {
             filename += '.m3u';
-            content = '#EXTM3U\n' + source.map(item => {
+            content = '#EXTM3U\n' + useChannels.map(item => {
               const attrs = [
                 item.tvg_id ? `tvg-id="${item.tvg_id}"` : '',
                 item.tvg_name ? `tvg-name="${item.tvg_name}"` : '',
@@ -868,23 +1435,18 @@
             }).join('\n');
           }
 
-          const blob = new Blob([content], { type: mime });
+          const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          a.click();
+          a.href = url; a.download = filename; a.click();
           URL.revokeObjectURL(url);
-          showToast(`Exported ${source.length} channels.`);
+          showToast(`${useChannels.length} ${t('exportedChannels')}`);
         }
 
         function escapeXml(value) {
           return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&apos;');
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
         }
 
         const groupOptions = computed(() => {
@@ -892,20 +1454,18 @@
           return Array.from(groups).sort((a, b) => a.localeCompare(b));
         });
 
+        function groupCount(g) { return channels.value.filter(ch => ch.group_title === g).length; }
+        function groupActiveCount(g) { return channels.value.filter(ch => ch.group_title === g && ch.is_active).length; }
+
         const filteredChannels = computed(() => {
           let result = [...channels.value];
           const q = filters.search.trim().toLowerCase();
-          if (q) {
-            result = result.filter(item => [item.name, item.group_title, item.tvg_id, item.url, item.tvg_name]
-              .filter(Boolean)
-              .some(field => field.toLowerCase().includes(q)));
-          }
+          if (q) result = result.filter(item => [item.name, item.group_title, item.tvg_id, item.url, item.tvg_name].filter(Boolean).some(f => f.toLowerCase().includes(q)));
           if (filters.group) result = result.filter(item => item.group_title === filters.group);
           if (filters.quality) result = result.filter(item => item.quality === filters.quality);
           if (filters.status === 'active') result = result.filter(item => item.is_active);
           if (filters.status === 'inactive') result = result.filter(item => !item.is_active);
           if (filters.country) result = result.filter(item => (item.tvg_country || '').toLowerCase().includes(filters.country.toLowerCase()));
-
           result.sort((a, b) => {
             const key = sort.by;
             const av = String(a[key === 'group' ? 'group_title' : key] || '').toLowerCase();
@@ -923,9 +1483,7 @@
 
         const stats = computed(() => {
           const qualities = { '4K': 0, 'FHD': 0, 'HD': 0, 'SD': 0 };
-          channels.value.forEach(item => {
-            if (qualities[item.quality] !== undefined) qualities[item.quality] += 1;
-          });
+          channels.value.forEach(item => { if (qualities[item.quality] !== undefined) qualities[item.quality] += 1; });
           return {
             total: channels.value.length,
             active: channels.value.filter(item => item.is_active).length,
@@ -935,12 +1493,8 @@
         });
 
         function resetFilters() {
-          filters.search = '';
-          filters.group = '';
-          filters.quality = '';
-          filters.status = 'all';
-          filters.country = '';
-          pagination.page = 1;
+          filters.search = ''; filters.group = ''; filters.quality = '';
+          filters.status = 'all'; filters.country = ''; pagination.page = 1;
         }
 
         function setSort(by) {
@@ -948,129 +1502,101 @@
           else { sort.by = by; sort.dir = 'asc'; }
         }
 
-        function prevPage() {
-          if (pagination.page > 1) pagination.page -= 1;
+        function prevPage() { if (pagination.page > 1) pagination.page -= 1; }
+        function nextPage() { if (pagination.page < totalPages.value) pagination.page += 1; }
+
+        function bulkActivateAll() {
+          channels.value.forEach(ch => ch.is_active = true);
+          saveToStorage();
+          showToast(t('activateAll'));
         }
 
-        function nextPage() {
-          if (pagination.page < totalPages.value) pagination.page += 1;
+        function bulkDeactivateAll() {
+          channels.value.forEach(ch => ch.is_active = false);
+          saveToStorage();
+          showToast(t('deactivateAll'));
         }
 
-        function openAddChannel() {
-          Object.assign(form, createEmptyChannel());
-          modal.mode = 'create';
-          modal.open = true;
+        function bulkAssignGroup() {
+          if (!bulkSearch.value || !bulkNewGroup.value) return;
+          const q = bulkSearch.value.trim().toLowerCase();
+          let count = 0;
+          channels.value.forEach(ch => {
+            if ((ch.name || '').toLowerCase().includes(q)) { ch.group_title = bulkNewGroup.value.trim(); count++; }
+          });
+          saveToStorage();
+          showToast(`${t('bulkApplied')} (${count})`);
         }
+
+        function openAddChannel() { Object.assign(form, createEmptyChannel()); modal.mode = 'create'; modal.open = true; }
 
         function editChannel(channel) {
           Object.assign(form, JSON.parse(JSON.stringify(channel)));
-          selectedId.value = channel.id;
-          modal.mode = 'edit';
-          modal.open = true;
+          selectedId.value = channel.id; modal.mode = 'edit'; modal.open = true;
         }
 
-        function closeModal() {
-          modal.open = false;
-        }
+        function closeModal() { modal.open = false; }
 
         function saveChannel() {
-          if (!form.name || !form.url) {
-            showToast('Name and URL are required.');
-            return;
-          }
-
+          if (!form.name || !form.url) { showToast(t('nameUrlRequired')); return; }
           form.quality = normalizeQuality(form.quality, form.name);
           if (modal.mode === 'create') {
             channels.value.unshift({ ...JSON.parse(JSON.stringify(form)), id: `${Date.now()}-${Math.random().toString(16).slice(2)}` });
-            showToast('Channel created.');
+            showToast(t('channelCreated'));
           } else {
             const index = channels.value.findIndex(item => item.id === form.id);
             if (index >= 0) channels.value[index] = { ...JSON.parse(JSON.stringify(form)) };
-            showToast('Channel updated.');
+            showToast(t('channelUpdated'));
           }
-          saveToStorage();
-          modal.open = false;
+          saveToStorage(); modal.open = false;
         }
 
         function removeChannel(id) {
-          if (!confirm('Delete this channel?')) return;
+          if (!confirm(t('deleteConfirm'))) return;
           channels.value = channels.value.filter(item => item.id !== id);
           if (selectedId.value === id) selectedId.value = null;
-          saveToStorage();
-          showToast('Channel deleted.');
+          saveToStorage(); showToast(t('channelDeleted'));
         }
 
-        function toggleChannel(channel) {
-          channel.is_active = !channel.is_active;
-          saveToStorage();
-        }
+        function toggleChannel(channel) { channel.is_active = !channel.is_active; saveToStorage(); }
 
         function clearAll() {
-          if (!confirm('Delete all channels from local library?')) return;
-          channels.value = [];
-          saveToStorage();
-          pagination.page = 1;
-          showToast('Library cleared.');
+          if (!confirm(t('clearConfirm'))) return;
+          channels.value = []; saveToStorage(); pagination.page = 1; showToast(t('libraryCleared'));
         }
 
-        function toggleTheme() {
-          theme.value = theme.value === 'dark' ? 'light' : 'dark';
-        }
+        function toggleTheme() { theme.value = theme.value === 'dark' ? 'light' : 'dark'; }
 
         watch(theme, (value) => {
           document.documentElement.setAttribute('data-theme', value);
           localStorage.setItem(THEME_KEY, value);
         }, { immediate: true });
 
+        watch(lang, (value) => {
+          document.documentElement.lang = value;
+          localStorage.setItem(LANG_KEY, value);
+        }, { immediate: true });
+
         watch([() => filters.search, () => filters.group, () => filters.quality, () => filters.status, () => filters.country, () => pagination.limit], () => {
           pagination.page = 1;
         });
 
-        watch(totalPages, (value) => {
-          if (pagination.page > value) pagination.page = value;
-        });
+        watch(totalPages, (value) => { if (pagination.page > value) pagination.page = value; });
 
         onMounted(() => {
           loadFromStorage();
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').catch(() => {});
-          }
+          if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
         });
 
         return {
-          fileInput,
-          theme,
-          activeTab,
-          tabs,
-          channels,
-          selectedId,
-          filters,
-          sort,
-          pagination,
-          modal,
-          toast,
-          form,
-          groupOptions,
-          filteredChannels,
-          paginatedChannels,
-          totalPages,
-          stats,
-          qualityClass,
-          triggerImport,
-          handleImportFile,
-          exportPlaylist,
-          openAddChannel,
-          editChannel,
-          closeModal,
-          saveChannel,
-          removeChannel,
-          toggleChannel,
-          clearAll,
-          toggleTheme,
-          setSort,
-          resetFilters,
-          prevPage,
-          nextPage,
+          fileInput, theme, lang, activeTab, tabs, visibleTabs, uiScale, exportActiveOnly,
+          accentColor, accentSwatches, bulkSearch, bulkNewGroup,
+          channels, selectedId, filters, sort, pagination, modal, toast, form,
+          groupOptions, filteredChannels, paginatedChannels, totalPages, stats,
+          t, setLang, setAccentColor, qualityClass, triggerImport, handleImportFile, exportPlaylist,
+          openAddChannel, editChannel, closeModal, saveChannel, removeChannel, toggleChannel,
+          clearAll, toggleTheme, setSort, resetFilters, prevPage, nextPage,
+          groupCount, groupActiveCount, bulkActivateAll, bulkDeactivateAll, bulkAssignGroup,
         };
       }
     }).mount('#app');

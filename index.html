@@ -1,604 +1,496 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="sk" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#f5f5f7" />
+  <meta name="theme-color" content="#f2f2f7" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="IPTVPlaylistgen" />
+  <meta name="apple-mobile-web-app-title" content="IPTV Playlist" />
   <title>IPTV Playlist Generator</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <style>
+    /* ─── Apple Design Tokens ─── */
     :root {
-      --bg: #f5f5f7;
-      --surface: rgba(255,255,255,0.76);
-      --surface-strong: rgba(255,255,255,0.92);
-      --surface-muted: rgba(248,248,250,0.86);
-      --border: rgba(15,23,42,0.08);
-      --border-strong: rgba(15,23,42,0.12);
-      --text: #111827;
-      --text-muted: #6b7280;
-      --text-soft: #94a3b8;
-      --primary: #0071e3;
-      --primary-hover: #0062c4;
-      --danger: #d92d20;
-      --success: #17a34a;
-      --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.06);
-      --shadow-md: 0 18px 45px rgba(15, 23, 42, 0.1);
-      --radius-xl: 24px;
-      --radius-lg: 18px;
-      --radius-md: 14px;
-      --radius-sm: 10px;
+      --bg:              #f2f2f7;
+      --bg-secondary:    #ffffff;
+      --surface:         rgba(255,255,255,0.82);
+      --surface-strong:  rgba(255,255,255,0.96);
+      --surface-muted:   rgba(242,242,247,0.90);
+      --border:          rgba(60,60,67,0.12);
+      --border-strong:   rgba(60,60,67,0.18);
+      --text:            #1c1c1e;
+      --text-secondary:  #3c3c43;
+      --text-tertiary:   #6c6c70;
+      --text-quaternary: #aeaeb2;
+      --fill:            rgba(120,120,128,0.12);
+      --fill-secondary:  rgba(120,120,128,0.08);
+      --separator:       rgba(60,60,67,0.1);
+      --blue:            #007aff;
+      --blue-dark:       #0051d4;
+      --blue-light:      #e8f2ff;
+      --green:           #34c759;
+      --red:             #ff3b30;
+      --orange:          #ff9500;
+      --purple:          #af52de;
+      --gray:            #8e8e93;
+      --radius-xl: 20px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --radius-xs: 6px;
+      --shadow-xs: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+      --shadow-lg: 0 20px 60px rgba(0,0,0,0.1), 0 4px 16px rgba(0,0,0,0.06);
+      --transition: 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
 
     [data-theme="dark"] {
-      --bg: #0f1115;
-      --surface: rgba(28,29,32,0.72);
-      --surface-strong: rgba(32,33,36,0.88);
-      --surface-muted: rgba(22,23,26,0.86);
-      --border: rgba(255,255,255,0.08);
-      --border-strong: rgba(255,255,255,0.12);
-      --text: #f5f7fa;
-      --text-muted: #a1a9b8;
-      --text-soft: #798394;
-      --primary: #4da3ff;
-      --primary-hover: #7cbcff;
-      --danger: #ff6159;
-      --success: #32d583;
-      --shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.28);
-      --shadow-md: 0 20px 50px rgba(0, 0, 0, 0.38);
+      --bg:              #000000;
+      --bg-secondary:    #1c1c1e;
+      --surface:         rgba(28,28,30,0.88);
+      --surface-strong:  rgba(44,44,46,0.95);
+      --surface-muted:   rgba(28,28,30,0.92);
+      --border:          rgba(255,255,255,0.10);
+      --border-strong:   rgba(255,255,255,0.16);
+      --text:            #ffffff;
+      --text-secondary:  rgba(235,235,245,0.80);
+      --text-tertiary:   rgba(235,235,245,0.55);
+      --text-quaternary: rgba(235,235,245,0.28);
+      --fill:            rgba(120,120,128,0.20);
+      --fill-secondary:  rgba(120,120,128,0.14);
+      --separator:       rgba(84,84,88,0.50);
+      --blue:            #0a84ff;
+      --blue-dark:       #409cff;
+      --blue-light:      rgba(10,132,255,0.15);
+      --green:           #30d158;
+      --red:             #ff453a;
+      --orange:          #ff9f0a;
+      --purple:          #bf5af2;
+      --gray:            #636366;
+      --shadow-xs: 0 1px 3px rgba(0,0,0,0.30);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.40);
+      --shadow-lg: 0 20px 60px rgba(0,0,0,0.55);
     }
 
-    * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; }
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
     body {
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
       color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(0,113,227,0.08), transparent 28%),
-        radial-gradient(circle at top right, rgba(99,102,241,0.08), transparent 22%),
-        linear-gradient(180deg, rgba(255,255,255,0.55), transparent 25%),
-        var(--bg);
-      transition: background 180ms ease, color 180ms ease;
+      background: var(--bg);
+      min-height: 100dvh;
+      transition: background var(--transition), color var(--transition);
     }
 
-    ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.35); border-radius: 999px; }
+    /* ─── Scrollbars ─── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.28); border-radius: 999px; }
     ::-webkit-scrollbar-track { background: transparent; }
 
+    /* ─── Glass ─── */
     .glass {
       background: var(--surface);
       border: 1px solid var(--border);
       box-shadow: var(--shadow-sm);
-      backdrop-filter: saturate(180%) blur(24px);
-      -webkit-backdrop-filter: saturate(180%) blur(24px);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
     }
-
     .glass-strong {
       background: var(--surface-strong);
       border: 1px solid var(--border-strong);
       box-shadow: var(--shadow-md);
-      backdrop-filter: saturate(180%) blur(28px);
-      -webkit-backdrop-filter: saturate(180%) blur(28px);
+      backdrop-filter: saturate(200%) blur(28px);
+      -webkit-backdrop-filter: saturate(200%) blur(28px);
     }
 
+    /* ─── Buttons ─── */
     .btn {
-      border: 1px solid transparent;
-      border-radius: 999px;
-      padding: .78rem 1.1rem;
-      font-size: .92rem;
-      font-weight: 600;
-      transition: all .18s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: .5rem;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      border: none; border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      font-family: inherit; font-size: 14px; font-weight: 500;
+      line-height: 1; white-space: nowrap; cursor: pointer;
+      transition: all var(--transition);
+      -webkit-user-select: none; user-select: none;
+    }
+    .btn:disabled { opacity: .38; cursor: not-allowed; pointer-events: none; }
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--blue);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--blue-dark); }
+
+    .btn-secondary {
+      background: var(--fill);
+      color: var(--text);
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--fill-secondary); filter: brightness(0.94); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--blue);
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--blue-light); }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--red);
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(255,59,48,.10); }
+
+    .btn-icon {
+      width: 34px; height: 34px;
+      padding: 0;
+      border-radius: var(--radius-sm);
+      background: var(--fill);
+      color: var(--text-tertiary);
+    }
+    .btn-icon:hover:not(:disabled) { background: var(--fill-secondary); color: var(--text); }
+
+    /* ─── Form elements ─── */
+    .field, .select-field {
+      width: 100%;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-strong);
+      color: var(--text);
+      padding: 9px 12px;
+      font-family: inherit; font-size: 14px;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      -webkit-appearance: none; appearance: none;
+    }
+    .field::placeholder { color: var(--text-quaternary); }
+    .field:focus, .select-field:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(0,122,255,.15);
+    }
+    .select-field {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238e8e93' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
       cursor: pointer;
+    }
+    .field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 5px;
+    }
+
+    /* ─── Segmented control ─── */
+    .seg {
+      display: inline-flex;
+      background: var(--fill);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      gap: 2px;
+    }
+    .seg-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text-tertiary);
+      padding: 6px 12px;
+      border-radius: calc(var(--radius-sm) - 3px);
+      font-family: inherit; font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
       white-space: nowrap;
     }
-
-    .btn:disabled { opacity: .45; cursor: not-allowed; }
-    .btn-primary { background: var(--primary); color: white; box-shadow: 0 10px 25px rgba(0,113,227,.22); }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); }
-    .btn-secondary { background: var(--surface-strong); color: var(--text); border-color: var(--border); }
-    .btn-secondary:hover:not(:disabled) { background: var(--surface-muted); }
-    .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border); }
-    .btn-ghost:hover:not(:disabled) { color: var(--text); background: var(--surface-muted); }
-    .btn-danger { background: rgba(217,45,32,.12); color: var(--danger); border-color: rgba(217,45,32,.16); }
-    .btn-danger:hover:not(:disabled) { background: rgba(217,45,32,.18); }
-
-    .field, .select, textarea {
-      width: 100%;
-      border-radius: 16px;
-      border: 1px solid var(--border);
+    .seg-btn.active {
       background: var(--surface-strong);
       color: var(--text);
-      padding: .92rem 1rem;
-      font-size: .94rem;
-      outline: none;
-      transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+      box-shadow: var(--shadow-xs);
     }
+    [data-theme="dark"] .seg-btn.active { background: rgba(255,255,255,0.12); color: #fff; }
 
-    .field:focus, .select:focus, textarea:focus {
-      border-color: rgba(0,113,227,.44);
-      box-shadow: 0 0 0 4px rgba(0,113,227,.12);
+    /* ─── Quality badges ─── */
+    .q-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-xs);
+      padding: 2px 7px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.04em;
     }
+    .q-4K  { background: rgba(175,82,222,.14); color: #9b27c0; }
+    .q-FHD { background: rgba(0,122,255,.12);  color: #0040aa; }
+    .q-HD  { background: rgba(52,199,89,.14);  color: #22863a; }
+    .q-SD  { background: rgba(142,142,147,.16); color: #636366; }
+    [data-theme="dark"] .q-4K  { color: #d77ff0; }
+    [data-theme="dark"] .q-FHD { color: #7ab5ff; }
+    [data-theme="dark"] .q-HD  { color: #6ee080; }
+    [data-theme="dark"] .q-SD  { color: #b0b0b5; }
 
-    .label {
-      font-size: .73rem;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--text-soft);
-      font-weight: 700;
-      margin-bottom: .45rem;
-      display: block;
+    /* ─── Stat chip ─── */
+    .stat-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--fill);
+      border-radius: var(--radius-xs);
+      padding: 4px 10px;
+      font-size: 13px; color: var(--text-secondary);
     }
+    .stat-chip strong { color: var(--text); font-weight: 600; }
 
-    .stat-pill {
-      border-radius: 999px;
-      padding: .55rem .85rem;
-      background: var(--surface-strong);
-      border: 1px solid var(--border);
-      font-size: .82rem;
-      color: var(--text-muted);
-    }
-
-    .quality-pill {
-      border-radius: 999px;
-      padding: .28rem .65rem;
-      font-size: .74rem;
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 58px;
-    }
-
-    .q-4K { background: rgba(124,58,237,.14); color: #6d28d9; }
-    .q-FHD { background: rgba(37,99,235,.14); color: #1d4ed8; }
-    .q-HD { background: rgba(22,163,74,.14); color: #15803d; }
-    .q-SD { background: rgba(100,116,139,.16); color: #475569; }
-
-    [data-theme="dark"] .q-4K { color: #d8b4fe; }
-    [data-theme="dark"] .q-FHD { color: #93c5fd; }
-    [data-theme="dark"] .q-HD { color: #86efac; }
-    [data-theme="dark"] .q-SD { color: #cbd5e1; }
-
-    .sidebar-tab {
+    /* ─── Sidebar nav ─── */
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
       width: 100%;
-      text-align: left;
-      border-radius: 16px;
-      border: 1px solid transparent;
-      padding: .85rem 1rem;
+      border: none; border-radius: var(--radius-sm);
+      padding: 9px 12px;
       background: transparent;
-      color: var(--text-muted);
-      font-weight: 600;
-      transition: .18s ease;
-      display: flex;
-      align-items: center;
-      gap: .75rem;
+      color: var(--text-tertiary);
+      font-family: inherit; font-size: 14px; font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: left;
     }
+    .nav-item:hover { background: var(--fill-secondary); color: var(--text-secondary); }
+    .nav-item.active { background: var(--blue); color: #fff; }
+    .nav-item .nav-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; background: rgba(255,255,255,0.2); }
+    .nav-item:not(.active) .nav-icon { background: var(--fill); }
 
-    .sidebar-tab.active {
-      background: var(--surface-strong);
-      border-color: var(--border);
-      color: var(--text);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .section-card {
-      border-radius: var(--radius-xl);
-      padding: 1.15rem;
-    }
-
-    .table-shell {
-      border-radius: 28px;
-      overflow: hidden;
+    /* ─── Table ─── */
+    .table-wrap {
+      border-radius: var(--radius-lg);
       border: 1px solid var(--border);
       background: var(--surface);
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
       backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
     }
-
-    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1080px; }
+    table { width: 100%; border-collapse: collapse; min-width: 960px; }
     thead th {
-      position: sticky;
-      top: 0;
-      z-index: 5;
+      position: sticky; top: 0; z-index: 5;
       background: var(--surface-strong);
-      color: var(--text-soft);
-      font-size: .72rem;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      font-weight: 700;
-      border-bottom: 1px solid var(--border);
+      color: var(--text-tertiary);
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      border-bottom: 1px solid var(--separator);
+      padding: 10px 12px; text-align: left;
+    }
+    tbody td { padding: 10px 12px; font-size: 14px; }
+    tbody tr { border-bottom: 1px solid var(--separator); transition: background var(--transition); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--fill-secondary); }
+    tbody tr.selected { background: var(--blue-light); }
+    .mono { font-family: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+
+    /* ─── Modal ─── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.38);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+      z-index: 60;
+    }
+    .modal-card {
+      width: min(720px, 100%);
+      max-height: calc(100dvh - 32px);
+      overflow-y: auto;
+      border-radius: var(--radius-xl);
     }
 
-    th, td { padding: .92rem .9rem; text-align: left; }
-    tbody tr { transition: background .15s ease; }
-    tbody tr:hover { background: rgba(0,113,227,.045); }
-    tbody tr.selected { background: rgba(0,113,227,.08); }
-    tbody tr + tr td { border-top: 1px solid var(--border); }
-    .muted { color: var(--text-muted); }
-    .soft { color: var(--text-soft); }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    /* ─── Toast ─── */
+    .toast {
+      position: fixed;
+      bottom: max(24px, env(safe-area-inset-bottom, 24px));
+      left: 50%; transform: translateX(-50%);
+      z-index: 80;
+      border-radius: var(--radius-sm);
+      padding: 10px 18px;
+      font-size: 14px; font-weight: 500;
+      color: #fff;
+      background: rgba(28,28,30,0.94);
+      box-shadow: var(--shadow-lg);
+      white-space: nowrap;
+    }
+    [data-theme="dark"] .toast { background: rgba(72,72,74,0.94); }
 
-    .logo-badge {
-      width: 48px;
-      height: 48px;
-      border-radius: 16px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(180deg, #1d9bf0 0%, #0071e3 100%);
-      color: white;
-      box-shadow: 0 14px 30px rgba(0,113,227,.28);
+    /* ─── Empty state ─── */
+    .empty-state {
+      padding: 64px 24px;
+      text-align: center;
+      color: var(--text-tertiary);
+    }
+    .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.6; }
+    .empty-state h3 { color: var(--text-secondary); font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .empty-state p { font-size: 14px; color: var(--text-tertiary); max-width: 280px; margin: 0 auto; }
+
+    /* ─── Mini logo (channel) ─── */
+    .channel-logo {
+      width: 32px; height: 32px;
+      border-radius: var(--radius-xs);
+      object-fit: cover;
+      background: var(--fill);
+      border: 1px solid var(--border);
       flex-shrink: 0;
     }
 
-    .mini-logo {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      object-fit: cover;
-      background: var(--surface-muted);
+    /* ─── App logo ─── */
+    .app-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(175deg, #1a8fff 0%, #0040d0 100%);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(0,122,255,.32);
+      flex-shrink: 0;
+    }
+
+    /* ─── Platform info cards ─── */
+    .platform-card {
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      background: var(--fill-secondary);
       border: 1px solid var(--border);
     }
-
-    .segmented {
-      display: inline-flex;
-      padding: .25rem;
-      border-radius: 999px;
-      background: var(--surface-strong);
-      border: 1px solid var(--border);
-      gap: .25rem;
-      flex-wrap: wrap;
+    .platform-card-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0; margin-bottom: 8px;
     }
 
-    .segmented button {
-      border: 0;
-      background: transparent;
-      color: var(--text-muted);
-      padding: .62rem .9rem;
-      border-radius: 999px;
-      font-size: .85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: .18s ease;
+    /* ─── Section header ─── */
+    .section-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-tertiary); margin-bottom: 6px;
     }
 
-    .segmented button.active {
-      background: white;
-      color: #111827;
-      box-shadow: 0 4px 12px rgba(15,23,42,.08);
-    }
+    /* ─── Transitions ─── */
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.18s ease, transform 0.18s ease; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(8px); }
 
-    [data-theme="dark"] .segmented button.active {
-      background: rgba(255,255,255,.1);
-      color: white;
-    }
-
-    .modal-wrap {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, .34);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-      z-index: 60;
-      backdrop-filter: blur(10px);
-    }
-
-    .modal-card {
-      width: min(760px, 100%);
-      max-height: calc(100vh - 2rem);
-      overflow: auto;
-      border-radius: 30px;
-      padding: 1.2rem;
-    }
-
-    .toast {
-      position: fixed;
-      bottom: max(20px, env(safe-area-inset-bottom));
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 80;
-      border-radius: 999px;
-      padding: .85rem 1.1rem;
-      color: white;
-      background: rgba(17,24,39,.92);
-      box-shadow: var(--shadow-md);
-      font-size: .9rem;
-    }
-
-    .empty-state {
-      padding: 4rem 1rem;
-      text-align: center;
-      color: var(--text-muted);
-    }
-
-    .header-safe { padding-top: max(1rem, env(safe-area-inset-top)); }
-
+    /* ─── Responsive ─── */
     @media (max-width: 1024px) {
       .app-grid { grid-template-columns: 1fr !important; }
-      .sidebar-stack { order: 2; }
-      .content-stack { order: 1; }
-      table { min-width: 900px; }
+      .sidebar-col { order: 2; }
+      .main-col { order: 1; }
+      table { min-width: 860px; }
     }
-
     @media (max-width: 640px) {
-      .header-actions, .top-stats { width: 100%; }
-      .header-actions { display: grid; grid-template-columns: 1fr 1fr; }
-      .header-actions .btn:nth-child(3), .header-actions .btn:nth-child(4) { grid-column: span 1; }
-      .filters-grid { grid-template-columns: 1fr !important; }
-      .hero-stack { flex-direction: column; align-items: flex-start !important; }
-      .title-copy h1 { font-size: 1.7rem !important; }
+      .header-actions { flex-direction: column; width: 100%; }
+      .header-actions .btn-row { flex-wrap: wrap; }
+      .filters-cols { grid-template-columns: 1fr !important; }
+      .title-h1 { font-size: 1.5rem !important; }
     }
   </style>
 </head>
 <body>
-  <div id="app" class="min-h-screen px-3 md:px-5 lg:px-6 pb-6">
-    <div class="max-w-[1680px] mx-auto header-safe pt-4 md:pt-5">
-      <header class="glass-strong rounded-[32px] px-4 md:px-6 py-4 md:py-5 mb-4 md:mb-5">
-        <div class="flex flex-wrap gap-4 items-start md:items-center justify-between hero-stack">
-          <div class="flex items-center gap-4 min-w-0 title-copy">
-            <div class="logo-badge" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1.8"></rect>
-                <rect x="14" y="3" width="7" height="7" rx="1.8"></rect>
-                <rect x="3" y="14" width="7" height="7" rx="1.8"></rect>
-                <path d="M17 14v3"></path>
-                <path d="M14 17h3"></path>
-                <path d="M17 20h4"></path>
-                <path d="M20 17v4"></path>
-              </svg>
-            </div>
-            <div>
-              <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">Simple Apple Style</div>
-              <h1 class="text-[2rem] md:text-[2.35rem] leading-tight font-extrabold tracking-[-0.04em] m-0">IPTV Playlist Generator</h1>
-              <p class="muted mt-1 mb-0 text-sm md:text-[0.95rem] max-w-2xl">Statická SPA verzia pripravená pre Netlify, s offline PWA režimom a balením pre Windows aj Android.</p>
-            </div>
-          </div>
+<div id="app" style="min-height:100dvh; padding: max(env(safe-area-inset-top,16px),16px) 12px 24px; max-width: 1700px; margin: 0 auto;">
 
-          <div class="flex flex-col gap-3 items-stretch md:items-end min-w-[280px] header-actions">
-            <div class="flex flex-wrap gap-2 justify-start md:justify-end">
-              <button class="btn btn-primary" @click="triggerImport">Import playlist</button>
-              <button class="btn btn-secondary" @click="exportPlaylist('m3u')" :disabled="stats.total === 0">Export M3U</button>
-              <button class="btn btn-secondary" @click="exportPlaylist('xspf')" :disabled="stats.total === 0">Export XSPF</button>
-              <button class="btn btn-ghost" @click="openAddChannel">Add channel</button>
-            </div>
-            <div class="flex items-center gap-2 justify-start md:justify-end">
-              <button class="btn btn-ghost" @click="toggleTheme" :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
-                <span v-if="theme === 'dark'">☀︎ Light</span>
-                <span v-else>☾ Dark</span>
-              </button>
-              <button class="btn btn-danger" @click="clearAll" :disabled="stats.total === 0">Clear all</button>
-            </div>
-          </div>
+  <!-- ══ HEADER ══ -->
+  <header class="glass-strong mb-4" style="border-radius:20px; padding:18px 22px;">
+    <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; justify-content:space-between;">
+      <!-- Brand -->
+      <div style="display:flex; align-items:center; gap:14px; min-width:0;">
+        <div class="app-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            <path d="M17 14v3m0 3v-3m0 0h3m-3 0h-3"/>
+          </svg>
         </div>
-
-        <div class="flex flex-wrap gap-2 mt-4 top-stats">
-          <div class="stat-pill"><strong>{{ stats.total }}</strong> total</div>
-          <div class="stat-pill"><strong>{{ stats.active }}</strong> active</div>
-          <div class="stat-pill"><strong>{{ stats.groups }}</strong> groups</div>
-          <div class="stat-pill" v-for="(count, quality) in stats.qualities" :key="quality" v-if="count">
-            <span class="quality-pill" :class="qualityClass(quality)">{{ quality }}</span>
-            <span class="ml-2">{{ count }}</span>
-          </div>
+        <div>
+          <div class="section-label" style="margin-bottom:2px;">Playlist Manager</div>
+          <h1 class="title-h1" style="font-size:1.75rem; font-weight:700; letter-spacing:-0.03em; line-height:1.1; color:var(--text);">IPTV Playlist Generator</h1>
+          <p style="font-size:13px; color:var(--text-tertiary); margin-top:3px; max-width:440px; line-height:1.45;">Import, filter, edit a exportuj M3U / XSPF playlisty. PWA • Netlify • Android • Windows.</p>
         </div>
-      </header>
+      </div>
 
-      <div class="grid grid-cols-[290px_1fr] gap-4 md:gap-5 app-grid">
-        <aside class="sidebar-stack space-y-4">
-          <section class="glass rounded-[28px] p-4 md:p-5">
-            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">Workspace</div>
-            <div class="space-y-2">
-              <button v-for="tab in tabs" :key="tab.id" class="sidebar-tab" :class="{ active: activeTab === tab.id }" @click="activeTab = tab.id">
-                <span>{{ tab.icon }}</span>
-                <span>{{ tab.label }}</span>
-              </button>
-            </div>
-          </section>
-
-          <section class="glass rounded-[28px] p-4 md:p-5" v-if="activeTab === 'library' || activeTab === 'content'">
-            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">Filter set</div>
-            <div class="grid gap-3 filters-grid">
-              <div>
-                <label class="label">Search</label>
-                <input class="field" v-model.trim="filters.search" placeholder="Name, group, TVG-ID, URL" />
-              </div>
-              <div>
-                <label class="label">Group</label>
-                <select class="select" v-model="filters.group">
-                  <option value="">All groups</option>
-                  <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
-                </select>
-              </div>
-              <div>
-                <label class="label">Quality</label>
-                <select class="select" v-model="filters.quality">
-                  <option value="">All quality</option>
-                  <option value="4K">4K</option>
-                  <option value="FHD">FHD</option>
-                  <option value="HD">HD</option>
-                  <option value="SD">SD</option>
-                </select>
-              </div>
-              <div>
-                <label class="label">Status</label>
-                <div class="segmented w-full">
-                  <button :class="{ active: filters.status === 'all' }" @click="filters.status = 'all'">All</button>
-                  <button :class="{ active: filters.status === 'active' }" @click="filters.status = 'active'">Active</button>
-                  <button :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'">Inactive</button>
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="label">Country</label>
-                  <input class="field" v-model.trim="filters.country" placeholder="SK, CZ..." />
-                </div>
-                <div>
-                  <label class="label">Per page</label>
-                  <select class="select" v-model.number="pagination.limit">
-                    <option :value="50">50</option>
-                    <option :value="100">100</option>
-                    <option :value="200">200</option>
-                    <option :value="500">500</option>
-                  </select>
-                </div>
-              </div>
-              <button class="btn btn-ghost w-full" @click="resetFilters">Reset filters</button>
-            </div>
-          </section>
-
-          <section class="glass rounded-[28px] p-4 md:p-5" v-if="activeTab === 'design' || activeTab === 'platforms'">
-            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-3">Platform prep</div>
-            <div class="space-y-3 text-sm muted">
-              <div class="section-card" style="background:var(--surface-strong); border:1px solid var(--border);">
-                <strong class="block text-[var(--text)] text-base mb-1">Netlify ready</strong>
-                SPA fallback, cache headers, PWA manifest a Service Worker sú už zapojené.
-              </div>
-              <div class="section-card" style="background:var(--surface-strong); border:1px solid var(--border);">
-                <strong class="block text-[var(--text)] text-base mb-1">Windows ready</strong>
-                Electron wrapper je pripravený na build do desktop aplikácie.
-              </div>
-              <div class="section-card" style="background:var(--surface-strong); border:1px solid var(--border);">
-                <strong class="block text-[var(--text)] text-base mb-1">Android ready</strong>
-                Capacitor config je pripravený na otvorenie v Android Studio.
-              </div>
-            </div>
-          </section>
-        </aside>
-
-        <main class="content-stack space-y-4 md:space-y-5">
-          <section class="glass rounded-[30px] p-4 md:p-5">
-            <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
-              <div>
-                <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">Channel library</div>
-                <h2 class="text-[1.25rem] md:text-[1.45rem] tracking-[-0.03em] font-bold m-0">Curated playlist workspace</h2>
-              </div>
-              <div class="segmented">
-                <button :class="{ active: sort.by === 'name' }" @click="setSort('name')">Sort name</button>
-                <button :class="{ active: sort.by === 'group' }" @click="setSort('group')">Sort group</button>
-                <button :class="{ active: sort.by === 'quality' }" @click="setSort('quality')">Sort quality</button>
-                <button :class="{ active: sort.by === 'country' }" @click="setSort('country')">Sort country</button>
-              </div>
-            </div>
-
-            <div class="table-shell overflow-auto">
-              <table>
-                <thead>
-                  <tr>
-                    <th class="w-14">#</th>
-                    <th class="w-16">Logo</th>
-                    <th>Name</th>
-                    <th class="w-[160px]">Group</th>
-                    <th class="w-[110px]">Quality</th>
-                    <th class="w-[180px]">TVG-ID</th>
-                    <th class="w-[90px]">Country</th>
-                    <th>URL</th>
-                    <th class="w-[110px] text-center">Status</th>
-                    <th class="w-[170px] text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody v-if="paginatedChannels.length">
-                  <tr v-for="(channel, index) in paginatedChannels" :key="channel.id" :class="{ selected: selectedId === channel.id }">
-                    <td class="soft">{{ ((pagination.page - 1) * pagination.limit) + index + 1 }}</td>
-                    <td>
-                      <img v-if="channel.tvg_logo" :src="channel.tvg_logo" class="mini-logo" loading="lazy" alt="Channel logo" />
-                      <div v-else class="mini-logo flex items-center justify-center">📺</div>
-                    </td>
-                    <td>
-                      <div class="font-semibold">{{ channel.name || 'Untitled channel' }}</div>
-                      <div class="text-xs muted">{{ channel.tvg_name || 'No TVG name' }}</div>
-                    </td>
-                    <td><span class="muted">{{ channel.group_title || '—' }}</span></td>
-                    <td>
-                      <span v-if="channel.quality" class="quality-pill" :class="qualityClass(channel.quality)">{{ channel.quality }}</span>
-                      <span v-else class="soft">—</span>
-                    </td>
-                    <td class="mono text-xs muted">{{ channel.tvg_id || '—' }}</td>
-                    <td class="uppercase text-xs muted">{{ channel.tvg_country || '—' }}</td>
-                    <td class="mono text-xs muted max-w-[280px] truncate">{{ channel.url }}</td>
-                    <td class="text-center">
-                      <button class="btn btn-ghost !py-2 !px-3" @click="toggleChannel(channel)">
-                        <span :style="{ color: channel.is_active ? 'var(--success)' : 'var(--text-soft)' }">{{ channel.is_active ? '● Active' : '○ Off' }}</span>
-                      </button>
-                    </td>
-                    <td>
-                      <div class="flex gap-2 justify-end">
-                        <button class="btn btn-secondary !py-2 !px-3" @click="editChannel(channel)">Edit</button>
-                        <button class="btn btn-danger !py-2 !px-3" @click="removeChannel(channel.id)">Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-                <tbody v-else>
-                  <tr>
-                    <td colspan="10">
-                      <div class="empty-state">
-                        <div style="font-size:3rem; margin-bottom: .8rem;">📺</div>
-                        <div class="text-lg font-semibold mb-1" style="color:var(--text)">No channels in library</div>
-                        <div>Import an M3U, TXT or XSPF file to start building your playlist.</div>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div class="flex flex-wrap gap-3 items-center justify-between mt-4">
-              <div class="muted text-sm">Showing <strong>{{ paginatedChannels.length }}</strong> of <strong>{{ filteredChannels.length }}</strong> filtered channels.</div>
-              <div class="flex items-center gap-2">
-                <button class="btn btn-secondary !py-2 !px-4" @click="prevPage" :disabled="pagination.page === 1">Previous</button>
-                <div class="stat-pill">Page {{ pagination.page }} / {{ totalPages }}</div>
-                <button class="btn btn-secondary !py-2 !px-4" @click="nextPage" :disabled="pagination.page >= totalPages">Next</button>
-              </div>
-            </div>
-          </section>
-        </main>
+      <!-- Actions -->
+      <div class="header-actions" style="display:flex; flex-direction:column; gap:10px; align-items:flex-end; flex-shrink:0;">
+        <div class="btn-row" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+          <button class="btn btn-primary" @click="triggerImport">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import
+          </button>
+          <button class="btn btn-secondary" @click="exportPlaylist('m3u')" :disabled="stats.total === 0">Export M3U</button>
+          <button class="btn btn-secondary" @click="exportPlaylist('xspf')" :disabled="stats.total === 0">Export XSPF</button>
+          <button class="btn btn-ghost" @click="openAddChannel">+ Pridať kanál</button>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-icon" @click="toggleTheme" :aria-label="theme === 'dark' ? 'Prepnúť na svetlý režim' : 'Prepnúť na tmavý režim'" style="width:auto; padding:6px 12px; font-size:13px; font-weight:500; color:var(--text-tertiary);">
+            <span v-if="theme === 'dark'">☀ Svetlý</span>
+            <span v-else>⏾ Tmavý</span>
+          </button>
+          <button class="btn btn-danger" @click="clearAll" :disabled="stats.total === 0">Vymazať všetko</button>
+        </div>
       </div>
     </div>
 
-    <input ref="fileInput" type="file" class="hidden" accept=".m3u,.m3u8,.txt,.xspf" @change="handleImportFile" />
-
-    <div v-if="modal.open" class="modal-wrap" @click.self="closeModal">
-      <div class="modal-card glass-strong">
-        <div class="flex items-center justify-between gap-3 mb-4">
-          <div>
-            <div class="text-[0.72rem] font-bold tracking-[0.16em] uppercase soft mb-1">Editor</div>
-            <h3 class="text-[1.35rem] tracking-[-0.03em] font-bold m-0">{{ modal.mode === 'create' ? 'Add channel' : 'Edit channel' }}</h3>
-          </div>
-          <button class="btn btn-ghost !px-4" @click="closeModal">Close</button>
+    <!-- Stats chips -->
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; padding-top:14px; border-top:1px solid var(--separator);">
+      <div class="stat-chip"><strong>{{ stats.total }}</strong> kanálov</div>
+      <div class="stat-chip"><strong>{{ stats.active }}</strong> aktívnych</div>
+      <div class="stat-chip"><strong>{{ stats.groups }}</strong> skupín</div>
+      <template v-for="(count, quality) in stats.qualities" :key="quality">
+        <div class="stat-chip" v-if="count">
+          <span class="q-badge" :class="qualityClass(quality)">{{ quality }}</span>
+          <strong>{{ count }}</strong>
         </div>
+      </template>
+    </div>
+  </header>
 
-        <div class="grid md:grid-cols-2 gap-4">
+  <!-- ══ BODY GRID ══ -->
+  <div class="app-grid" style="display:grid; grid-template-columns:240px 1fr; gap:12px; align-items:start;">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar-col" style="display:flex; flex-direction:column; gap:10px; position:sticky; top:16px;">
+
+      <!-- Navigation -->
+      <div class="glass" style="border-radius:var(--radius-lg); padding:8px; overflow:hidden;">
+        <div class="section-label" style="padding:6px 8px 4px;">Workspace</div>
+        <nav style="display:flex; flex-direction:column; gap:2px;">
+          <button v-for="tab in tabs" :key="tab.id" class="nav-item" :class="{ active: activeTab === tab.id }" @click="activeTab = tab.id">
+            <span class="nav-icon">{{ tab.icon }}</span>
+            <span>{{ tab.label }}</span>
+            <span v-if="tab.id === 'library' && stats.total > 0" style="margin-left:auto; font-size:11px; font-weight:600; opacity:0.7;">{{ stats.total }}</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Filter panel -->
+      <div class="glass" style="border-radius:var(--radius-lg); padding:14px; overflow:hidden;" v-if="activeTab === 'library' || activeTab === 'content'">
+        <div class="section-label">Filtre</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
           <div>
-            <label class="label">Name</label>
-            <input class="field" v-model.trim="form.name" placeholder="Channel name" />
+            <label class="field-label">Hľadať</label>
+            <input class="field" v-model.trim="filters.search" placeholder="Názov, skupina, URL..." />
           </div>
           <div>
-            <label class="label">Stream URL</label>
-            <input class="field" v-model.trim="form.url" placeholder="https://..." />
+            <label class="field-label">Skupina</label>
+            <select class="select-field" v-model="filters.group">
+              <option value="">Všetky skupiny</option>
+              <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
+            </select>
           </div>
           <div>
-            <label class="label">Group</label>
-            <input class="field" v-model.trim="form.group_title" placeholder="Movies, Sports..." />
-          </div>
-          <div>
-            <label class="label">Quality</label>
-            <select class="select" v-model="form.quality">
-              <option value="">No label</option>
+            <label class="field-label">Kvalita</label>
+            <select class="select-field" v-model="filters.quality">
+              <option value="">Všetky kvality</option>
               <option value="4K">4K</option>
               <option value="FHD">FHD</option>
               <option value="HD">HD</option>
@@ -606,474 +498,428 @@
             </select>
           </div>
           <div>
-            <label class="label">TVG ID</label>
-            <input class="field mono" v-model.trim="form.tvg_id" placeholder="channel.id" />
+            <label class="field-label">Stav</label>
+            <div class="seg" style="width:100%;">
+              <button class="seg-btn" :class="{ active: filters.status === 'all' }" @click="filters.status = 'all'">Všetky</button>
+              <button class="seg-btn" :class="{ active: filters.status === 'active' }" @click="filters.status = 'active'">Aktívne</button>
+              <button class="seg-btn" :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'">Off</button>
+            </div>
           </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;" class="filters-cols">
+            <div>
+              <label class="field-label">Krajina</label>
+              <input class="field" v-model.trim="filters.country" placeholder="SK, CZ..." />
+            </div>
+            <div>
+              <label class="field-label">Na stránku</label>
+              <select class="select-field" v-model.number="pagination.limit">
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+                <option :value="200">200</option>
+                <option :value="500">500</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-secondary" style="width:100%; justify-content:center;" @click="resetFilters">Resetovať filtre</button>
+        </div>
+      </div>
+
+      <!-- Platform info -->
+      <div class="glass" style="border-radius:var(--radius-lg); padding:14px;" v-if="activeTab === 'design' || activeTab === 'platforms'">
+        <div class="section-label">Platformy</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="platform-card">
+            <div class="platform-card-icon" style="background:rgba(0,122,255,.12);">🌐</div>
+            <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:3px;">Netlify</div>
+            <div style="font-size:12px; color:var(--text-tertiary); line-height:1.4;">SPA fallback, cache hlavičky, PWA manifest a Service Worker sú zapojené.</div>
+          </div>
+          <div class="platform-card">
+            <div class="platform-card-icon" style="background:rgba(52,199,89,.12);">🤖</div>
+            <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:3px;">Android</div>
+            <div style="font-size:12px; color:var(--text-tertiary); line-height:1.4;">Capacitor config pripravený pre Android Studio.</div>
+          </div>
+          <div class="platform-card">
+            <div class="platform-card-icon" style="background:rgba(175,82,222,.12);">🖥</div>
+            <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:3px;">Windows</div>
+            <div style="font-size:12px; color:var(--text-tertiary); line-height:1.4;">Electron wrapper pripravený na build .exe.</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── MAIN CONTENT ── -->
+    <main class="main-col" style="min-width:0;">
+      <div class="glass" style="border-radius:var(--radius-lg); overflow:hidden;">
+
+        <!-- Table toolbar -->
+        <div style="padding:14px 16px; border-bottom:1px solid var(--separator); display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
           <div>
-            <label class="label">TVG name</label>
-            <input class="field" v-model.trim="form.tvg_name" placeholder="Display guide name" />
+            <div class="section-label">Knižnica kanálov</div>
+            <h2 style="font-size:17px; font-weight:600; color:var(--text); letter-spacing:-0.02em;">
+              Playlist workspace
+            </h2>
           </div>
-          <div>
-            <label class="label">Logo URL</label>
-            <input class="field mono" v-model.trim="form.tvg_logo" placeholder="https://.../logo.png" />
-          </div>
-          <div>
-            <label class="label">Country</label>
-            <input class="field" v-model.trim="form.tvg_country" placeholder="SK" />
-          </div>
-          <div>
-            <label class="label">Language</label>
-            <input class="field" v-model.trim="form.tvg_language" placeholder="sk" />
-          </div>
-          <div>
-            <label class="label">User agent</label>
-            <input class="field" v-model.trim="form.user_agent" placeholder="Optional" />
-          </div>
-          <div class="md:col-span-2">
-            <label class="label">Referer</label>
-            <input class="field" v-model.trim="form.referer" placeholder="Optional referer" />
-          </div>
-          <div class="md:col-span-2">
-            <label class="label">Playback options</label>
-            <div class="segmented">
-              <button :class="{ active: form.is_active }" @click="form.is_active = true">Active</button>
-              <button :class="{ active: !form.is_active }" @click="form.is_active = false">Inactive</button>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <div class="seg">
+              <button class="seg-btn" :class="{ active: sort.by === 'name' }" @click="setSort('name')">Názov</button>
+              <button class="seg-btn" :class="{ active: sort.by === 'group' }" @click="setSort('group')">Skupina</button>
+              <button class="seg-btn" :class="{ active: sort.by === 'quality' }" @click="setSort('quality')">Kvalita</button>
+            </div>
+            <div class="seg-btn" style="font-size:13px; color:var(--text-tertiary); background:transparent; padding:6px 4px;">
+              {{ sort.dir === 'asc' ? '↑' : '↓' }}
             </div>
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 mt-5">
-          <button class="btn btn-ghost" @click="closeModal">Cancel</button>
-          <button class="btn btn-primary" @click="saveChannel">{{ modal.mode === 'create' ? 'Create channel' : 'Save changes' }}</button>
+        <!-- Table -->
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:44px;">#</th>
+                <th style="width:52px;">Logo</th>
+                <th>Názov</th>
+                <th style="width:150px;">Skupina</th>
+                <th style="width:80px;">Kvalita</th>
+                <th style="width:100px;">Krajina</th>
+                <th>URL</th>
+                <th style="width:96px; text-align:center;">Stav</th>
+                <th style="width:130px; text-align:right;">Akcie</th>
+              </tr>
+            </thead>
+            <tbody v-if="paginatedChannels.length">
+              <tr v-for="(channel, index) in paginatedChannels" :key="channel.id" :class="{ selected: selectedId === channel.id }">
+                <td style="color:var(--text-quaternary); font-size:12px;">{{ ((pagination.page - 1) * pagination.limit) + index + 1 }}</td>
+                <td>
+                  <img v-if="channel.tvg_logo" :src="channel.tvg_logo" class="channel-logo" loading="lazy" :alt="channel.name" width="32" height="32" />
+                  <div v-else class="channel-logo" style="display:flex; align-items:center; justify-content:center; font-size:16px;">📺</div>
+                </td>
+                <td>
+                  <div style="font-weight:500; color:var(--text);">{{ channel.name || 'Bez názvu' }}</div>
+                  <div style="font-size:12px; color:var(--text-tertiary);" v-if="channel.tvg_name">{{ channel.tvg_name }}</div>
+                </td>
+                <td style="color:var(--text-tertiary); font-size:13px;">{{ channel.group_title || '—' }}</td>
+                <td>
+                  <span v-if="channel.quality" class="q-badge" :class="qualityClass(channel.quality)">{{ channel.quality }}</span>
+                  <span v-else style="color:var(--text-quaternary);">—</span>
+                </td>
+                <td style="color:var(--text-tertiary); font-size:12px; text-transform:uppercase; letter-spacing:0.06em;">{{ channel.tvg_country || '—' }}</td>
+                <td>
+                  <div class="mono" style="color:var(--text-tertiary); max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ channel.url }}</div>
+                </td>
+                <td style="text-align:center;">
+                  <button @click="toggleChannel(channel)" style="background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600; transition:all var(--transition);"
+                    :style="{ color: channel.is_active ? 'var(--green)' : 'var(--text-quaternary)', background: channel.is_active ? 'rgba(52,199,89,.10)' : 'var(--fill)' }">
+                    {{ channel.is_active ? '● Aktívny' : '○ Off' }}
+                  </button>
+                </td>
+                <td>
+                  <div style="display:flex; gap:6px; justify-content:flex-end;">
+                    <button class="btn btn-secondary" style="padding:5px 10px; font-size:12px;" @click="editChannel(channel)">Upraviť</button>
+                    <button class="btn btn-danger" style="padding:5px 10px; font-size:12px;" @click="removeChannel(channel.id)">Zmazať</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+            <tbody v-else>
+              <tr><td colspan="9">
+                <div class="empty-state">
+                  <div class="empty-state-icon">📺</div>
+                  <h3>Knižnica je prázdna</h3>
+                  <p>Importuj M3U, TXT alebo XSPF súbor a začni budovať playlist.</p>
+                  <button class="btn btn-primary" style="margin-top:16px;" @click="triggerImport">Import playlist</button>
+                </div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div style="padding:12px 16px; border-top:1px solid var(--separator); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
+          <div style="font-size:13px; color:var(--text-tertiary);">
+            <strong style="color:var(--text);">{{ paginatedChannels.length }}</strong> z <strong style="color:var(--text);">{{ filteredChannels.length }}</strong> filtrovaných
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn btn-secondary" style="padding:6px 12px; font-size:13px;" @click="prevPage" :disabled="pagination.page === 1">← Predošlá</button>
+            <div class="stat-chip">{{ pagination.page }} / {{ totalPages }}</div>
+            <button class="btn btn-secondary" style="padding:6px 12px; font-size:13px;" @click="nextPage" :disabled="pagination.page >= totalPages">Ďalšia →</button>
+          </div>
         </div>
       </div>
-    </div>
-
-    <transition name="fade">
-      <div v-if="toast.show" class="toast">{{ toast.message }}</div>
-    </transition>
+    </main>
   </div>
 
-  <script>
-    const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+  <!-- Hidden file input -->
+  <input ref="fileInput" type="file" style="display:none;" accept=".m3u,.m3u8,.txt,.xspf" @change="handleImportFile" />
 
-    createApp({
-      setup() {
-        const STORAGE_KEY = 'iptv-playlistgen-v2';
-        const THEME_KEY = 'iptv-playlistgen-theme';
+  <!-- ══ MODAL ══ -->
+  <div v-if="modal.open" class="modal-backdrop" @click.self="closeModal">
+    <div class="modal-card glass-strong" style="padding:22px;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px;">
+        <div>
+          <div class="section-label">Editor kanálu</div>
+          <h3 style="font-size:18px; font-weight:700; color:var(--text); letter-spacing:-0.025em;">{{ modal.mode === 'create' ? 'Pridať kanál' : 'Upraviť kanál' }}</h3>
+        </div>
+        <button class="btn btn-ghost" @click="closeModal" style="flex-shrink:0; padding:6px 12px; font-size:13px;">Zavrieť</button>
+      </div>
 
-        const fileInput = ref(null);
-        const theme = ref(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-        const activeTab = ref('library');
-        const tabs = [
-          { id: 'library', label: 'Library', icon: '⌘' },
-          { id: 'content', label: 'Content', icon: '▣' },
-          { id: 'design', label: 'Design', icon: '✦' },
-          { id: 'platforms', label: 'Platforms', icon: '◉' },
-        ];
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div>
+          <label class="field-label">Názov *</label>
+          <input class="field" v-model.trim="form.name" placeholder="Názov kanálu" />
+        </div>
+        <div>
+          <label class="field-label">Stream URL *</label>
+          <input class="field" v-model.trim="form.url" placeholder="https://..." />
+        </div>
+        <div>
+          <label class="field-label">Skupina</label>
+          <input class="field" v-model.trim="form.group_title" placeholder="Filmy, Šport..." />
+        </div>
+        <div>
+          <label class="field-label">Kvalita</label>
+          <select class="select-field" v-model="form.quality">
+            <option value="">Bez označenia</option>
+            <option value="4K">4K</option>
+            <option value="FHD">FHD</option>
+            <option value="HD">HD</option>
+            <option value="SD">SD</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">TVG ID</label>
+          <input class="field mono" v-model.trim="form.tvg_id" placeholder="channel.id" />
+        </div>
+        <div>
+          <label class="field-label">TVG Názov</label>
+          <input class="field" v-model.trim="form.tvg_name" placeholder="Zobrazovaný názov" />
+        </div>
+        <div>
+          <label class="field-label">Logo URL</label>
+          <input class="field mono" v-model.trim="form.tvg_logo" placeholder="https://.../logo.png" />
+        </div>
+        <div>
+          <label class="field-label">Krajina</label>
+          <input class="field" v-model.trim="form.tvg_country" placeholder="SK" />
+        </div>
+        <div>
+          <label class="field-label">Jazyk</label>
+          <input class="field" v-model.trim="form.tvg_language" placeholder="sk" />
+        </div>
+        <div>
+          <label class="field-label">User Agent</label>
+          <input class="field" v-model.trim="form.user_agent" placeholder="Voliteľné" />
+        </div>
+        <div style="grid-column:1/-1;">
+          <label class="field-label">Referer</label>
+          <input class="field" v-model.trim="form.referer" placeholder="Voliteľný referer" />
+        </div>
+        <div style="grid-column:1/-1;">
+          <label class="field-label">Stav prehrávania</label>
+          <div class="seg">
+            <button class="seg-btn" :class="{ active: form.is_active }" @click="form.is_active = true">Aktívny</button>
+            <button class="seg-btn" :class="{ active: !form.is_active }" @click="form.is_active = false">Neaktívny</button>
+          </div>
+        </div>
+      </div>
 
-        const channels = ref([]);
-        const selectedId = ref(null);
-        const sort = reactive({ by: 'name', dir: 'asc' });
-        const filters = reactive({ search: '', group: '', quality: '', status: 'all', country: '' });
-        const pagination = reactive({ page: 1, limit: 100 });
-        const modal = reactive({ open: false, mode: 'create' });
-        const toast = reactive({ show: false, message: '' });
-        const form = reactive(createEmptyChannel());
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px; padding-top:18px; border-top:1px solid var(--separator);">
+        <button class="btn btn-secondary" @click="closeModal">Zrušiť</button>
+        <button class="btn btn-primary" @click="saveChannel">{{ modal.mode === 'create' ? 'Vytvoriť kanál' : 'Uložiť zmeny' }}</button>
+      </div>
+    </div>
+  </div>
 
-        function createEmptyChannel() {
-          return {
-            id: null,
-            name: '',
-            url: '',
-            tvg_id: '',
-            tvg_name: '',
-            tvg_logo: '',
-            tvg_country: '',
-            tvg_language: '',
-            group_title: '',
-            quality: '',
-            user_agent: '',
-            referer: '',
-            catchup: '',
-            catchup_source: '',
-            is_active: true,
-          };
-        }
+  <!-- ══ TOAST ══ -->
+  <transition name="fade">
+    <div v-if="toast.show" class="toast">{{ toast.message }}</div>
+  </transition>
+</div>
 
-        function qualityClass(quality) {
-          return quality ? `q-${quality}` : '';
-        }
+<script>
+  const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
 
-        function saveToStorage() {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value));
-        }
+  createApp({
+    setup() {
+      const STORAGE_KEY = 'iptv-playlistgen-v2';
+      const THEME_KEY   = 'iptv-playlistgen-theme';
 
-        function loadFromStorage() {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          if (!raw) return;
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) channels.value = parsed;
-          } catch {}
-        }
+      const fileInput = ref(null);
+      const theme     = ref(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+      const activeTab = ref('library');
+      const tabs = [
+        { id: 'library',   label: 'Knižnica',  icon: '⌘' },
+        { id: 'content',   label: 'Obsah',     icon: '▣' },
+        { id: 'design',    label: 'Dizajn',    icon: '✦' },
+        { id: 'platforms', label: 'Platformy', icon: '◉' },
+      ];
 
-        function showToast(message) {
-          toast.message = message;
-          toast.show = true;
-          clearTimeout(showToast._timer);
-          showToast._timer = setTimeout(() => toast.show = false, 2200);
-        }
+      const channels   = ref([]);
+      const selectedId = ref(null);
+      const sort       = reactive({ by: 'name', dir: 'asc' });
+      const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' });
+      const pagination = reactive({ page: 1, limit: 100 });
+      const modal      = reactive({ open: false, mode: 'create' });
+      const toast      = reactive({ show: false, message: '' });
+      const form       = reactive(createEmptyChannel());
 
-        function normalizeQuality(value, name = '') {
-          const source = `${value || ''} ${name || ''}`.toUpperCase();
-          if (source.includes('4K') || source.includes('UHD')) return '4K';
-          if (source.includes('FHD') || source.includes('1080')) return 'FHD';
-          if (source.includes('HD') || source.includes('720')) return 'HD';
-          if (source.includes('SD') || source.includes('576') || source.includes('480')) return 'SD';
-          return '';
-        }
-
-        function triggerImport() {
-          fileInput.value?.click();
-        }
-
-        async function handleImportFile(event) {
-          const file = event.target.files?.[0];
-          if (!file) return;
-          const text = await file.text();
-          const ext = (file.name.split('.').pop() || '').toLowerCase();
-          let imported = [];
-
-          if (['m3u', 'm3u8', 'txt'].includes(ext)) {
-            imported = parseM3U(text);
-          } else if (ext === 'xspf') {
-            imported = parseXSPF(text);
-          } else {
-            imported = parseM3U(text);
-          }
-
-          if (!imported.length) {
-            showToast('No channels detected in file.');
-            event.target.value = '';
-            return;
-          }
-
-          const now = Date.now();
-          channels.value = imported.map((item, index) => ({
-            ...createEmptyChannel(),
-            ...item,
-            id: `${now}-${index}`,
-            quality: normalizeQuality(item.quality, item.name),
-            is_active: item.is_active !== false,
-          }));
-          saveToStorage();
-          pagination.page = 1;
-          showToast(`Imported ${channels.value.length} channels.`);
-          event.target.value = '';
-        }
-
-        function parseM3U(text) {
-          const lines = text.replace(/\r/g, '').split('\n');
-          const items = [];
-          let current = null;
-
-          const parseAttrs = (line) => {
-            const attrs = {};
-            const attrRegex = /(\w[\w-]*)="([^"]*)"/g;
-            let match;
-            while ((match = attrRegex.exec(line))) {
-              attrs[match[1]] = match[2];
-            }
-            return attrs;
-          };
-
-          for (const lineRaw of lines) {
-            const line = lineRaw.trim();
-            if (!line) continue;
-            if (line.startsWith('#EXTINF')) {
-              const attrs = parseAttrs(line);
-              const name = line.includes(',') ? line.split(',').slice(1).join(',').trim() : '';
-              current = {
-                name,
-                tvg_id: attrs['tvg-id'] || '',
-                tvg_name: attrs['tvg-name'] || '',
-                tvg_logo: attrs['tvg-logo'] || '',
-                tvg_country: attrs['tvg-country'] || '',
-                tvg_language: attrs['tvg-language'] || '',
-                group_title: attrs['group-title'] || '',
-                quality: attrs['quality'] || '',
-              };
-            } else if (line.startsWith('#EXTVLCOPT')) {
-              if (!current) current = {};
-              const [, payload = ''] = line.split(':');
-              if (payload.startsWith('http-user-agent=')) current.user_agent = payload.replace('http-user-agent=', '');
-              if (payload.startsWith('http-referrer=')) current.referer = payload.replace('http-referrer=', '');
-            } else if (line.startsWith('#')) {
-              continue;
-            } else {
-              if (current) {
-                items.push({ ...current, url: line });
-                current = null;
-              } else {
-                const parts = line.split('|');
-                if (parts.length === 2) items.push({ name: parts[0].trim(), url: parts[1].trim() });
-                else items.push({ name: line, url: line });
-              }
-            }
-          }
-          return items.filter(item => item.url);
-        }
-
-        function parseXSPF(text) {
-          const parser = new DOMParser();
-          const xml = parser.parseFromString(text, 'application/xml');
-          const tracks = Array.from(xml.querySelectorAll('track'));
-          return tracks.map((track) => ({
-            name: track.querySelector('title')?.textContent?.trim() || '',
-            url: track.querySelector('location')?.textContent?.trim() || '',
-            tvg_logo: track.querySelector('image')?.textContent?.trim() || '',
-            group_title: track.querySelector('annotation')?.textContent?.trim() || '',
-          })).filter(item => item.url);
-        }
-
-        function exportPlaylist(format = 'm3u') {
-          if (!channels.value.length) return;
-          const active = channels.value.filter(item => item.is_active);
-          const source = active.length ? active : channels.value;
-          let content = '';
-          let mime = 'text/plain;charset=utf-8';
-          let filename = 'iptv-playlist';
-
-          if (format === 'xspf') {
-            filename += '.xspf';
-            content = `<?xml version="1.0" encoding="UTF-8"?>\n<playlist version="1" xmlns="http://xspf.org/ns/0/">\n  <trackList>\n${source.map(item => `    <track>\n      <title>${escapeXml(item.name || '')}</title>\n      <location>${escapeXml(item.url || '')}</location>\n      <image>${escapeXml(item.tvg_logo || '')}</image>\n      <annotation>${escapeXml(item.group_title || '')}</annotation>\n    </track>`).join('\n')}\n  </trackList>\n</playlist>`;
-          } else {
-            filename += '.m3u';
-            content = '#EXTM3U\n' + source.map(item => {
-              const attrs = [
-                item.tvg_id ? `tvg-id="${item.tvg_id}"` : '',
-                item.tvg_name ? `tvg-name="${item.tvg_name}"` : '',
-                item.tvg_logo ? `tvg-logo="${item.tvg_logo}"` : '',
-                item.tvg_country ? `tvg-country="${item.tvg_country}"` : '',
-                item.tvg_language ? `tvg-language="${item.tvg_language}"` : '',
-                item.group_title ? `group-title="${item.group_title}"` : '',
-                item.quality ? `quality="${item.quality}"` : '',
-              ].filter(Boolean).join(' ');
-              const options = [
-                item.user_agent ? `#EXTVLCOPT:http-user-agent=${item.user_agent}` : '',
-                item.referer ? `#EXTVLCOPT:http-referrer=${item.referer}` : '',
-              ].filter(Boolean).join('\n');
-              return `#EXTINF:-1 ${attrs},${item.name || 'Untitled'}\n${options ? options + '\n' : ''}${item.url}`;
-            }).join('\n');
-          }
-
-          const blob = new Blob([content], { type: mime });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          a.click();
-          URL.revokeObjectURL(url);
-          showToast(`Exported ${source.length} channels.`);
-        }
-
-        function escapeXml(value) {
-          return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&apos;');
-        }
-
-        const groupOptions = computed(() => {
-          const groups = new Set(channels.value.map(item => item.group_title).filter(Boolean));
-          return Array.from(groups).sort((a, b) => a.localeCompare(b));
-        });
-
-        const filteredChannels = computed(() => {
-          let result = [...channels.value];
-          const q = filters.search.trim().toLowerCase();
-          if (q) {
-            result = result.filter(item => [item.name, item.group_title, item.tvg_id, item.url, item.tvg_name]
-              .filter(Boolean)
-              .some(field => field.toLowerCase().includes(q)));
-          }
-          if (filters.group) result = result.filter(item => item.group_title === filters.group);
-          if (filters.quality) result = result.filter(item => item.quality === filters.quality);
-          if (filters.status === 'active') result = result.filter(item => item.is_active);
-          if (filters.status === 'inactive') result = result.filter(item => !item.is_active);
-          if (filters.country) result = result.filter(item => (item.tvg_country || '').toLowerCase().includes(filters.country.toLowerCase()));
-
-          result.sort((a, b) => {
-            const key = sort.by;
-            const av = String(a[key === 'group' ? 'group_title' : key] || '').toLowerCase();
-            const bv = String(b[key === 'group' ? 'group_title' : key] || '').toLowerCase();
-            return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-          });
-          return result;
-        });
-
-        const totalPages = computed(() => Math.max(1, Math.ceil(filteredChannels.value.length / pagination.limit)));
-        const paginatedChannels = computed(() => {
-          const start = (pagination.page - 1) * pagination.limit;
-          return filteredChannels.value.slice(start, start + pagination.limit);
-        });
-
-        const stats = computed(() => {
-          const qualities = { '4K': 0, 'FHD': 0, 'HD': 0, 'SD': 0 };
-          channels.value.forEach(item => {
-            if (qualities[item.quality] !== undefined) qualities[item.quality] += 1;
-          });
-          return {
-            total: channels.value.length,
-            active: channels.value.filter(item => item.is_active).length,
-            groups: new Set(channels.value.map(item => item.group_title).filter(Boolean)).size,
-            qualities,
-          };
-        });
-
-        function resetFilters() {
-          filters.search = '';
-          filters.group = '';
-          filters.quality = '';
-          filters.status = 'all';
-          filters.country = '';
-          pagination.page = 1;
-        }
-
-        function setSort(by) {
-          if (sort.by === by) sort.dir = sort.dir === 'asc' ? 'desc' : 'asc';
-          else { sort.by = by; sort.dir = 'asc'; }
-        }
-
-        function prevPage() {
-          if (pagination.page > 1) pagination.page -= 1;
-        }
-
-        function nextPage() {
-          if (pagination.page < totalPages.value) pagination.page += 1;
-        }
-
-        function openAddChannel() {
-          Object.assign(form, createEmptyChannel());
-          modal.mode = 'create';
-          modal.open = true;
-        }
-
-        function editChannel(channel) {
-          Object.assign(form, JSON.parse(JSON.stringify(channel)));
-          selectedId.value = channel.id;
-          modal.mode = 'edit';
-          modal.open = true;
-        }
-
-        function closeModal() {
-          modal.open = false;
-        }
-
-        function saveChannel() {
-          if (!form.name || !form.url) {
-            showToast('Name and URL are required.');
-            return;
-          }
-
-          form.quality = normalizeQuality(form.quality, form.name);
-          if (modal.mode === 'create') {
-            channels.value.unshift({ ...JSON.parse(JSON.stringify(form)), id: `${Date.now()}-${Math.random().toString(16).slice(2)}` });
-            showToast('Channel created.');
-          } else {
-            const index = channels.value.findIndex(item => item.id === form.id);
-            if (index >= 0) channels.value[index] = { ...JSON.parse(JSON.stringify(form)) };
-            showToast('Channel updated.');
-          }
-          saveToStorage();
-          modal.open = false;
-        }
-
-        function removeChannel(id) {
-          if (!confirm('Delete this channel?')) return;
-          channels.value = channels.value.filter(item => item.id !== id);
-          if (selectedId.value === id) selectedId.value = null;
-          saveToStorage();
-          showToast('Channel deleted.');
-        }
-
-        function toggleChannel(channel) {
-          channel.is_active = !channel.is_active;
-          saveToStorage();
-        }
-
-        function clearAll() {
-          if (!confirm('Delete all channels from local library?')) return;
-          channels.value = [];
-          saveToStorage();
-          pagination.page = 1;
-          showToast('Library cleared.');
-        }
-
-        function toggleTheme() {
-          theme.value = theme.value === 'dark' ? 'light' : 'dark';
-        }
-
-        watch(theme, (value) => {
-          document.documentElement.setAttribute('data-theme', value);
-          localStorage.setItem(THEME_KEY, value);
-        }, { immediate: true });
-
-        watch([() => filters.search, () => filters.group, () => filters.quality, () => filters.status, () => filters.country, () => pagination.limit], () => {
-          pagination.page = 1;
-        });
-
-        watch(totalPages, (value) => {
-          if (pagination.page > value) pagination.page = value;
-        });
-
-        onMounted(() => {
-          loadFromStorage();
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').catch(() => {});
-          }
-        });
-
-        return {
-          fileInput,
-          theme,
-          activeTab,
-          tabs,
-          channels,
-          selectedId,
-          filters,
-          sort,
-          pagination,
-          modal,
-          toast,
-          form,
-          groupOptions,
-          filteredChannels,
-          paginatedChannels,
-          totalPages,
-          stats,
-          qualityClass,
-          triggerImport,
-          handleImportFile,
-          exportPlaylist,
-          openAddChannel,
-          editChannel,
-          closeModal,
-          saveChannel,
-          removeChannel,
-          toggleChannel,
-          clearAll,
-          toggleTheme,
-          setSort,
-          resetFilters,
-          prevPage,
-          nextPage,
-        };
+      function createEmptyChannel() {
+        return { id: null, name: '', url: '', tvg_id: '', tvg_name: '', tvg_logo: '', tvg_country: '', tvg_language: '', group_title: '', quality: '', user_agent: '', referer: '', catchup: '', catchup_source: '', is_active: true };
       }
-    }).mount('#app');
-  </script>
+
+      function qualityClass(q) { return q ? `q-${q}` : ''; }
+
+      function saveToStorage()   { localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value)); }
+      function loadFromStorage() {
+        try { const d = JSON.parse(localStorage.getItem(STORAGE_KEY)); if (Array.isArray(d)) channels.value = d; } catch {}
+      }
+
+      function showToast(message) {
+        toast.message = message; toast.show = true;
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => toast.show = false, 2400);
+      }
+
+      function normalizeQuality(value = '', name = '') {
+        const s = `${value} ${name}`.toUpperCase();
+        if (s.includes('4K') || s.includes('UHD'))  return '4K';
+        if (s.includes('FHD') || s.includes('1080')) return 'FHD';
+        if (s.includes('HD') || s.includes('720'))   return 'HD';
+        if (s.includes('SD') || s.includes('576') || s.includes('480')) return 'SD';
+        return '';
+      }
+
+      function triggerImport() { fileInput.value?.click(); }
+
+      async function handleImportFile(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const text = await file.text();
+        const ext  = (file.name.split('.').pop() || '').toLowerCase();
+        let imported = ['xspf'].includes(ext) ? parseXSPF(text) : parseM3U(text);
+        if (!imported.length) { showToast('Žiadne kanály v súbore.'); event.target.value = ''; return; }
+        const now = Date.now();
+        channels.value = imported.map((item, i) => ({ ...createEmptyChannel(), ...item, id: `${now}-${i}`, quality: normalizeQuality(item.quality, item.name), is_active: item.is_active !== false }));
+        saveToStorage(); pagination.page = 1;
+        showToast(`Importovaných ${channels.value.length} kanálov.`);
+        event.target.value = '';
+      }
+
+      function parseM3U(text) {
+        const lines = text.replace(/\r/g, '').split('\n');
+        const items = []; let cur = null;
+        const getAttrs = l => { const a = {}; let m; const r = /([\w-]+)="([^"]*)"/g; while ((m=r.exec(l))) a[m[1]]=m[2]; return a; };
+        for (const raw of lines) {
+          const l = raw.trim(); if (!l) continue;
+          if (l.startsWith('#EXTINF')) {
+            const a = getAttrs(l), name = l.includes(',') ? l.split(',').slice(1).join(',').trim() : '';
+            cur = { name, tvg_id: a['tvg-id']||'', tvg_name: a['tvg-name']||'', tvg_logo: a['tvg-logo']||'', tvg_country: a['tvg-country']||'', tvg_language: a['tvg-language']||'', group_title: a['group-title']||'', quality: a['quality']||'' };
+          } else if (l.startsWith('#EXTVLCOPT')) {
+            if (!cur) cur = {};
+            const p = l.split(':').slice(1).join(':');
+            if (p.startsWith('http-user-agent=')) cur.user_agent = p.replace('http-user-agent=','');
+            if (p.startsWith('http-referrer='))   cur.referer = p.replace('http-referrer=','');
+          } else if (!l.startsWith('#')) {
+            if (cur) { items.push({ ...cur, url: l }); cur = null; }
+            else { const p = l.split('|'); items.push(p.length===2 ? { name:p[0].trim(), url:p[1].trim() } : { name:l, url:l }); }
+          }
+        }
+        return items.filter(i => i.url);
+      }
+
+      function parseXSPF(text) {
+        const xml = new DOMParser().parseFromString(text, 'application/xml');
+        return Array.from(xml.querySelectorAll('track')).map(t => ({
+          name: t.querySelector('title')?.textContent?.trim()||'',
+          url:  t.querySelector('location')?.textContent?.trim()||'',
+          tvg_logo: t.querySelector('image')?.textContent?.trim()||'',
+          group_title: t.querySelector('annotation')?.textContent?.trim()||'',
+        })).filter(i => i.url);
+      }
+
+      function exportPlaylist(format = 'm3u') {
+        if (!channels.value.length) return;
+        const src  = channels.value.filter(i => i.is_active).length ? channels.value.filter(i => i.is_active) : channels.value;
+        let content, filename;
+        const esc  = v => String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+        if (format === 'xspf') {
+          filename = 'iptv-playlist.xspf';
+          content  = `<?xml version="1.0" encoding="UTF-8"?>\n<playlist version="1" xmlns="http://xspf.org/ns/0/">\n  <trackList>\n${src.map(i=>`    <track>\n      <title>${esc(i.name||'')}</title>\n      <location>${esc(i.url||'')}</location>\n      <image>${esc(i.tvg_logo||'')}</image>\n      <annotation>${esc(i.group_title||'')}</annotation>\n    </track>`).join('\n')}\n  </trackList>\n</playlist>`;
+        } else {
+          filename = 'iptv-playlist.m3u';
+          content  = '#EXTM3U\n' + src.map(i => {
+            const a = [i.tvg_id&&`tvg-id="${i.tvg_id}"`,i.tvg_name&&`tvg-name="${i.tvg_name}"`,i.tvg_logo&&`tvg-logo="${i.tvg_logo}"`,i.tvg_country&&`tvg-country="${i.tvg_country}"`,i.tvg_language&&`tvg-language="${i.tvg_language}"`,i.group_title&&`group-title="${i.group_title}"`,i.quality&&`quality="${i.quality}"`].filter(Boolean).join(' ');
+            const o = [i.user_agent&&`#EXTVLCOPT:http-user-agent=${i.user_agent}`,i.referer&&`#EXTVLCOPT:http-referrer=${i.referer}`].filter(Boolean).join('\n');
+            return `#EXTINF:-1 ${a},${i.name||'Bez názvu'}\n${o?o+'\n':''}${i.url}`;
+          }).join('\n');
+        }
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: filename });
+        a.click(); URL.revokeObjectURL(a.href);
+        showToast(`Exportovaných ${src.length} kanálov.`);
+      }
+
+      const groupOptions    = computed(() => Array.from(new Set(channels.value.map(i=>i.group_title).filter(Boolean))).sort((a,b)=>a.localeCompare(b)));
+      const filteredChannels = computed(() => {
+        let r = [...channels.value];
+        const q = filters.search.trim().toLowerCase();
+        if (q) r = r.filter(i=>[i.name,i.group_title,i.tvg_id,i.url,i.tvg_name].filter(Boolean).some(f=>f.toLowerCase().includes(q)));
+        if (filters.group)   r = r.filter(i=>i.group_title===filters.group);
+        if (filters.quality) r = r.filter(i=>i.quality===filters.quality);
+        if (filters.status==='active')   r = r.filter(i=>i.is_active);
+        if (filters.status==='inactive') r = r.filter(i=>!i.is_active);
+        if (filters.country) r = r.filter(i=>(i.tvg_country||'').toLowerCase().includes(filters.country.toLowerCase()));
+        const k = sort.by === 'group' ? 'group_title' : sort.by;
+        r.sort((a,b) => { const av=String(a[k]||'').toLowerCase(), bv=String(b[k]||'').toLowerCase(); return sort.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av); });
+        return r;
+      });
+      const totalPages       = computed(() => Math.max(1, Math.ceil(filteredChannels.value.length/pagination.limit)));
+      const paginatedChannels = computed(() => { const s=(pagination.page-1)*pagination.limit; return filteredChannels.value.slice(s,s+pagination.limit); });
+      const stats            = computed(() => {
+        const q = {'4K':0,'FHD':0,'HD':0,'SD':0};
+        channels.value.forEach(i=>{ if(q[i.quality]!==undefined) q[i.quality]++; });
+        return { total:channels.value.length, active:channels.value.filter(i=>i.is_active).length, groups:new Set(channels.value.map(i=>i.group_title).filter(Boolean)).size, qualities:q };
+      });
+
+      function resetFilters()   { Object.assign(filters,{search:'',group:'',quality:'',status:'all',country:''}); pagination.page=1; }
+      function setSort(by)      { sort.by===by ? sort.dir=sort.dir==='asc'?'desc':'asc' : Object.assign(sort,{by,dir:'asc'}); }
+      function prevPage()       { if(pagination.page>1) pagination.page--; }
+      function nextPage()       { if(pagination.page<totalPages.value) pagination.page++; }
+      function openAddChannel() { Object.assign(form,createEmptyChannel()); modal.mode='create'; modal.open=true; }
+      function editChannel(ch)  { Object.assign(form,JSON.parse(JSON.stringify(ch))); selectedId.value=ch.id; modal.mode='edit'; modal.open=true; }
+      function closeModal()     { modal.open=false; }
+      function saveChannel() {
+        if(!form.name||!form.url){ showToast('Názov a URL sú povinné.'); return; }
+        form.quality = normalizeQuality(form.quality, form.name);
+        if(modal.mode==='create') { channels.value.unshift({...JSON.parse(JSON.stringify(form)),id:`${Date.now()}-${Math.random().toString(16).slice(2)}`}); showToast('Kanál vytvorený.'); }
+        else { const idx=channels.value.findIndex(i=>i.id===form.id); if(idx>=0) channels.value[idx]={...JSON.parse(JSON.stringify(form))}; showToast('Kanál uložený.'); }
+        saveToStorage(); modal.open=false;
+      }
+      function removeChannel(id) {
+        if(!confirm('Zmazať tento kanál?')) return;
+        channels.value=channels.value.filter(i=>i.id!==id);
+        if(selectedId.value===id) selectedId.value=null;
+        saveToStorage(); showToast('Kanál zmazaný.');
+      }
+      function toggleChannel(ch) { ch.is_active=!ch.is_active; saveToStorage(); }
+      function clearAll() {
+        if(!confirm('Zmazať všetky kanály z knižnice?')) return;
+        channels.value=[]; saveToStorage(); pagination.page=1; showToast('Knižnica vymazaná.');
+      }
+      function toggleTheme() { theme.value=theme.value==='dark'?'light':'dark'; }
+
+      watch(theme, v => { document.documentElement.setAttribute('data-theme',v); localStorage.setItem(THEME_KEY,v); }, { immediate:true });
+      watch([()=>filters.search,()=>filters.group,()=>filters.quality,()=>filters.status,()=>filters.country,()=>pagination.limit], ()=>{ pagination.page=1; });
+      watch(totalPages, v=>{ if(pagination.page>v) pagination.page=v; });
+
+      onMounted(() => {
+        loadFromStorage();
+        if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+      });
+
+      return { fileInput, theme, activeTab, tabs, channels, selectedId, filters, sort, pagination, modal, toast, form, groupOptions, filteredChannels, paginatedChannels, totalPages, stats, qualityClass, triggerImport, handleImportFile, exportPlaylist, openAddChannel, editChannel, closeModal, saveChannel, removeChannel, toggleChannel, clearAll, toggleTheme, setSort, resetFilters, prevPage, nextPage };
+    }
+  }).mount('#app');
+</script>
 </body>
 </html>

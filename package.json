@@ -1,0 +1,43 @@
+{
+  "name": "iptv-playlist-generator",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Simple Apple style IPTV playlist generator with Netlify, Electron and Capacitor support.",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "npx serve .",
+    "android:add": "npx cap add android",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "win:start": "electron .",
+    "win:build": "electron-builder --win portable nsis"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.1",
+    "@capacitor/core": "^7.0.1",
+    "electron": "^31.7.0",
+    "electron-builder": "^24.13.3",
+    "serve": "^14.2.3"
+  },
+  "build": {
+    "appId": "com.bucala.iptvplaylistgen",
+    "productName": "IPTV Playlist Generator",
+    "files": [
+      "index.html",
+      "manifest.json",
+      "sw.js",
+      "icons/**/*",
+      "electron/**/*",
+      "capacitor.config.json"
+    ],
+    "directories": {
+      "output": "dist-electron"
+    },
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    }
+  }
+}

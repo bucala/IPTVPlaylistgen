@@ -1,0 +1,9 @@
+{
+  "appId": "com.bucala.iptvplaylistgen",
+  "appName": "IPTV Playlist Generator",
+  "webDir": ".",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

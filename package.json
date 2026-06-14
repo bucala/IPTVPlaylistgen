@@ -13,8 +13,6 @@
     "win:build": "electron-builder --win portable nsis"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.0.1",
-    "@capacitor/core": "^7.0.1",
     "electron": "^31.7.0",
     "electron-builder": "^24.13.3",
     "serve": "^14.2.3"
@@ -39,5 +37,10 @@
         "nsis"
       ]
     }
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0"
   }
 }

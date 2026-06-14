@@ -15,7 +15,8 @@
   "devDependencies": {
     "electron": "^31.7.0",
     "electron-builder": "^24.13.3",
-    "serve": "^14.2.3"
+    "serve": "^14.2.3",
+    "sharp": "^0.35.1"
   },
   "build": {
     "appId": "com.bucala.iptvplaylistgen",

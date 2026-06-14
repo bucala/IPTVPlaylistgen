@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">IPTV Playlist Generator</string>
+    <string name="title_activity_main">IPTV Playlist Generator</string>
+    <string name="package_name">com.bucala.iptvplaylistgen</string>
+    <string name="custom_url_scheme">com.bucala.iptvplaylistgen</string>
+</resources>

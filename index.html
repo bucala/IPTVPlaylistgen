@@ -364,9 +364,28 @@
     .fade-enter-active, .fade-leave-active { transition: opacity .2s ease, margin-bottom .2s ease; }
     .fade-enter-from, .fade-leave-to { opacity: 0; margin-bottom: -8px; }
 
+    /* ── Mobile tab bar ── */
+    .mob-tabs {
+      display: none; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; gap: 6px;
+    }
+    .mob-tabs::-webkit-scrollbar { display: none; }
+    .mob-tab {
+      display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+      border: none; border-radius: var(--radius-sm);
+      padding: 9px 15px; font-size: 14px; font-weight: 600;
+      white-space: nowrap; cursor: pointer;
+      background: var(--fill); color: var(--text3); transition: all var(--ease);
+    }
+    .mob-tab:active { transform: scale(0.97); }
+    .mob-tab.active { background: var(--primary); color: #fff; }
+    .mob-badge { font-size: 11px; opacity: .7; margin-left: 2px; }
+
     /* ── Responsive ── */
     @media (max-width: 1024px) {
       .app-grid { grid-template-columns: 1fr !important; }
+      .app-sidebar { display: none !important; }
+      .mob-tabs { display: flex; }
     }
     @media (max-width: 640px) {
       .hdr-actions { flex-direction: column; width: 100%; }
@@ -405,6 +424,7 @@
           <!-- Lang + theme -->
           <div class="flex items-center gap-2 justify-start md:justify-end">
             <div class="lang-sw" role="group" :aria-label="t('langLabel')">
+              <span style="padding:2px 4px 2px 6px; opacity:.55; font-size:14px; line-height:1" aria-hidden="true">🌐</span>
               <button :class="{ active: lang === 'sk' }" @click="setLang('sk')" aria-label="Slovenčina" :aria-pressed="(lang === 'sk').toString()">SK</button>
               <button :class="{ active: lang === 'en' }" @click="setLang('en')" aria-label="English"    :aria-pressed="(lang === 'en').toString()">EN</button>
             </div>
@@ -438,11 +458,26 @@
       </div>
     </header>
 
+    <!-- Mobile tab bar (hidden on ≥1024px by .mob-tabs CSS) -->
+    <div class="mob-tabs glass rounded-[18px] px-4 py-3 mb-4" role="tablist" :aria-label="t('workspace')">
+      <button
+        v-for="tab in visibleTabs" :key="tab.id"
+        class="mob-tab" :class="{ active: activeTab === tab.id }"
+        @click="activeTab = tab.id; mobFilterOpen = false"
+        :aria-current="activeTab === tab.id ? 'page' : undefined"
+        role="tab"
+      >
+        <span aria-hidden="true">{{ tab.icon }}</span>
+        {{ t(tab.labelKey) }}
+        <span v-if="tab.id === 'library' && stats.total" class="mob-badge">{{ stats.total }}</span>
+      </button>
+    </div>
+
     <!-- ══════════════════════ GRID ══════════════════════ -->
     <div class="grid gap-4 app-grid" style="grid-template-columns: 280px 1fr; align-items: start;">
 
       <!-- ──────────── SIDEBAR ──────────── -->
-      <aside class="space-y-3" style="position:sticky; top:16px;">
+      <aside class="app-sidebar space-y-3" style="position:sticky; top:16px;">
 
         <!-- Nav -->
         <nav class="glass rounded-[22px] p-3" aria-label="Navigation">
@@ -559,6 +594,64 @@
               <button class="seg-btn" :class="{ active: sort.by === 'group' }"   @click="setSort('group')"   :aria-pressed="(sort.by === 'group').toString()">{{ t('sortGroup') }}<span v-if="sort.by === 'group'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
               <button class="seg-btn" :class="{ active: sort.by === 'quality' }" @click="setSort('quality')" :aria-pressed="(sort.by === 'quality').toString()">{{ t('sortQuality') }}<span v-if="sort.by === 'quality'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
               <button class="seg-btn" :class="{ active: sort.by === 'country' }" @click="setSort('country')" :aria-pressed="(sort.by === 'country').toString()">{{ t('sortCountry') }}<span v-if="sort.by === 'country'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
+            </div>
+          </div>
+
+          <!-- Mobile filter toggle (hidden on ≥1024px via Tailwind lg:hidden) -->
+          <div class="mb-3 lg:hidden">
+            <button
+              class="btn btn-secondary" style="width:100%; justify-content:space-between"
+              @click="mobFilterOpen = !mobFilterOpen"
+              :aria-expanded="mobFilterOpen.toString()"
+              aria-controls="mob-filter-panel"
+            >
+              <span>{{ t('filterSet') }}<span v-if="hasActiveFilters" style="color:var(--primary);margin-left:5px">●</span></span>
+              <span aria-hidden="true">{{ mobFilterOpen ? '▲' : '▼' }}</span>
+            </button>
+            <div v-if="mobFilterOpen" id="mob-filter-panel" class="glass rounded-[16px] p-4 mt-2 space-y-3">
+              <div>
+                <label class="label" for="mob-search">{{ t('search') }}</label>
+                <input id="mob-search" class="field" v-model.trim="filters.search" :placeholder="t('searchPlaceholder')" />
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="label" for="mob-group">{{ t('group') }}</label>
+                  <select id="mob-group" class="select" v-model="filters.group">
+                    <option value="">{{ t('allGroups') }}</option>
+                    <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="label" for="mob-quality">{{ t('quality') }}</label>
+                  <select id="mob-quality" class="select" v-model="filters.quality">
+                    <option value="">{{ t('allQuality') }}</option>
+                    <option value="4K">4K</option>
+                    <option value="FHD">FHD</option>
+                    <option value="HD">HD</option>
+                    <option value="SD">SD</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="label" for="mob-country">{{ t('country') }}</label>
+                  <input id="mob-country" class="field" v-model.trim="filters.country" placeholder="SK, CZ…" />
+                </div>
+                <div>
+                  <label class="label" for="mob-limit">{{ t('perPage') }}</label>
+                  <select id="mob-limit" class="select" v-model.number="pagination.limit">
+                    <option :value="50">50</option>
+                    <option :value="100">100</option>
+                    <option :value="200">200</option>
+                  </select>
+                </div>
+              </div>
+              <div class="seg" style="width:100%" role="group" :aria-label="t('status')">
+                <button class="seg-btn" :class="{ active: filters.status === 'all' }"      @click="filters.status='all'">{{ t('all') }}</button>
+                <button class="seg-btn" :class="{ active: filters.status === 'active' }"   @click="filters.status='active'">{{ t('activeLabel') }}</button>
+                <button class="seg-btn" :class="{ active: filters.status === 'inactive' }" @click="filters.status='inactive'">{{ t('offLabel') }}</button>
+              </div>
+              <button class="btn btn-ghost" style="width:100%" @click="resetFilters; mobFilterOpen = false">{{ t('resetFilters') }}</button>
             </div>
           </div>
 
@@ -1118,6 +1211,8 @@ createApp({
     const importLoading = ref(false)
     const importFileRef = ref(null)
 
+    const mobFilterOpen = ref(false)
+
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
     const pagination = reactive({ page: 1, limit: 50 })
@@ -1201,6 +1296,10 @@ createApp({
       })
       return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0]))
     })
+
+    const hasActiveFilters = computed(() =>
+      !!(filters.search || filters.group || filters.quality || filters.country || filters.status !== 'all')
+    )
 
     const editIsDirty = computed(() => {
       if (!editCh.value || !editSnapshot.value) return false
@@ -1520,10 +1619,13 @@ createApp({
       () => { pagination.page = 1 }
     )
 
+    watch(() => activeTab.value, () => { mobFilterOpen.value = false })
+
     return {
       channels, lang, theme, activeTab, selectedId,
       importMode, importUrl, importLoading, importFileRef,
       filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,
+      mobFilterOpen, hasActiveFilters,
       stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs,
       t, setTheme, toggleTheme, setLang, setSort, prevPage, nextPage, resetFilters,
       toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,

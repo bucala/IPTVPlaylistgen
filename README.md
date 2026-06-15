@@ -1,4 +1,4 @@
-# IPTV Playlist Generator v2
+# IPTV Playlist Generator
 
 ## Čo je hotové
 - Apple-style statický frontend bez Python backendu

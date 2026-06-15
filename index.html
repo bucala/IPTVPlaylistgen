@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="IPTV Playlist" />
+  <meta name="apple-touch-icon" href="./icons/icon.svg" />
   <meta name="description" content="IPTV Playlist Generator – import, edit and export M3U / XSPF playlists. PWA ready, offline support." />
   <title>IPTV Playlist Generator</title>
   <link rel="manifest" href="./manifest.json" />
@@ -15,6 +16,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Anti-FOUC: apply persisted theme + lang before any paint -->
+  <script>(function(){try{var t=localStorage.getItem('iptv-theme')||'dark';document.documentElement.setAttribute('data-theme',t);var l=localStorage.getItem('iptv-lang')||'sk';document.documentElement.lang=l;}catch(e){}})()</script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <style>
@@ -358,8 +361,8 @@
     .stat-card .lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
 
     /* ── Vue transitions ── */
-    .fade-enter-active, .fade-leave-active { transition: opacity .2s ease, transform .2s ease; }
-    .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    .fade-enter-active, .fade-leave-active { transition: opacity .2s ease, margin-bottom .2s ease; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; margin-bottom: -8px; }
 
     /* ── Responsive ── */
     @media (max-width: 1024px) {
@@ -372,6 +375,7 @@
   </style>
 </head>
 <body>
+<noscript><style>body{display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#000;color:#fff;text-align:center;padding:2rem}</style><p>IPTV Playlist Generator requires JavaScript to run.</p></noscript>
 <div id="app" class="min-h-screen px-3 md:px-5 lg:px-6 pb-8">
   <div class="max-w-[1720px] mx-auto pt-4 md:pt-5">
 
@@ -551,10 +555,10 @@
               <h2 class="text-[1.3rem] font-bold tracking-[-0.03em]">{{ t('libraryHeading') }}</h2>
             </div>
             <div class="seg" role="group" :aria-label="t('sortLabel')">
-              <button class="seg-btn" :class="{ active: sort.by === 'name' }"    @click="setSort('name')"    :aria-pressed="(sort.by === 'name').toString()">{{ t('sortName') }}</button>
-              <button class="seg-btn" :class="{ active: sort.by === 'group' }"   @click="setSort('group')"   :aria-pressed="(sort.by === 'group').toString()">{{ t('sortGroup') }}</button>
-              <button class="seg-btn" :class="{ active: sort.by === 'quality' }" @click="setSort('quality')" :aria-pressed="(sort.by === 'quality').toString()">{{ t('sortQuality') }}</button>
-              <button class="seg-btn" :class="{ active: sort.by === 'country' }" @click="setSort('country')" :aria-pressed="(sort.by === 'country').toString()">{{ t('sortCountry') }}</button>
+              <button class="seg-btn" :class="{ active: sort.by === 'name' }"    @click="setSort('name')"    :aria-pressed="(sort.by === 'name').toString()">{{ t('sortName') }}<span v-if="sort.by === 'name'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
+              <button class="seg-btn" :class="{ active: sort.by === 'group' }"   @click="setSort('group')"   :aria-pressed="(sort.by === 'group').toString()">{{ t('sortGroup') }}<span v-if="sort.by === 'group'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
+              <button class="seg-btn" :class="{ active: sort.by === 'quality' }" @click="setSort('quality')" :aria-pressed="(sort.by === 'quality').toString()">{{ t('sortQuality') }}<span v-if="sort.by === 'quality'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
+              <button class="seg-btn" :class="{ active: sort.by === 'country' }" @click="setSort('country')" :aria-pressed="(sort.by === 'country').toString()">{{ t('sortCountry') }}<span v-if="sort.by === 'country'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
             </div>
           </div>
 
@@ -1473,6 +1477,10 @@ createApp({
       setLang(savedLang)
 
       document.addEventListener('keydown', handleKeydown)
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {})
+      }
     })
 
     onUnmounted(() => {

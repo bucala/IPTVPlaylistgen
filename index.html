@@ -89,7 +89,7 @@
 
     /* ── Reset ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; scroll-behavior: smooth; }
+    html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; scroll-behavior: smooth; -webkit-user-select: none; user-select: none; }
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
       font-size: 15px; line-height: 1.5;
@@ -100,6 +100,8 @@
     img, video, svg { display: block; max-width: 100%; }
     button { cursor: pointer; font: inherit; color: inherit; }
     input, select, textarea { font: inherit; color: inherit; }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+    td { -webkit-user-select: text; user-select: text; }
 
     /* ── Scrollbars ── */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -448,18 +450,6 @@
 
         <!-- Controls -->
         <div class="flex flex-col gap-2.5 items-stretch md:items-end hdr-actions">
-          <!-- Lang + theme -->
-          <div class="flex items-center gap-2 justify-start md:justify-end">
-            <div class="lang-sw" role="group" :aria-label="t('langLabel')">
-              <span style="padding:2px 4px 2px 6px; opacity:.55; display:inline-flex; align-items:center" aria-hidden="true" v-html="icon('globe', 14)"></span>
-              <button :class="{ active: lang === 'sk' }" @click="setLang('sk')" aria-label="Slovenčina" :aria-pressed="(lang === 'sk').toString()">SK</button>
-              <button :class="{ active: lang === 'en' }" @click="setLang('en')" aria-label="English"    :aria-pressed="(lang === 'en').toString()">EN</button>
-            </div>
-            <button class="btn btn-ghost" @click="toggleTheme" :aria-label="theme === 'dark' ? t('switchLight') : t('switchDark')">
-              <span v-if="theme === 'dark'" class="inline-flex items-center gap-1.5"><span v-html="icon('sun', 15)"></span>{{ t('light') }}</span>
-              <span v-else class="inline-flex items-center gap-1.5"><span v-html="icon('moon', 15)"></span>{{ t('dark') }}</span>
-            </button>
-          </div>
           <!-- Action buttons -->
           <div class="flex flex-wrap gap-2 justify-start md:justify-end hdr-btns">
             <button class="btn btn-primary"    @click="triggerImport">{{ t('importPlaylist') }}</button>
@@ -467,7 +457,7 @@
             <button class="btn btn-secondary"  @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
             <button class="btn btn-secondary"  @click="epgLoaded ? clearEpg() : triggerEpgImport()" :style="epgLoaded ? 'color:var(--success)' : ''"><span v-html="icon('antenna', 15)"></span>{{ epgLoaded ? t('clearEpg') : t('epgImport') }}</button>
             <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" class="sr-only" @change="importEpgFromFile" />
-            <button class="btn btn-secondary"  @click="openAutoDetect" :disabled="stats.total === 0 || !epgLoaded" :title="!epgLoaded ? t('autoDetectNeedEpg') : ''"><span v-html="icon('search', 15)"></span>{{ t('autoDetectBtn') }}</button>
+            <button class="btn btn-secondary"  @click="openAutoDetect" :disabled="stats.total === 0" :title="!epgLoaded ? t('autoDetectNeedEpg') : ''"><span v-html="icon('search', 15)"></span>{{ t('autoDetectBtn') }}</button>
             <button class="btn btn-ghost"      @click="openAddChannel"><span class="inline-flex items-center gap-1.5"><span v-html="icon('plus', 14)"></span>{{ t('addChannel') }}</span></button>
             <button class="btn btn-danger"     @click="clearAll" :disabled="stats.total === 0">{{ t('clearAll') }}</button>
           </div>
@@ -605,7 +595,16 @@
         <!-- Design info sidebar -->
         <section class="glass rounded-[22px] p-4" v-if="activeTab === 'design'">
           <div class="sec-label">{{ t('designInfo') }}</div>
-          <p class="text-sm mt-2" style="color:var(--text3)">{{ t('designInfoDesc') }}</p>
+          <div class="space-y-2 mt-2">
+            <div class="design-row">
+              <span class="text-xs" style="color:var(--text3)">{{ t('language') }}</span>
+              <strong class="text-xs">{{ lang.toUpperCase() }}</strong>
+            </div>
+            <div class="design-row">
+              <span class="text-xs" style="color:var(--text3)">{{ t('theme') }}</span>
+              <strong class="text-xs">{{ theme === 'dark' ? t('dark') : t('light') }}</strong>
+            </div>
+          </div>
         </section>
       </aside>
 
@@ -681,12 +680,12 @@
             <table role="grid">
               <thead>
                 <tr>
-                  <th scope="col" class="w-12">#</th>
+                  <th scope="col" class="w-12 sortable" @click="setSort('index')" :aria-sort="sort.by==='index' ? (sort.asc?'ascending':'descending') : 'none'">#<span class="sort-ic" v-html="sort.by==='index' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
                   <th scope="col" class="w-14">{{ t('logo') }}</th>
                   <th scope="col" class="sortable" @click="setSort('name')" :aria-sort="sort.by==='name' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('name') }}<span class="sort-ic" v-html="sort.by==='name' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
                   <th scope="col" class="w-[150px] sortable" @click="setSort('group')" :aria-sort="sort.by==='group' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('group') }}<span class="sort-ic" v-html="sort.by==='group' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
                   <th scope="col" class="w-[100px] sortable" @click="setSort('quality')" :aria-sort="sort.by==='quality' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('quality') }}<span class="sort-ic" v-html="sort.by==='quality' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
-                  <th scope="col" class="w-[160px]">TVG-ID</th>
+                  <th scope="col" class="w-[160px] sortable" @click="setSort('tvg_id')" :aria-sort="sort.by==='tvg_id' ? (sort.asc?'ascending':'descending') : 'none'">TVG-ID<span class="sort-ic" v-html="sort.by==='tvg_id' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
                   <th scope="col" class="w-[80px] sortable" @click="setSort('country')" :aria-sort="sort.by==='country' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('country') }}<span class="sort-ic" v-html="sort.by==='country' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
                   <th scope="col">URL</th>
                   <th scope="col" class="w-[110px] text-center sortable" @click="setSort('status')" :aria-sort="sort.by==='status' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('status') }}<span class="sort-ic" v-html="sort.by==='status' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
@@ -827,14 +826,31 @@
         <!-- ══ DESIGN TAB ══ -->
         <section v-if="activeTab === 'design'" class="glass rounded-[24px] p-4 md:p-5" aria-label="Design settings">
           <div class="sec-label">{{ t('tabDesign') }}</div>
-          <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-4">{{ t('designHeading') }}</h2>
+          <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-5">{{ t('designHeading') }}</h2>
 
+          <!-- Language -->
+          <div class="sec-label mb-2">{{ t('langLabel') }}</div>
           <div class="design-row">
-            <span class="text-sm" style="color:var(--text3)">{{ t('themeAndLangHint') }}</span>
-            <span style="opacity:.45" aria-hidden="true" v-html="icon('arrowUR', 20)"></span>
+            <span class="text-sm" style="color:var(--text3)">{{ t('language') }}</span>
+            <div class="lang-sw" role="group" :aria-label="t('langLabel')">
+              <span style="padding:2px 4px 2px 6px; opacity:.55; display:inline-flex; align-items:center" aria-hidden="true" v-html="icon('globe', 14)"></span>
+              <button :class="{ active: lang === 'sk' }" @click="setLang('sk')" aria-label="Slovenčina" :aria-pressed="(lang === 'sk').toString()">SK</button>
+              <button :class="{ active: lang === 'en' }" @click="setLang('en')" aria-label="English" :aria-pressed="(lang === 'en').toString()">EN</button>
+            </div>
           </div>
 
-          <div class="mt-4 p-4 rounded-[var(--radius-md)]" style="background:var(--fill);border:1px solid var(--border)">
+          <!-- Theme -->
+          <div class="sec-label mb-2 mt-4">{{ t('theme') }}</div>
+          <div class="design-row">
+            <span class="text-sm" style="color:var(--text3)">{{ t('theme') }}</span>
+            <button class="btn btn-ghost" @click="toggleTheme" :aria-label="theme === 'dark' ? t('switchLight') : t('switchDark')">
+              <span v-if="theme === 'dark'" class="inline-flex items-center gap-1.5"><span v-html="icon('sun', 15)"></span>{{ t('light') }}</span>
+              <span v-else class="inline-flex items-center gap-1.5"><span v-html="icon('moon', 15)"></span>{{ t('dark') }}</span>
+            </button>
+          </div>
+
+          <!-- About -->
+          <div class="mt-5 p-4 rounded-[var(--radius-md)]" style="background:var(--fill);border:1px solid var(--border)">
             <p class="text-sm" style="color:var(--text3)">{{ t('designInfoDesc') }}</p>
           </div>
         </section>
@@ -1058,6 +1074,9 @@
                   </div>
                   <span v-else class="text-xs" style="color:var(--text4)">{{ t('autoDetectNoMatch') }}</span>
                 </td>
+                <td>
+                  <input class="field" style="font-size:12px;padding:4px 7px" v-model="r.editTvgUrl" :placeholder="t('tvgUrl')" type="url" />
+                </td>
                 <td class="text-center">
                   <div v-if="r.score > 0">
                     <div class="text-sm font-bold" :style="{ color: r.score >= 0.7 ? 'var(--success)' : r.score >= 0.4 ? 'var(--warning)' : 'var(--danger)' }">
@@ -1080,14 +1099,35 @@
         </div>
 
         <!-- Footer info + actions -->
-        <div class="flex flex-wrap gap-3 items-center justify-between mt-4 pt-4" style="border-top:1px solid var(--sep)">
-          <div class="text-sm" style="color:var(--text3)">
-            {{ t('autoDetectInfo').replace('{matched}', autoDetectSummary.matched).replace('{total}', autoDetectSummary.total) }}
-            · {{ t('autoDetectMatchPct').replace('{pct}', autoDetectSummary.total > 0 ? Math.round(autoDetectSummary.matched / autoDetectSummary.total * 100) : 0) }}
+        <div class="mt-4 pt-4" style="border-top:1px solid var(--sep)">
+          <!-- Per-field sync stats -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+            <div class="stat-card" style="padding:.5rem .8rem">
+              <div class="num" style="font-size:1.1rem;color:var(--primary)">{{ autoDetectFieldStats.tvgIdPct }}%</div>
+              <div class="lbl">TVG-ID</div>
+            </div>
+            <div class="stat-card" style="padding:.5rem .8rem">
+              <div class="num" style="font-size:1.1rem;color:var(--success)">{{ autoDetectFieldStats.tvgNamePct }}%</div>
+              <div class="lbl">TVG-Name</div>
+            </div>
+            <div class="stat-card" style="padding:.5rem .8rem">
+              <div class="num" style="font-size:1.1rem;color:var(--purple)">{{ autoDetectFieldStats.logoPct }}%</div>
+              <div class="lbl">Logo URL</div>
+            </div>
+            <div class="stat-card" style="padding:.5rem .8rem">
+              <div class="num" style="font-size:1.1rem;color:var(--warning)">{{ autoDetectFieldStats.tvgUrlPct }}%</div>
+              <div class="lbl">TVG URL (EPG)</div>
+            </div>
           </div>
-          <div class="flex gap-2">
-            <button class="btn btn-secondary" @click="modal.autoDetect = false">{{ t('cancel') }}</button>
-            <button class="btn btn-primary" @click="applyAutoDetect" :disabled="autoDetectSummary.selected === 0">{{ t('autoDetectApply') }} ({{ autoDetectSummary.selected }})</button>
+          <div class="flex flex-wrap gap-3 items-center justify-between">
+            <div class="text-sm" style="color:var(--text3)">
+              {{ t('autoDetectInfo').replace('{matched}', autoDetectSummary.matched).replace('{total}', autoDetectSummary.total) }}
+              · {{ t('autoDetectMatchPct').replace('{pct}', autoDetectSummary.total > 0 ? Math.round(autoDetectSummary.matched / autoDetectSummary.total * 100) : 0) }}
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary" @click="modal.autoDetect = false">{{ t('cancel') }}</button>
+              <button class="btn btn-primary" @click="applyAutoDetect" :disabled="autoDetectSummary.selected === 0">{{ t('autoDetectApply') }} ({{ autoDetectSummary.selected }})</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1241,6 +1281,9 @@ createApp({
         noEpgMatchTip:    'Bez EPG',
         clearEpg:            'Zmazať EPG',
         themeAndLangHint:    'Téma a jazyk sú dostupné v hlavičke',
+        language:            'Jazyk',
+        theme:               'Téma',
+        tvgUrl:              'TVG URL (EPG zdroj)',
         autoDetectBtn:       'Autodetekcia',
         autoDetectNeedEpg:   'Najprv načítaj EPG (XMLTV)',
         autoDetectTitle:     'Autodetekcia metadát z EPG',
@@ -1388,6 +1431,9 @@ createApp({
         noEpgMatchTip:    'No EPG',
         clearEpg:            'Clear EPG',
         themeAndLangHint:    'Theme & language controls are in the header',
+        language:            'Language',
+        theme:               'Theme',
+        tvgUrl:              'TVG URL (EPG source)',
         autoDetectBtn:       'Auto-detect',
         autoDetectNeedEpg:   'Load EPG (XMLTV) first',
         autoDetectTitle:     'Metadata Auto-detection from EPG',
@@ -1503,9 +1549,13 @@ createApp({
         arr = arr.filter(c => (c.tvg_country || '').toUpperCase() === cu)
       }
 
-      const fieldMap = { name: 'name', group: 'group_title', quality: 'quality', country: 'tvg_country', status: 'is_active' }
+      const fieldMap = { name: 'name', index: '_idx', group: 'group_title', quality: 'quality', country: 'tvg_country', status: 'is_active', tvg_id: 'tvg_id' }
       const f = fieldMap[sort.by] || 'name'
       return [...arr].sort((a, b) => {
+        if (f === '_idx') {
+          const ai = channels.value.indexOf(a), bi = channels.value.indexOf(b)
+          return sort.asc ? ai - bi : bi - ai
+        }
         const av = a[f], bv = b[f]
         if (typeof av === 'boolean' || typeof bv === 'boolean') {
           return sort.asc ? (bv === av ? 0 : av ? -1 : 1) : (bv === av ? 0 : av ? 1 : -1)
@@ -1558,6 +1608,21 @@ createApp({
       if (autoDetectFilter.value === 'matched')   return r.filter(x => x.score > 0)
       if (autoDetectFilter.value === 'unmatched') return r.filter(x => x.score === 0)
       return r
+    })
+
+    const autoDetectFieldStats = computed(() => {
+      const arr = autoDetectResults.value
+      const total = arr.length || 1
+      const withId   = arr.filter(r => r.suggestedId   || r.editId).length
+      const withName = arr.filter(r => r.suggestedName || r.editName).length
+      const withLogo = arr.filter(r => r.suggestedLogo || r.editLogo).length
+      const withUrl  = arr.filter(r => r.editTvgUrl).length
+      return {
+        tvgIdPct:   Math.round(withId   / total * 100),
+        tvgNamePct: Math.round(withName / total * 100),
+        logoPct:    Math.round(withLogo / total * 100),
+        tvgUrlPct:  Math.round(withUrl  / total * 100),
+      }
     })
 
     const autoDetectSummary = computed(() => ({
@@ -2036,6 +2101,7 @@ createApp({
           editId:        matched ? best.id                       : (ch.tvg_id   || ''),
           editName:      matched ? (best.meta?.displayName || '') : (ch.tvg_name || ''),
           editLogo:      matched ? (best.meta?.icon        || '') : (ch.tvg_logo || ''),
+          editTvgUrl:    ch.tvg_url || (matched && best.meta?.tvgUrl ? best.meta.tvgUrl : '') || '',
         }
       }).sort((a, b) => b.score - a.score)
     }
@@ -2052,9 +2118,10 @@ createApp({
         if (!r.selected) return
         const ch = channels.value.find(c => c.id === r.ch.id)
         if (!ch) return
-        if (r.editId)   ch.tvg_id   = r.editId
-        if (r.editName) ch.tvg_name = r.editName
-        if (r.editLogo) ch.tvg_logo = r.editLogo
+        if (r.editId)     ch.tvg_id   = r.editId
+        if (r.editName)   ch.tvg_name = r.editName
+        if (r.editLogo)   ch.tvg_logo = r.editLogo
+        if (r.editTvgUrl) ch.tvg_url  = r.editTvgUrl
         logoErrors.delete(ch.id)
         applied++
       })
@@ -2090,7 +2157,7 @@ createApp({
       getCurrentProgram, getNextProgram, getTodayPrograms, formatEpgTime,
       selectRow,
       autoDetectResults, autoDetectFilter,
-      filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected,
+      filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
     }
   }

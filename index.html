@@ -266,6 +266,13 @@
       font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
       border-bottom: 1px solid var(--sep); padding: 10px 12px; text-align: left;
     }
+    thead th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+    thead th.sortable:hover { color: var(--text); }
+    thead th.sortable[aria-sort="ascending"],
+    thead th.sortable[aria-sort="descending"] { color: var(--primary); }
+    .sort-ic { opacity: .3; font-style: normal; margin-left: 2px; }
+    thead th.sortable[aria-sort="ascending"] .sort-ic,
+    thead th.sortable[aria-sort="descending"] .sort-ic { opacity: 1; }
     tbody tr {
       border-bottom: 1px solid var(--sep);
       transition: background var(--ease);
@@ -584,17 +591,9 @@
 
         <!-- ══ LIBRARY TAB ══ -->
         <section v-if="activeTab === 'library'" class="glass rounded-[24px] p-4 md:p-5" aria-label="Channel library">
-          <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
-            <div>
-              <div class="sec-label">{{ t('tabLibrary') }}</div>
-              <h2 class="text-[1.3rem] font-bold tracking-[-0.03em]">{{ t('libraryHeading') }}</h2>
-            </div>
-            <div class="seg" role="group" :aria-label="t('sortLabel')">
-              <button class="seg-btn" :class="{ active: sort.by === 'name' }"    @click="setSort('name')"    :aria-pressed="(sort.by === 'name').toString()">{{ t('sortName') }}<span v-if="sort.by === 'name'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
-              <button class="seg-btn" :class="{ active: sort.by === 'group' }"   @click="setSort('group')"   :aria-pressed="(sort.by === 'group').toString()">{{ t('sortGroup') }}<span v-if="sort.by === 'group'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
-              <button class="seg-btn" :class="{ active: sort.by === 'quality' }" @click="setSort('quality')" :aria-pressed="(sort.by === 'quality').toString()">{{ t('sortQuality') }}<span v-if="sort.by === 'quality'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
-              <button class="seg-btn" :class="{ active: sort.by === 'country' }" @click="setSort('country')" :aria-pressed="(sort.by === 'country').toString()">{{ t('sortCountry') }}<span v-if="sort.by === 'country'" aria-hidden="true"> {{ sort.asc ? '↑' : '↓' }}</span></button>
-            </div>
+          <div class="mb-4">
+            <div class="sec-label">{{ t('tabLibrary') }}</div>
+            <h2 class="text-[1.3rem] font-bold tracking-[-0.03em]">{{ t('libraryHeading') }}</h2>
           </div>
 
           <!-- Mobile filter toggle (hidden on ≥1024px via Tailwind lg:hidden) -->
@@ -661,13 +660,13 @@
                 <tr>
                   <th scope="col" class="w-12">#</th>
                   <th scope="col" class="w-14">{{ t('logo') }}</th>
-                  <th scope="col">{{ t('name') }}</th>
-                  <th scope="col" class="w-[150px]">{{ t('group') }}</th>
-                  <th scope="col" class="w-[100px]">{{ t('quality') }}</th>
+                  <th scope="col" class="sortable" @click="setSort('name')" :aria-sort="sort.by==='name' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('name') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='name' ? (sort.asc?'↑':'↓') : '↕' }}</i></th>
+                  <th scope="col" class="w-[150px] sortable" @click="setSort('group')" :aria-sort="sort.by==='group' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('group') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='group' ? (sort.asc?'↑':'↓') : '↕' }}</i></th>
+                  <th scope="col" class="w-[100px] sortable" @click="setSort('quality')" :aria-sort="sort.by==='quality' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('quality') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='quality' ? (sort.asc?'↑':'↓') : '↕' }}</i></th>
                   <th scope="col" class="w-[160px]">TVG-ID</th>
-                  <th scope="col" class="w-[80px]">{{ t('country') }}</th>
+                  <th scope="col" class="w-[80px] sortable" @click="setSort('country')" :aria-sort="sort.by==='country' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('country') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='country' ? (sort.asc?'↑':'↓') : '↕' }}</i></th>
                   <th scope="col">URL</th>
-                  <th scope="col" class="w-[110px] text-center">{{ t('status') }}</th>
+                  <th scope="col" class="w-[110px] text-center sortable" @click="setSort('status')" :aria-sort="sort.by==='status' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('status') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='status' ? (sort.asc?'↑':'↓') : '↕' }}</i></th>
                   <th scope="col" class="w-[150px] text-right">{{ t('actions') }}</th>
                 </tr>
               </thead>
@@ -1259,12 +1258,15 @@ createApp({
         arr = arr.filter(c => (c.tvg_country || '').toUpperCase() === cu)
       }
 
-      const fieldMap = { name: 'name', group: 'group_title', quality: 'quality', country: 'tvg_country' }
+      const fieldMap = { name: 'name', group: 'group_title', quality: 'quality', country: 'tvg_country', status: 'is_active' }
       const f = fieldMap[sort.by] || 'name'
       return [...arr].sort((a, b) => {
-        const av = (a[f] || '').toLowerCase()
-        const bv = (b[f] || '').toLowerCase()
-        return sort.asc ? av.localeCompare(bv) : bv.localeCompare(av)
+        const av = a[f], bv = b[f]
+        if (typeof av === 'boolean' || typeof bv === 'boolean') {
+          return sort.asc ? (bv === av ? 0 : av ? -1 : 1) : (bv === av ? 0 : av ? 1 : -1)
+        }
+        const as = (av || '').toLowerCase(), bs = (bv || '').toLowerCase()
+        return sort.asc ? as.localeCompare(bs) : bs.localeCompare(as)
       })
     })
 

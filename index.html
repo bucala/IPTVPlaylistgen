@@ -270,7 +270,7 @@
     thead th.sortable:hover { color: var(--text); }
     thead th.sortable[aria-sort="ascending"],
     thead th.sortable[aria-sort="descending"] { color: var(--primary); }
-    .sort-ic { opacity: .3; font-style: normal; margin-left: 2px; }
+    .sort-ic { opacity: 0; font-style: normal; margin-left: 2px; min-width: .9em; display: inline-block; }
     thead th.sortable[aria-sort="ascending"] .sort-ic,
     thead th.sortable[aria-sort="descending"] .sort-ic { opacity: 1; }
     tbody tr {
@@ -280,7 +280,7 @@
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--fill2); }
     tbody tr.selected { background: var(--primary-l); }
-    td { padding: 9px 12px; font-size: 13px; vertical-align: middle; }
+    td { padding: 9px 12px; font-size: 13px; vertical-align: middle; user-select: text; -webkit-user-select: text; }
     td.muted { color: var(--text3); }
 
     /* ── Design row ── */
@@ -467,6 +467,7 @@
             <button class="btn btn-secondary"  @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
             <button class="btn btn-secondary"  @click="epgLoaded ? clearEpg() : triggerEpgImport()" :style="epgLoaded ? 'color:var(--success)' : ''">📡 {{ epgLoaded ? t('clearEpg') : t('epgImport') }}</button>
             <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" class="sr-only" @change="importEpgFromFile" />
+            <button class="btn btn-secondary"  @click="openAutoDetect" :disabled="stats.total === 0 || !epgLoaded" :title="!epgLoaded ? t('autoDetectNeedEpg') : ''">🔍 {{ t('autoDetectBtn') }}</button>
             <button class="btn btn-ghost"      @click="openAddChannel">{{ t('addChannel') }}</button>
             <button class="btn btn-danger"     @click="clearAll" :disabled="stats.total === 0">{{ t('clearAll') }}</button>
           </div>
@@ -682,13 +683,13 @@
                 <tr>
                   <th scope="col" class="w-12">#</th>
                   <th scope="col" class="w-14">{{ t('logo') }}</th>
-                  <th scope="col" class="sortable" @click="setSort('name')" :aria-sort="sort.by==='name' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('name') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='name' ? (sort.asc?'↑':'↓') : '↕' }}</i></th>
-                  <th scope="col" class="w-[150px] sortable" @click="setSort('group')" :aria-sort="sort.by==='group' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('group') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='group' ? (sort.asc?'↑':'↓') : '↕' }}</i></th>
-                  <th scope="col" class="w-[100px] sortable" @click="setSort('quality')" :aria-sort="sort.by==='quality' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('quality') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='quality' ? (sort.asc?'↑':'↓') : '↕' }}</i></th>
+                  <th scope="col" class="sortable" @click="setSort('name')" :aria-sort="sort.by==='name' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('name') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='name' ? (sort.asc?'↑':'↓') : '' }}</i></th>
+                  <th scope="col" class="w-[150px] sortable" @click="setSort('group')" :aria-sort="sort.by==='group' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('group') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='group' ? (sort.asc?'↑':'↓') : '' }}</i></th>
+                  <th scope="col" class="w-[100px] sortable" @click="setSort('quality')" :aria-sort="sort.by==='quality' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('quality') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='quality' ? (sort.asc?'↑':'↓') : '' }}</i></th>
                   <th scope="col" class="w-[160px]">TVG-ID</th>
-                  <th scope="col" class="w-[80px] sortable" @click="setSort('country')" :aria-sort="sort.by==='country' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('country') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='country' ? (sort.asc?'↑':'↓') : '↕' }}</i></th>
+                  <th scope="col" class="w-[80px] sortable" @click="setSort('country')" :aria-sort="sort.by==='country' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('country') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='country' ? (sort.asc?'↑':'↓') : '' }}</i></th>
                   <th scope="col">URL</th>
-                  <th scope="col" class="w-[110px] text-center sortable" @click="setSort('status')" :aria-sort="sort.by==='status' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('status') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='status' ? (sort.asc?'↑':'↓') : '↕' }}</i></th>
+                  <th scope="col" class="w-[110px] text-center sortable" @click="setSort('status')" :aria-sort="sort.by==='status' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('status') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='status' ? (sort.asc?'↑':'↓') : '' }}</i></th>
                   <th scope="col" class="w-[150px] text-right">{{ t('actions') }}</th>
                 </tr>
               </thead>
@@ -828,24 +829,9 @@
           <div class="sec-label">{{ t('tabDesign') }}</div>
           <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-4">{{ t('designHeading') }}</h2>
 
-          <div class="space-y-2">
-            <!-- Theme -->
-            <div class="design-row">
-              <span class="font-medium">{{ t('theme') }}</span>
-              <div class="seg" role="group" :aria-label="t('theme')">
-                <button class="seg-btn" :class="{ active: theme === 'light' }" @click="setTheme('light')" :aria-pressed="(theme === 'light').toString()">☀︎ {{ t('light') }}</button>
-                <button class="seg-btn" :class="{ active: theme === 'dark' }"  @click="setTheme('dark')"  :aria-pressed="(theme === 'dark').toString()">☾ {{ t('dark') }}</button>
-              </div>
-            </div>
-
-            <!-- Language -->
-            <div class="design-row">
-              <span class="font-medium">{{ t('language') }}</span>
-              <div class="lang-sw" role="group" :aria-label="t('langLabel')">
-                <button :class="{ active: lang === 'sk' }" @click="setLang('sk')" aria-label="Slovenčina" :aria-pressed="(lang === 'sk').toString()">SK</button>
-                <button :class="{ active: lang === 'en' }" @click="setLang('en')" aria-label="English"    :aria-pressed="(lang === 'en').toString()">EN</button>
-              </div>
-            </div>
+          <div class="design-row">
+            <span class="text-sm" style="color:var(--text3)">{{ t('themeAndLangHint') }}</span>
+            <span style="font-size:20px; opacity:.45" aria-hidden="true">↗</span>
           </div>
 
           <div class="mt-4 p-4 rounded-[var(--radius-md)]" style="background:var(--fill);border:1px solid var(--border)">
@@ -998,6 +984,115 @@
       </div>
     </div>
 
+    <!-- Autodetect Modal -->
+    <div v-if="modal.autoDetect" class="modal-overlay" @click.self="modal.autoDetect = false"
+         role="dialog" aria-modal="true" :aria-label="t('autoDetectTitle')">
+      <div class="modal-card glass-s" style="width:min(960px,100%)">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold">🔍 {{ t('autoDetectTitle') }}</h2>
+          <button class="btn btn-ghost" style="padding:6px 10px" @click="modal.autoDetect = false" :aria-label="t('close')">✕</button>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <div class="stat-card">
+            <div class="num" style="color:var(--primary)">{{ autoDetectSummary.matched }}</div>
+            <div class="lbl">{{ t('autoDetectMatched') }}</div>
+          </div>
+          <div class="stat-card">
+            <div class="num" style="color:var(--success)">{{ autoDetectSummary.selected }}</div>
+            <div class="lbl">{{ t('autoDetectSelected') }}</div>
+          </div>
+          <div class="stat-card">
+            <div class="num" style="color:var(--text3)">{{ autoDetectSummary.total }}</div>
+            <div class="lbl">{{ t('total') }}</div>
+          </div>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="flex items-center gap-2 mb-3">
+          <div class="seg flex-1" role="group">
+            <button class="seg-btn flex-1" :class="{ active: autoDetectFilter === 'all' }" @click="autoDetectFilter = 'all'">{{ t('all') }}</button>
+            <button class="seg-btn flex-1" :class="{ active: autoDetectFilter === 'matched' }" @click="autoDetectFilter = 'matched'">{{ t('autoDetectMatchedOnly') }}</button>
+            <button class="seg-btn flex-1" :class="{ active: autoDetectFilter === 'unmatched' }" @click="autoDetectFilter = 'unmatched'">{{ t('autoDetectUnmatched') }}</button>
+          </div>
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" @click="runAutoDetect">↺ {{ t('autoDetectRerun') }}</button>
+        </div>
+
+        <!-- Results table -->
+        <div class="table-shell" style="max-height:42vh">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px">
+                  <input type="checkbox" :checked="autoDetectAllSelected"
+                         @change="toggleAllAutoDetect($event.target.checked)"
+                         :title="t('autoDetectSelectAll')" />
+                </th>
+                <th>{{ t('channelName') }}</th>
+                <th>{{ t('autoDetectSuggested') }}</th>
+                <th class="text-center" style="width:72px">{{ t('autoDetectScore') }}</th>
+              </tr>
+            </thead>
+            <tbody v-if="filteredAutoDetectResults.length">
+              <tr v-for="r in filteredAutoDetectResults" :key="r.ch.id" :class="{ selected: r.selected }">
+                <td><input type="checkbox" v-model="r.selected" :disabled="!r.suggestedId" /></td>
+                <td style="min-width:180px">
+                  <div class="font-semibold text-sm">{{ r.ch.name }}</div>
+                  <div class="text-xs" style="color:var(--text3)">{{ r.ch.tvg_id || '—' }}</div>
+                </td>
+                <td>
+                  <div v-if="r.suggestedId" class="space-y-1">
+                    <div class="flex items-center gap-1">
+                      <span class="label" style="min-width:52px;margin:0">TVG-ID</span>
+                      <input class="field" style="font-size:12px;padding:4px 7px" v-model="r.editId" :placeholder="t('tvgId')" />
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span class="label" style="min-width:52px;margin:0">Name</span>
+                      <input class="field" style="font-size:12px;padding:4px 7px" v-model="r.editName" :placeholder="t('tvgName')" />
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <span class="label" style="min-width:52px;margin:0">Logo</span>
+                      <input class="field" style="font-size:12px;padding:4px 7px" v-model="r.editLogo" :placeholder="t('tvgLogo')" type="url" />
+                    </div>
+                  </div>
+                  <span v-else class="text-xs" style="color:var(--text4)">{{ t('autoDetectNoMatch') }}</span>
+                </td>
+                <td class="text-center">
+                  <div v-if="r.score > 0">
+                    <div class="text-sm font-bold" :style="{ color: r.score >= 0.7 ? 'var(--success)' : r.score >= 0.4 ? 'var(--warning)' : 'var(--danger)' }">
+                      {{ Math.round(r.score * 100) }}%
+                    </div>
+                  </div>
+                  <span v-else style="color:var(--text4)">—</span>
+                </td>
+              </tr>
+            </tbody>
+            <tbody v-else>
+              <tr><td colspan="4">
+                <div class="empty-state">
+                  <div class="icon" aria-hidden="true">🔍</div>
+                  <h3>{{ t('autoDetectEmpty') }}</h3>
+                </div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer info + actions -->
+        <div class="flex flex-wrap gap-3 items-center justify-between mt-4 pt-4" style="border-top:1px solid var(--sep)">
+          <div class="text-sm" style="color:var(--text3)">
+            {{ t('autoDetectInfo').replace('{matched}', autoDetectSummary.matched).replace('{total}', autoDetectSummary.total) }}
+            · {{ t('autoDetectMatchPct').replace('{pct}', autoDetectSummary.total > 0 ? Math.round(autoDetectSummary.matched / autoDetectSummary.total * 100) : 0) }}
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-secondary" @click="modal.autoDetect = false">{{ t('cancel') }}</button>
+            <button class="btn btn-primary" @click="applyAutoDetect" :disabled="autoDetectSummary.selected === 0">{{ t('autoDetectApply') }} ({{ autoDetectSummary.selected }})</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast -->
     <transition name="fade">
       <div v-if="toast.show" class="toast" role="status" aria-live="polite" aria-atomic="true">{{ toast.message }}</div>
@@ -1144,7 +1239,25 @@ createApp({
         noEpg:            'Žiadne EPG dáta pre tento kanál',
         epgMatchTip:      'EPG dostupné',
         noEpgMatchTip:    'Bez EPG',
-        clearEpg:         'Zmazať EPG',
+        clearEpg:            'Zmazať EPG',
+        themeAndLangHint:    'Téma a jazyk sú dostupné v hlavičke',
+        autoDetectBtn:       'Autodetekcia',
+        autoDetectNeedEpg:   'Najprv načítaj EPG (XMLTV)',
+        autoDetectTitle:     'Autodetekcia metadát z EPG',
+        autoDetectMatched:   'Nájdených',
+        autoDetectSelected:  'Vybraných',
+        autoDetectMatchedOnly:'Len nájdené',
+        autoDetectUnmatched: 'Bez zhody',
+        autoDetectSuggested: 'Navrhované metadáta',
+        autoDetectScore:     'Zhoda',
+        autoDetectNoMatch:   'Žiadna zhoda v EPG',
+        autoDetectEmpty:     'Žiadne výsledky',
+        autoDetectSelectAll: 'Vybrať / zrušiť všetky',
+        autoDetectRerun:     'Spustiť znova',
+        autoDetectInfo:      'Nájdených {matched} z {total} kanálov',
+        autoDetectMatchPct:  '{pct}% pokrytie',
+        autoDetectApply:     'Aplikovať vybrané',
+        autoDetectApplied:   'Aplikovaných {n} kanálov',
       },
       en: {
         appSubtitle:      'Import, edit and export M3U / XSPF playlists',
@@ -1273,7 +1386,25 @@ createApp({
         noEpg:            'No EPG data for this channel',
         epgMatchTip:      'EPG available',
         noEpgMatchTip:    'No EPG',
-        clearEpg:         'Clear EPG',
+        clearEpg:            'Clear EPG',
+        themeAndLangHint:    'Theme & language controls are in the header',
+        autoDetectBtn:       'Auto-detect',
+        autoDetectNeedEpg:   'Load EPG (XMLTV) first',
+        autoDetectTitle:     'Metadata Auto-detection from EPG',
+        autoDetectMatched:   'Matched',
+        autoDetectSelected:  'Selected',
+        autoDetectMatchedOnly:'Matched only',
+        autoDetectUnmatched: 'No match',
+        autoDetectSuggested: 'Suggested metadata',
+        autoDetectScore:     'Match',
+        autoDetectNoMatch:   'No EPG match found',
+        autoDetectEmpty:     'No results',
+        autoDetectSelectAll: 'Select / deselect all',
+        autoDetectRerun:     'Re-run',
+        autoDetectInfo:      'Found {matched} of {total} channels',
+        autoDetectMatchPct:  '{pct}% coverage',
+        autoDetectApply:     'Apply selected',
+        autoDetectApplied:   'Applied {n} channels',
       }
     }
 
@@ -1291,13 +1422,17 @@ createApp({
     const mobFilterOpen = ref(false)
     const epgRef        = ref(null)
     const epgData       = ref({})
+    const epgChannelMeta = ref({})
     const epgLoaded     = ref(false)
     const logoErrors    = reactive(new Set())
+
+    const autoDetectResults = ref([])
+    const autoDetectFilter  = ref('all')
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
     const pagination = reactive({ page: 1, limit: 50 })
-    const modal      = reactive({ import: false, edit: false, add: false, deleteConfirm: false, unsaved: false })
+    const modal      = reactive({ import: false, edit: false, add: false, deleteConfirm: false, unsaved: false, autoDetect: false })
     const toast      = reactive({ show: false, message: '' })
     const editCh     = ref(null)
     const editSnapshot = ref(null)
@@ -1388,6 +1523,24 @@ createApp({
     const editIsDirty = computed(() => {
       if (!editCh.value || !editSnapshot.value) return false
       return JSON.stringify(editCh.value) !== editSnapshot.value
+    })
+
+    const filteredAutoDetectResults = computed(() => {
+      const r = autoDetectResults.value
+      if (autoDetectFilter.value === 'matched')   return r.filter(x => x.score > 0)
+      if (autoDetectFilter.value === 'unmatched') return r.filter(x => x.score === 0)
+      return r
+    })
+
+    const autoDetectSummary = computed(() => ({
+      total:    autoDetectResults.value.length,
+      matched:  autoDetectResults.value.filter(r => r.score > 0).length,
+      selected: autoDetectResults.value.filter(r => r.selected).length,
+    }))
+
+    const autoDetectAllSelected = computed(() => {
+      const f = filteredAutoDetectResults.value
+      return f.length > 0 && f.every(r => r.selected)
     })
 
     /* ── Helpers ── */
@@ -1673,6 +1826,7 @@ createApp({
       if (modal.deleteConfirm){ modal.deleteConfirm = false; return }
       if (modal.edit || modal.add) { closeEditSafe(); return }
       if (modal.import)       { modal.import = false; return }
+      if (modal.autoDetect)   { modal.autoDetect = false; return }
     }
 
     /* ── Lifecycle ── */
@@ -1725,6 +1879,14 @@ createApp({
     function parseXMLTV(xmlText) {
       const doc = new DOMParser().parseFromString(xmlText, 'text/xml')
       if (doc.querySelector('parsererror')) throw new Error('Invalid XML')
+      const channelMeta = {}
+      doc.querySelectorAll('channel').forEach(ch => {
+        const id = ch.getAttribute('id'); if (!id) return
+        channelMeta[id] = {
+          displayName: ch.querySelector('display-name')?.textContent?.trim() || '',
+          icon: ch.querySelector('icon')?.getAttribute('src') || ''
+        }
+      })
       const programs = {}
       doc.querySelectorAll('programme').forEach(prog => {
         const ch = prog.getAttribute('channel'); if (!ch) return
@@ -1735,7 +1897,7 @@ createApp({
         if (!programs[ch]) programs[ch] = []
         programs[ch].push({ start, stop, title, desc })
       })
-      return programs
+      return { programs, channelMeta }
     }
 
     function importEpgFromFile(event) {
@@ -1744,8 +1906,9 @@ createApp({
       const reader = new FileReader()
       reader.onload = e => {
         try {
-          const programs = parseXMLTV(e.target.result)
+          const { programs, channelMeta } = parseXMLTV(e.target.result)
           epgData.value = programs
+          epgChannelMeta.value = channelMeta
           epgLoaded.value = true
           const chCount = Object.keys(programs).length
           const pCount  = Object.values(programs).reduce((s, a) => s + a.length, 0)
@@ -1756,7 +1919,7 @@ createApp({
       reader.readAsText(file, 'UTF-8')
     }
 
-    function clearEpg() { epgData.value = {}; epgLoaded.value = false }
+    function clearEpg() { epgData.value = {}; epgChannelMeta.value = {}; epgLoaded.value = false }
     function triggerEpgImport() { epgRef.value?.click() }
 
     function getCurrentProgram(ch) {
@@ -1785,6 +1948,99 @@ createApp({
       return date.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
     }
 
+    /* ── Autodetect ── */
+    function normName(s) {
+      return (s || '')
+        .toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\b(hd|fhd|4k|uhd|sd|tv|sk|cz|cs|en|pl|de|at|hu|it|fr|uk|us|ro|hr|rs|si|bg|mk)\b/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim()
+    }
+
+    function strSimilarity(na, nb) {
+      if (!na || !nb) return 0
+      if (na === nb) return 1
+      const longer  = na.length >= nb.length ? na : nb
+      const shorter = na.length <  nb.length ? na : nb
+      if (longer.includes(shorter)) return shorter.length / longer.length
+      const makeTrigrams = s => {
+        const r = new Set()
+        const p = ' ' + s + ' '
+        for (let i = 0; i < p.length - 2; i++) r.add(p.slice(i, i + 3))
+        return r
+      }
+      const ta = makeTrigrams(na), tb = makeTrigrams(nb)
+      let inter = 0; ta.forEach(t => { if (tb.has(t)) inter++ })
+      return (2 * inter) / (ta.size + tb.size)
+    }
+
+    function runAutoDetect() {
+      if (!epgLoaded.value) return
+      const epgIds = Object.keys(epgData.value)
+      const epgNorm = epgIds.map(id => {
+        const meta = epgChannelMeta.value[id]
+        return {
+          id,
+          meta,
+          nId:   normName(id),
+          nName: meta?.displayName ? normName(meta.displayName) : ''
+        }
+      })
+      autoDetectResults.value = channels.value.map(ch => {
+        const chNorm = normName(ch.name)
+        let best = null, bestScore = 0
+        epgNorm.forEach(e => {
+          const s = Math.max(
+            strSimilarity(chNorm, e.nId),
+            e.nName ? strSimilarity(chNorm, e.nName) : 0
+          )
+          if (s > bestScore) { bestScore = s; best = e }
+        })
+        const matched = best && bestScore >= 0.2
+        return {
+          ch,
+          suggestedId:   matched ? best.id : '',
+          suggestedName: matched ? (best.meta?.displayName || best.id) : '',
+          suggestedLogo: matched ? (best.meta?.icon || '') : '',
+          score:         matched ? bestScore : 0,
+          selected:      matched && bestScore >= 0.5,
+          editId:        matched ? best.id                       : (ch.tvg_id   || ''),
+          editName:      matched ? (best.meta?.displayName || '') : (ch.tvg_name || ''),
+          editLogo:      matched ? (best.meta?.icon        || '') : (ch.tvg_logo || ''),
+        }
+      }).sort((a, b) => b.score - a.score)
+    }
+
+    function openAutoDetect() {
+      autoDetectFilter.value = 'all'
+      runAutoDetect()
+      modal.autoDetect = true
+    }
+
+    function applyAutoDetect() {
+      let applied = 0
+      autoDetectResults.value.forEach(r => {
+        if (!r.selected) return
+        const ch = channels.value.find(c => c.id === r.ch.id)
+        if (!ch) return
+        if (r.editId)   ch.tvg_id   = r.editId
+        if (r.editName) ch.tvg_name = r.editName
+        if (r.editLogo) ch.tvg_logo = r.editLogo
+        logoErrors.delete(ch.id)
+        applied++
+      })
+      persist()
+      modal.autoDetect = false
+      showToast(t('autoDetectApplied').replace('{n}', applied))
+    }
+
+    function toggleAllAutoDetect(checked) {
+      filteredAutoDetectResults.value.forEach(r => {
+        if (r.suggestedId) r.selected = checked
+      })
+    }
+
     function selectRow(ch, event) {
       if (event.target.closest('button, a')) return
       selectedId.value = selectedId.value === ch.id ? null : ch.id
@@ -1804,6 +2060,9 @@ createApp({
       triggerEpgImport, importEpgFromFile, clearEpg,
       getCurrentProgram, getNextProgram, getTodayPrograms, formatEpgTime,
       selectRow,
+      autoDetectResults, autoDetectFilter,
+      filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected,
+      openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
     }
   }
 }).mount('#app')

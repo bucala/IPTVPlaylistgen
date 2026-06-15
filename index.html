@@ -230,7 +230,7 @@
     .sidebar-tab.active { background: var(--primary); color: #fff; }
     .sidebar-tab .tab-icon {
       width: 30px; height: 30px; border-radius: 7px;
-      display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .sidebar-tab:not(.active) .tab-icon { background: var(--fill); }
     .sidebar-tab.active .tab-icon { background: rgba(255,255,255,.2); }
@@ -270,7 +270,7 @@
     thead th.sortable:hover { color: var(--text); }
     thead th.sortable[aria-sort="ascending"],
     thead th.sortable[aria-sort="descending"] { color: var(--primary); }
-    .sort-ic { opacity: 0; font-style: normal; margin-left: 2px; min-width: .9em; display: inline-block; }
+    .sort-ic { opacity: 0; margin-left: 3px; display: inline-flex; align-items: center; vertical-align: middle; width: 12px; height: 12px; line-height: 0; }
     thead th.sortable[aria-sort="ascending"] .sort-ic,
     thead th.sortable[aria-sort="descending"] .sort-ic { opacity: 1; }
     tbody tr {
@@ -334,7 +334,7 @@
 
     /* ── Empty state ── */
     .empty-state { padding: 64px 24px; text-align: center; color: var(--text3); }
-    .empty-state .icon { font-size: 44px; margin-bottom: 12px; opacity: .55; }
+    .empty-state .icon { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; opacity: .55; }
     .empty-state h3 { color: var(--text2); font-size: 16px; font-weight: 600; margin-bottom: 6px; }
     .empty-state p  { font-size: 14px; max-width: 280px; margin: 0 auto; }
 
@@ -451,13 +451,13 @@
           <!-- Lang + theme -->
           <div class="flex items-center gap-2 justify-start md:justify-end">
             <div class="lang-sw" role="group" :aria-label="t('langLabel')">
-              <span style="padding:2px 4px 2px 6px; opacity:.55; font-size:14px; line-height:1" aria-hidden="true">🌐</span>
+              <span style="padding:2px 4px 2px 6px; opacity:.55; display:inline-flex; align-items:center" aria-hidden="true" v-html="icon('globe', 14)"></span>
               <button :class="{ active: lang === 'sk' }" @click="setLang('sk')" aria-label="Slovenčina" :aria-pressed="(lang === 'sk').toString()">SK</button>
               <button :class="{ active: lang === 'en' }" @click="setLang('en')" aria-label="English"    :aria-pressed="(lang === 'en').toString()">EN</button>
             </div>
             <button class="btn btn-ghost" @click="toggleTheme" :aria-label="theme === 'dark' ? t('switchLight') : t('switchDark')">
-              <span v-if="theme === 'dark'">☀︎ {{ t('light') }}</span>
-              <span v-else>☾ {{ t('dark') }}</span>
+              <span v-if="theme === 'dark'" class="inline-flex items-center gap-1.5"><span v-html="icon('sun', 15)"></span>{{ t('light') }}</span>
+              <span v-else class="inline-flex items-center gap-1.5"><span v-html="icon('moon', 15)"></span>{{ t('dark') }}</span>
             </button>
           </div>
           <!-- Action buttons -->
@@ -465,10 +465,10 @@
             <button class="btn btn-primary"    @click="triggerImport">{{ t('importPlaylist') }}</button>
             <button class="btn btn-secondary"  @click="exportPlaylist('m3u')"  :disabled="stats.total === 0">{{ t('exportM3U') }}</button>
             <button class="btn btn-secondary"  @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
-            <button class="btn btn-secondary"  @click="epgLoaded ? clearEpg() : triggerEpgImport()" :style="epgLoaded ? 'color:var(--success)' : ''">📡 {{ epgLoaded ? t('clearEpg') : t('epgImport') }}</button>
+            <button class="btn btn-secondary"  @click="epgLoaded ? clearEpg() : triggerEpgImport()" :style="epgLoaded ? 'color:var(--success)' : ''"><span v-html="icon('antenna', 15)"></span>{{ epgLoaded ? t('clearEpg') : t('epgImport') }}</button>
             <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" class="sr-only" @change="importEpgFromFile" />
-            <button class="btn btn-secondary"  @click="openAutoDetect" :disabled="stats.total === 0 || !epgLoaded" :title="!epgLoaded ? t('autoDetectNeedEpg') : ''">🔍 {{ t('autoDetectBtn') }}</button>
-            <button class="btn btn-ghost"      @click="openAddChannel">{{ t('addChannel') }}</button>
+            <button class="btn btn-secondary"  @click="openAutoDetect" :disabled="stats.total === 0 || !epgLoaded" :title="!epgLoaded ? t('autoDetectNeedEpg') : ''"><span v-html="icon('search', 15)"></span>{{ t('autoDetectBtn') }}</button>
+            <button class="btn btn-ghost"      @click="openAddChannel"><span class="inline-flex items-center gap-1.5"><span v-html="icon('plus', 14)"></span>{{ t('addChannel') }}</span></button>
             <button class="btn btn-danger"     @click="clearAll" :disabled="stats.total === 0">{{ t('clearAll') }}</button>
           </div>
         </div>
@@ -497,7 +497,7 @@
         :aria-current="activeTab === tab.id ? 'page' : undefined"
         role="tab"
       >
-        <span aria-hidden="true">{{ tab.icon }}</span>
+        <span aria-hidden="true" v-html="icon(tab.svgKey, 16)"></span>
         {{ t(tab.labelKey) }}
         <span v-if="tab.id === 'library' && stats.total" class="mob-badge">{{ stats.total }}</span>
       </button>
@@ -521,7 +521,7 @@
               :aria-current="activeTab === tab.id ? 'page' : undefined"
               role="listitem"
             >
-              <span class="tab-icon" aria-hidden="true">{{ tab.icon }}</span>
+              <span class="tab-icon" aria-hidden="true" v-html="icon(tab.svgKey, 18)"></span>
               <div class="leading-tight">
                 <div class="text-sm font-semibold">{{ t(tab.labelKey) }}</div>
                 <div class="text-[11px]" style="color:inherit; opacity:.7">{{ t(tab.descKey) }}</div>
@@ -628,7 +628,7 @@
               aria-controls="mob-filter-panel"
             >
               <span>{{ t('filterSet') }}<span v-if="hasActiveFilters" style="color:var(--primary);margin-left:5px">●</span></span>
-              <span aria-hidden="true">{{ mobFilterOpen ? '▲' : '▼' }}</span>
+              <span aria-hidden="true" v-html="mobFilterOpen ? icon('chevUp', 14) : icon('chevDown', 14)"></span>
             </button>
             <div v-if="mobFilterOpen" id="mob-filter-panel" class="glass rounded-[16px] p-4 mt-2 space-y-3">
               <div>
@@ -683,13 +683,13 @@
                 <tr>
                   <th scope="col" class="w-12">#</th>
                   <th scope="col" class="w-14">{{ t('logo') }}</th>
-                  <th scope="col" class="sortable" @click="setSort('name')" :aria-sort="sort.by==='name' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('name') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='name' ? (sort.asc?'↑':'↓') : '' }}</i></th>
-                  <th scope="col" class="w-[150px] sortable" @click="setSort('group')" :aria-sort="sort.by==='group' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('group') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='group' ? (sort.asc?'↑':'↓') : '' }}</i></th>
-                  <th scope="col" class="w-[100px] sortable" @click="setSort('quality')" :aria-sort="sort.by==='quality' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('quality') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='quality' ? (sort.asc?'↑':'↓') : '' }}</i></th>
+                  <th scope="col" class="sortable" @click="setSort('name')" :aria-sort="sort.by==='name' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('name') }}<span class="sort-ic" v-html="sort.by==='name' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
+                  <th scope="col" class="w-[150px] sortable" @click="setSort('group')" :aria-sort="sort.by==='group' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('group') }}<span class="sort-ic" v-html="sort.by==='group' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
+                  <th scope="col" class="w-[100px] sortable" @click="setSort('quality')" :aria-sort="sort.by==='quality' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('quality') }}<span class="sort-ic" v-html="sort.by==='quality' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
                   <th scope="col" class="w-[160px]">TVG-ID</th>
-                  <th scope="col" class="w-[80px] sortable" @click="setSort('country')" :aria-sort="sort.by==='country' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('country') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='country' ? (sort.asc?'↑':'↓') : '' }}</i></th>
+                  <th scope="col" class="w-[80px] sortable" @click="setSort('country')" :aria-sort="sort.by==='country' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('country') }}<span class="sort-ic" v-html="sort.by==='country' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
                   <th scope="col">URL</th>
-                  <th scope="col" class="w-[110px] text-center sortable" @click="setSort('status')" :aria-sort="sort.by==='status' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('status') }}<i class="sort-ic" aria-hidden="true">{{ sort.by==='status' ? (sort.asc?'↑':'↓') : '' }}</i></th>
+                  <th scope="col" class="w-[110px] text-center sortable" @click="setSort('status')" :aria-sort="sort.by==='status' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('status') }}<span class="sort-ic" v-html="sort.by==='status' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
                   <th scope="col" class="w-[150px] text-right">{{ t('actions') }}</th>
                 </tr>
               </thead>
@@ -723,7 +723,7 @@
                       :aria-label="(ch.is_active ? t('deactivate') : t('activate')) + ' ' + ch.name"
                       role="switch" :aria-checked="ch.is_active.toString()"
                     >
-                      <span :style="{ color: ch.is_active ? 'var(--success)' : 'var(--text3)' }">{{ ch.is_active ? '● ' + t('activeLabel') : '○ ' + t('offLabel') }}</span>
+                      <span :style="{ color: ch.is_active ? 'var(--success)' : 'var(--text3)' }" class="inline-flex items-center gap-1"><span v-html="icon(ch.is_active ? 'circle' : 'circleOff', 8)"></span>{{ ch.is_active ? t('activeLabel') : t('offLabel') }}</span>
                     </button>
                   </td>
                   <td>
@@ -737,7 +737,7 @@
               <tbody v-else>
                 <tr><td colspan="10">
                   <div class="empty-state">
-                    <div class="icon" aria-hidden="true">📺</div>
+                    <div class="icon" aria-hidden="true" v-html="icon('tv', 44)"></div>
                     <h3>{{ t('emptyLibraryTitle') }}</h3>
                     <p>{{ t('emptyLibraryDesc') }}</p>
                     <button class="btn btn-primary mt-4" @click="triggerImport">{{ t('importPlaylist') }}</button>
@@ -752,7 +752,7 @@
             <div v-if="selectedId && epgLoaded" class="epg-panel mt-3">
               <div class="epg-panel-head">
                 <span>{{ (channels.find(c => c.id === selectedId) || {}).name || '' }} — {{ t('schedule') }}</span>
-                <button class="btn btn-ghost" style="padding:3px 8px;font-size:12px" @click.stop="selectedId = null">✕</button>
+                <button class="btn btn-ghost" style="padding:3px 8px" @click.stop="selectedId = null" v-html="icon('x', 14)"></button>
               </div>
               <template v-if="getTodayPrograms(channels.find(c => c.id === selectedId) || {}).length">
                 <div v-for="prog in getTodayPrograms(channels.find(c => c.id === selectedId) || {})" :key="prog.start?.getTime()"
@@ -768,9 +768,9 @@
           <div class="flex flex-wrap gap-3 items-center justify-between mt-3">
             <div class="text-sm muted">{{ t('showing') }} <strong style="color:var(--text)">{{ paginatedChannels.length }}</strong> {{ t('of') }} <strong style="color:var(--text)">{{ filteredChannels.length }}</strong> {{ t('filteredChannels') }}</div>
             <div class="flex items-center gap-2" role="navigation" :aria-label="t('pagination')">
-              <button class="btn btn-secondary" style="padding:6px 14px" @click="prevPage" :disabled="pagination.page === 1" aria-label="Previous page">{{ t('previous') }}</button>
+              <button class="btn btn-secondary" style="padding:6px 14px" @click="prevPage" :disabled="pagination.page === 1" aria-label="Previous page"><span class="inline-flex items-center gap-1"><span v-html="icon('chevLeft', 14)"></span>{{ t('previous') }}</span></button>
               <div class="stat-pill" aria-live="polite">{{ t('page') }} {{ pagination.page }} / {{ totalPages }}</div>
-              <button class="btn btn-secondary" style="padding:6px 14px" @click="nextPage" :disabled="pagination.page >= totalPages" aria-label="Next page">{{ t('next') }}</button>
+              <button class="btn btn-secondary" style="padding:6px 14px" @click="nextPage" :disabled="pagination.page >= totalPages" aria-label="Next page"><span class="inline-flex items-center gap-1">{{ t('next') }}<span v-html="icon('chevRight', 14)"></span></span></button>
             </div>
           </div>
         </section>
@@ -809,15 +809,15 @@
                 <div class="flex items-center gap-2">
                   <span class="stat-pill"><strong>{{ count }}</strong></span>
                   <button
-                    class="btn btn-ghost" style="padding:4px 10px;font-size:12px"
+                    class="btn btn-ghost" style="padding:4px 10px"
                     @click="filters.group = g; activeTab = 'library'"
                     :aria-label="t('filterByGroup') + ': ' + (g || t('noGroup'))"
-                  >↗</button>
+                    v-html="icon('arrowUR', 14)"></button>
                 </div>
               </div>
             </div>
             <div v-else class="empty-state">
-              <div class="icon" aria-hidden="true">📊</div>
+              <div class="icon" aria-hidden="true" v-html="icon('barChart', 44)"></div>
               <h3>{{ t('noGroups') }}</h3>
               <p>{{ t('noGroupsDesc') }}</p>
             </div>
@@ -831,7 +831,7 @@
 
           <div class="design-row">
             <span class="text-sm" style="color:var(--text3)">{{ t('themeAndLangHint') }}</span>
-            <span style="font-size:20px; opacity:.45" aria-hidden="true">↗</span>
+            <span style="opacity:.45" aria-hidden="true" v-html="icon('arrowUR', 20)"></span>
           </div>
 
           <div class="mt-4 p-4 rounded-[var(--radius-md)]" style="background:var(--fill);border:1px solid var(--border)">
@@ -850,7 +850,7 @@
       <div class="modal-card glass-s">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-bold" id="import-title">{{ t('importTitle') }}</h2>
-          <button class="btn btn-ghost" style="padding:6px 10px" @click="modal.import = false" :aria-label="t('close')">✕</button>
+          <button class="btn btn-ghost" style="padding:6px 10px" @click="modal.import = false" :aria-label="t('close')" v-html="icon('x', 16)"></button>
         </div>
 
         <div class="seg mb-4" style="width:100%" role="group" :aria-label="t('importMode')">
@@ -860,8 +860,8 @@
 
         <div v-if="importMode === 'file'">
           <input type="file" accept=".m3u,.m3u8,.xspf" ref="importFileRef" @change="importFromFile" class="sr-only" aria-hidden="true" tabindex="-1" />
-          <button class="btn btn-secondary" style="width:100%;padding:14px 16px;font-size:14px" @click="importFileRef.click()">
-            📂 {{ t('chooseFile') }}
+          <button class="btn btn-secondary" style="width:100%;padding:14px 16px" @click="importFileRef.click()">
+            <span class="inline-flex items-center gap-2"><span v-html="icon('folder', 16)"></span>{{ t('chooseFile') }}</span>
           </button>
         </div>
         <div v-else class="flex gap-2">
@@ -882,7 +882,7 @@
       <div class="modal-card glass-s" v-if="editCh">
         <div class="flex items-center justify-between mb-5">
           <h2 class="text-xl font-bold" id="modal-edit-title">{{ modal.add ? t('addChannel_title') : t('editChannel') }}</h2>
-          <button class="btn btn-ghost" style="padding:6px 10px" @click="closeEditSafe" :aria-label="t('close')">✕</button>
+          <button class="btn btn-ghost" style="padding:6px 10px" @click="closeEditSafe" :aria-label="t('close')" v-html="icon('x', 16)"></button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -946,7 +946,7 @@
               class="btn btn-ghost"
               @click="editCh.is_active = !editCh.is_active"
               :style="{ color: editCh.is_active ? 'var(--success)' : 'var(--text3)' }"
-            >{{ editCh.is_active ? '● ' + t('activeLabel') : '○ ' + t('offLabel') }}</button>
+            ><span class="inline-flex items-center gap-1"><span v-html="icon(editCh.is_active ? 'circle' : 'circleOff', 8)"></span>{{ editCh.is_active ? t('activeLabel') : t('offLabel') }}</span></button>
             <span class="text-sm" style="color:var(--text3)">{{ t('activeStatus') }}</span>
           </div>
         </div>
@@ -989,8 +989,8 @@
          role="dialog" aria-modal="true" :aria-label="t('autoDetectTitle')">
       <div class="modal-card glass-s" style="width:min(960px,100%)">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold">🔍 {{ t('autoDetectTitle') }}</h2>
-          <button class="btn btn-ghost" style="padding:6px 10px" @click="modal.autoDetect = false" :aria-label="t('close')">✕</button>
+          <h2 class="text-xl font-bold flex items-center gap-2"><span v-html="icon('search', 20)"></span>{{ t('autoDetectTitle') }}</h2>
+          <button class="btn btn-ghost" style="padding:6px 10px" @click="modal.autoDetect = false" :aria-label="t('close')" v-html="icon('x', 16)"></button>
         </div>
 
         <!-- Summary cards -->
@@ -1016,7 +1016,7 @@
             <button class="seg-btn flex-1" :class="{ active: autoDetectFilter === 'matched' }" @click="autoDetectFilter = 'matched'">{{ t('autoDetectMatchedOnly') }}</button>
             <button class="seg-btn flex-1" :class="{ active: autoDetectFilter === 'unmatched' }" @click="autoDetectFilter = 'unmatched'">{{ t('autoDetectUnmatched') }}</button>
           </div>
-          <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" @click="runAutoDetect">↺ {{ t('autoDetectRerun') }}</button>
+          <button class="btn btn-ghost" style="padding:6px 12px" @click="runAutoDetect"><span class="inline-flex items-center gap-1.5"><span v-html="icon('refresh', 14)"></span>{{ t('autoDetectRerun') }}</span></button>
         </div>
 
         <!-- Results table -->
@@ -1071,7 +1071,7 @@
             <tbody v-else>
               <tr><td colspan="4">
                 <div class="empty-state">
-                  <div class="icon" aria-hidden="true">🔍</div>
+                  <div class="icon" aria-hidden="true" v-html="icon('search', 44)"></div>
                   <h3>{{ t('autoDetectEmpty') }}</h3>
                 </div>
               </td></tr>
@@ -1117,7 +1117,7 @@ createApp({
         importPlaylist:   'Import Playlist',
         exportM3U:        'Export M3U',
         exportXSPF:       'Export XSPF',
-        addChannel:       '+ Pridať kanál',
+        addChannel:       'Pridať kanál',
         clearAll:         'Vymazať všetko',
         total:            'kanálov',
         active:           'aktívnych',
@@ -1167,8 +1167,8 @@ createApp({
         of:               'z',
         filteredChannels: 'filtrovaných',
         pagination:       'Stránkovanie',
-        previous:         '← Predch.',
-        next:             'Ďalší →',
+        previous:         'Predch.',
+        next:             'Ďalší',
         page:             'Strana',
         emptyLibraryTitle:'Playlist je prázdny',
         emptyLibraryDesc: 'Importuj M3U alebo XSPF súbor pre začatie',
@@ -1264,7 +1264,7 @@ createApp({
         importPlaylist:   'Import Playlist',
         exportM3U:        'Export M3U',
         exportXSPF:       'Export XSPF',
-        addChannel:       '+ Add Channel',
+        addChannel:       'Add Channel',
         clearAll:         'Clear All',
         total:            'channels',
         active:           'active',
@@ -1314,8 +1314,8 @@ createApp({
         of:               'of',
         filteredChannels: 'filtered',
         pagination:       'Pagination',
-        previous:         '← Prev',
-        next:             'Next →',
+        previous:         'Prev',
+        next:             'Next',
         page:             'Page',
         emptyLibraryTitle:'Playlist is empty',
         emptyLibraryDesc: 'Import an M3U or XSPF file to get started',
@@ -1441,14 +1441,42 @@ createApp({
     let toastTimer = null
     let _uid = Date.now()
 
+    /* ── Icons ── */
+    const ICONS = {
+      tv:        '<rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/>',
+      barChart:  '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
+      sliders:   '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+      globe:     '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+      sun:       '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+      moon:      '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+      antenna:   '<path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/>',
+      search:    '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+      folder:    '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+      x:         '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+      arrowUR:   '<line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>',
+      refresh:   '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+      chevUp:    '<polyline points="18 15 12 9 6 15"/>',
+      chevDown:  '<polyline points="6 9 12 15 18 9"/>',
+      chevLeft:  '<polyline points="15 18 9 12 15 6"/>',
+      chevRight: '<polyline points="9 18 15 12 9 6"/>',
+      plus:      '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+      circle:    '<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>',
+      circleOff: '<circle cx="12" cy="12" r="5"/>',
+    }
+
+    function icon(name, size = 16) {
+      const p = ICONS[name] || ''
+      return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:middle;flex-shrink:0">${p}</svg>`
+    }
+
     /* ── i18n ── */
     const t = (key) => messages[lang.value]?.[key] ?? messages.en?.[key] ?? key
 
     /* ── Computed ── */
     const visibleTabs = computed(() => [
-      { id: 'library', icon: '📺', labelKey: 'tabLibrary', descKey: 'tabLibraryDesc' },
-      { id: 'content', icon: '📊', labelKey: 'tabContent', descKey: 'tabContentDesc' },
-      { id: 'design',  icon: '🎨', labelKey: 'tabDesign',  descKey: 'tabDesignDesc'  },
+      { id: 'library', svgKey: 'tv',       labelKey: 'tabLibrary', descKey: 'tabLibraryDesc' },
+      { id: 'content', svgKey: 'barChart', labelKey: 'tabContent', descKey: 'tabContentDesc' },
+      { id: 'design',  svgKey: 'sliders',  labelKey: 'tabDesign',  descKey: 'tabDesignDesc'  },
     ])
 
     const groupOptions = computed(() =>
@@ -2047,6 +2075,7 @@ createApp({
     }
 
     return {
+      icon,
       channels, lang, theme, activeTab, selectedId,
       importMode, importUrl, importLoading, importFileRef,
       filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,

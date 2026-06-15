@@ -10,12 +10,19 @@
 - Capacitor config pre Android Studio
 
 ## Cloudflare Pages deploy
+
+> **Dôležité**: Toto je čisto statický web. Nenastavuj žiadny build command ani deploy command.
+
 1. Nahraj obsah repozitára na GitHub.
-2. V Cloudflare Pages nastav:
-   - **Build command**: `npm run build` (alebo nechaj prázdne)
-   - **Build output directory**: `.` (root)
-3. `_headers` obsahuje všetky bezpečnostné hlavičky.
-4. `_redirects` zabezpečuje SPA fallback routing.
+2. V Cloudflare Pages → Settings → Builds & deployments nastav:
+   - **Framework preset**: `None`
+   - **Build command**: *(prázdne — nechaj prázdne!)*
+   - **Build output directory**: `/`
+3. `_headers` obsahuje všetky bezpečnostné hlavičky (CSP, HSTS, atď.).
+4. `_redirects` zabezpečuje SPA fallback routing (`/* /index.html 200`).
+5. Nasaď — Cloudflare Pages automaticky rozpozná `_headers` a `_redirects`.
+
+> Ak vidíš, že CI spúšťa `npm install` alebo `wrangler deploy`, máš nastavený nesprávny build/deploy command. Zmaž ho.
 
 ## Lokálny preview
 ```bash

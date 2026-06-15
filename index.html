@@ -103,6 +103,13 @@
     ::-webkit-scrollbar-thumb { background: rgba(127,127,127,.26); border-radius: 999px; }
     ::-webkit-scrollbar-track { background: transparent; }
 
+    /* ── Accessibility ── */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0;
+      margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
+      white-space: nowrap; border-width: 0;
+    }
+
     /* ── Glass ── */
     .glass {
       background: var(--surface);
@@ -275,15 +282,6 @@
     }
     .design-row:first-of-type { margin-top: 0; }
 
-    /* ── Color swatches ── */
-    .swatch {
-      width: 28px; height: 28px; border-radius: 50%;
-      border: 2px solid var(--border-s); cursor: pointer;
-      transition: transform .15s ease, box-shadow .15s ease;
-    }
-    .swatch:hover { transform: scale(1.12); box-shadow: 0 4px 12px rgba(0,0,0,.18); }
-    .swatch.active { box-shadow: 0 0 0 3px var(--primary); }
-
     /* ── Group item ── */
     .group-item {
       display: flex; align-items: center; justify-content: space-between;
@@ -321,10 +319,8 @@
       padding: 10px 20px; font-size: 14px; font-weight: 500; color: #fff;
       background: rgba(28,28,30,.94); box-shadow: var(--shadow-lg);
       white-space: nowrap; pointer-events: none;
-      animation: toastIn .2s ease;
     }
     [data-theme="dark"] .toast { background: rgba(72,72,74,.94); }
-    @keyframes toastIn { from { opacity:0; transform: translateX(-50%) translateY(10px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
 
     /* ── Empty state ── */
     .empty-state { padding: 64px 24px; text-align: center; color: var(--text3); }
@@ -353,7 +349,7 @@
       color: var(--text3); margin-bottom: 6px;
     }
 
-    /* ── Stat stat-card ── */
+    /* ── Stat card ── */
     .stat-card {
       background: var(--surface-s); border: 1px solid var(--border);
       border-radius: var(--radius-md); padding: 1rem; text-align: center;
@@ -362,8 +358,8 @@
     .stat-card .lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
 
     /* ── Vue transitions ── */
-    .fade-enter-active, .fade-leave-active { transition: opacity .18s ease, transform .18s ease; }
-    .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    .fade-enter-active, .fade-leave-active { transition: opacity .2s ease, transform .2s ease; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(10px); }
 
     /* ── Responsive ── */
     @media (max-width: 1024px) {
@@ -405,8 +401,8 @@
           <!-- Lang + theme -->
           <div class="flex items-center gap-2 justify-start md:justify-end">
             <div class="lang-sw" role="group" :aria-label="t('langLabel')">
-              <button :class="{ active: lang === 'sk' }" @click="setLang('sk')" aria-label="Slovenčina">SK</button>
-              <button :class="{ active: lang === 'en' }" @click="setLang('en')" aria-label="English">EN</button>
+              <button :class="{ active: lang === 'sk' }" @click="setLang('sk')" aria-label="Slovenčina" :aria-pressed="(lang === 'sk').toString()">SK</button>
+              <button :class="{ active: lang === 'en' }" @click="setLang('en')" aria-label="English"    :aria-pressed="(lang === 'en').toString()">EN</button>
             </div>
             <button class="btn btn-ghost" @click="toggleTheme" :aria-label="theme === 'dark' ? t('switchLight') : t('switchDark')">
               <span v-if="theme === 'dark'">☀︎ {{ t('light') }}</span>
@@ -415,17 +411,17 @@
           </div>
           <!-- Action buttons -->
           <div class="flex flex-wrap gap-2 justify-start md:justify-end hdr-btns">
-            <button class="btn btn-primary" @click="triggerImport">{{ t('importPlaylist') }}</button>
-            <button class="btn btn-secondary" @click="exportPlaylist('m3u')"  :disabled="stats.total === 0">{{ t('exportM3U') }}</button>
-            <button class="btn btn-secondary" @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
-            <button class="btn btn-ghost"    @click="openAddChannel">{{ t('addChannel') }}</button>
-            <button class="btn btn-danger"   @click="clearAll" :disabled="stats.total === 0">{{ t('clearAll') }}</button>
+            <button class="btn btn-primary"    @click="triggerImport">{{ t('importPlaylist') }}</button>
+            <button class="btn btn-secondary"  @click="exportPlaylist('m3u')"  :disabled="stats.total === 0">{{ t('exportM3U') }}</button>
+            <button class="btn btn-secondary"  @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
+            <button class="btn btn-ghost"      @click="openAddChannel">{{ t('addChannel') }}</button>
+            <button class="btn btn-danger"     @click="clearAll" :disabled="stats.total === 0">{{ t('clearAll') }}</button>
           </div>
         </div>
       </div>
 
       <!-- Stats bar -->
-      <div class="flex flex-wrap gap-2 mt-3">
+      <div class="flex flex-wrap gap-2 mt-3" role="status" aria-live="polite">
         <div class="stat-pill"><strong>{{ stats.total }}</strong> {{ t('total') }}</div>
         <div class="stat-pill"><strong>{{ stats.active }}</strong> {{ t('active') }}</div>
         <div class="stat-pill"><strong>{{ stats.groups }}</strong> {{ t('groups') }}</div>
@@ -445,43 +441,45 @@
       <aside class="space-y-3" style="position:sticky; top:16px;">
 
         <!-- Nav -->
-        <section class="glass rounded-[22px] p-3">
+        <nav class="glass rounded-[22px] p-3" aria-label="Navigation">
           <div class="sec-label px-1">{{ t('workspace') }}</div>
-          <div class="space-y-1 mt-2">
+          <div class="space-y-1 mt-2" role="list">
             <button
               v-for="tab in visibleTabs" :key="tab.id"
               class="sidebar-tab"
               :class="{ active: activeTab === tab.id }"
               @click="activeTab = tab.id"
+              :aria-current="activeTab === tab.id ? 'page' : undefined"
+              role="listitem"
             >
-              <span class="tab-icon">{{ tab.icon }}</span>
+              <span class="tab-icon" aria-hidden="true">{{ tab.icon }}</span>
               <div class="leading-tight">
                 <div class="text-sm font-semibold">{{ t(tab.labelKey) }}</div>
                 <div class="text-[11px]" style="color:inherit; opacity:.7">{{ t(tab.descKey) }}</div>
               </div>
-              <span v-if="tab.id === 'library' && stats.total > 0" style="margin-left:auto; font-size:11px; font-weight:700; opacity:.75">{{ stats.total }}</span>
+              <span v-if="tab.id === 'library' && stats.total > 0" style="margin-left:auto; font-size:11px; font-weight:700; opacity:.75" aria-hidden="true">{{ stats.total }}</span>
             </button>
           </div>
-        </section>
+        </nav>
 
         <!-- Filter panel (Library only) -->
-        <section class="glass rounded-[22px] p-4" v-if="activeTab === 'library'">
+        <section class="glass rounded-[22px] p-4" v-if="activeTab === 'library'" aria-label="Filters">
           <div class="sec-label">{{ t('filterSet') }}</div>
           <div class="space-y-3 mt-2">
             <div>
-              <label class="label">{{ t('search') }}</label>
-              <input class="field" v-model.trim="filters.search" :placeholder="t('searchPlaceholder')" />
+              <label class="label" for="filter-search">{{ t('search') }}</label>
+              <input id="filter-search" class="field" v-model.trim="filters.search" :placeholder="t('searchPlaceholder')" />
             </div>
             <div>
-              <label class="label">{{ t('group') }}</label>
-              <select class="select" v-model="filters.group">
+              <label class="label" for="filter-group">{{ t('group') }}</label>
+              <select id="filter-group" class="select" v-model="filters.group">
                 <option value="">{{ t('allGroups') }}</option>
                 <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
               </select>
             </div>
             <div>
-              <label class="label">{{ t('quality') }}</label>
-              <select class="select" v-model="filters.quality">
+              <label class="label" for="filter-quality">{{ t('quality') }}</label>
+              <select id="filter-quality" class="select" v-model="filters.quality">
                 <option value="">{{ t('allQuality') }}</option>
                 <option value="4K">4K</option>
                 <option value="FHD">FHD</option>
@@ -491,20 +489,20 @@
             </div>
             <div>
               <label class="label">{{ t('status') }}</label>
-              <div class="seg" style="width:100%">
-                <button class="seg-btn" :class="{ active: filters.status === 'all' }"      @click="filters.status = 'all'">{{ t('all') }}</button>
-                <button class="seg-btn" :class="{ active: filters.status === 'active' }"   @click="filters.status = 'active'">{{ t('activeLabel') }}</button>
-                <button class="seg-btn" :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'">{{ t('offLabel') }}</button>
+              <div class="seg" style="width:100%" role="group" :aria-label="t('status')">
+                <button class="seg-btn" :class="{ active: filters.status === 'all' }"      @click="filters.status = 'all'"      :aria-pressed="(filters.status === 'all').toString()">{{ t('all') }}</button>
+                <button class="seg-btn" :class="{ active: filters.status === 'active' }"   @click="filters.status = 'active'"   :aria-pressed="(filters.status === 'active').toString()">{{ t('activeLabel') }}</button>
+                <button class="seg-btn" :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'" :aria-pressed="(filters.status === 'inactive').toString()">{{ t('offLabel') }}</button>
               </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="label">{{ t('country') }}</label>
-                <input class="field" v-model.trim="filters.country" placeholder="SK, CZ..." />
+                <label class="label" for="filter-country">{{ t('country') }}</label>
+                <input id="filter-country" class="field" v-model.trim="filters.country" placeholder="SK, CZ…" />
               </div>
               <div>
-                <label class="label">{{ t('perPage') }}</label>
-                <select class="select" v-model.number="pagination.limit">
+                <label class="label" for="filter-limit">{{ t('perPage') }}</label>
+                <select id="filter-limit" class="select" v-model.number="pagination.limit">
                   <option :value="50">50</option>
                   <option :value="100">100</option>
                   <option :value="200">200</option>
@@ -517,7 +515,7 @@
         </section>
 
         <!-- Quick stats sidebar (Content tab) -->
-        <section class="glass rounded-[22px] p-4" v-if="activeTab === 'content'">
+        <section class="glass rounded-[22px] p-4" v-if="activeTab === 'content'" aria-label="Quick stats">
           <div class="sec-label">{{ t('quickStats') }}</div>
           <div class="space-y-2 mt-2">
             <div class="design-row">
@@ -546,42 +544,42 @@
       <main class="space-y-4">
 
         <!-- ══ LIBRARY TAB ══ -->
-        <section v-if="activeTab === 'library'" class="glass rounded-[24px] p-4 md:p-5">
+        <section v-if="activeTab === 'library'" class="glass rounded-[24px] p-4 md:p-5" aria-label="Channel library">
           <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
             <div>
               <div class="sec-label">{{ t('tabLibrary') }}</div>
               <h2 class="text-[1.3rem] font-bold tracking-[-0.03em]">{{ t('libraryHeading') }}</h2>
             </div>
-            <div class="seg">
-              <button class="seg-btn" :class="{ active: sort.by === 'name' }"    @click="setSort('name')">{{ t('sortName') }}</button>
-              <button class="seg-btn" :class="{ active: sort.by === 'group' }"   @click="setSort('group')">{{ t('sortGroup') }}</button>
-              <button class="seg-btn" :class="{ active: sort.by === 'quality' }" @click="setSort('quality')">{{ t('sortQuality') }}</button>
-              <button class="seg-btn" :class="{ active: sort.by === 'country' }" @click="setSort('country')">{{ t('sortCountry') }}</button>
+            <div class="seg" role="group" :aria-label="t('sortLabel')">
+              <button class="seg-btn" :class="{ active: sort.by === 'name' }"    @click="setSort('name')"    :aria-pressed="(sort.by === 'name').toString()">{{ t('sortName') }}</button>
+              <button class="seg-btn" :class="{ active: sort.by === 'group' }"   @click="setSort('group')"   :aria-pressed="(sort.by === 'group').toString()">{{ t('sortGroup') }}</button>
+              <button class="seg-btn" :class="{ active: sort.by === 'quality' }" @click="setSort('quality')" :aria-pressed="(sort.by === 'quality').toString()">{{ t('sortQuality') }}</button>
+              <button class="seg-btn" :class="{ active: sort.by === 'country' }" @click="setSort('country')" :aria-pressed="(sort.by === 'country').toString()">{{ t('sortCountry') }}</button>
             </div>
           </div>
 
-          <div class="table-shell">
-            <table>
+          <div class="table-shell" role="region" aria-label="Channels table">
+            <table role="grid">
               <thead>
                 <tr>
-                  <th class="w-12">#</th>
-                  <th class="w-14">{{ t('logo') }}</th>
-                  <th>{{ t('name') }}</th>
-                  <th class="w-[150px]">{{ t('group') }}</th>
-                  <th class="w-[100px]">{{ t('quality') }}</th>
-                  <th class="w-[160px]">TVG-ID</th>
-                  <th class="w-[80px]">{{ t('country') }}</th>
-                  <th>URL</th>
-                  <th class="w-[110px] text-center">{{ t('status') }}</th>
-                  <th class="w-[150px] text-right">{{ t('actions') }}</th>
+                  <th scope="col" class="w-12">#</th>
+                  <th scope="col" class="w-14">{{ t('logo') }}</th>
+                  <th scope="col">{{ t('name') }}</th>
+                  <th scope="col" class="w-[150px]">{{ t('group') }}</th>
+                  <th scope="col" class="w-[100px]">{{ t('quality') }}</th>
+                  <th scope="col" class="w-[160px]">TVG-ID</th>
+                  <th scope="col" class="w-[80px]">{{ t('country') }}</th>
+                  <th scope="col">URL</th>
+                  <th scope="col" class="w-[110px] text-center">{{ t('status') }}</th>
+                  <th scope="col" class="w-[150px] text-right">{{ t('actions') }}</th>
                 </tr>
               </thead>
               <tbody v-if="paginatedChannels.length">
                 <tr v-for="(ch, i) in paginatedChannels" :key="ch.id" :class="{ selected: selectedId === ch.id }">
                   <td class="muted">{{ (pagination.page - 1) * pagination.limit + i + 1 }}</td>
                   <td>
-                    <img v-if="ch.tvg_logo" :src="ch.tvg_logo" class="ch-logo" loading="lazy" alt="logo" />
-                    <div v-else class="ch-logo flex items-center justify-center text-base">📺</div>
+                    <img v-if="ch.tvg_logo" :src="ch.tvg_logo" class="ch-logo" loading="lazy" :alt="ch.name + ' logo'" />
+                    <div v-else class="ch-logo flex items-center justify-center text-base" aria-hidden="true">📺</div>
                   </td>
                   <td>
                     <div class="font-semibold">{{ ch.name || t('untitled') }}</div>
@@ -594,16 +592,21 @@
                   </td>
                   <td class="mono muted">{{ ch.tvg_id || '—' }}</td>
                   <td class="uppercase text-xs muted">{{ ch.tvg_country || '—' }}</td>
-                  <td class="mono muted" style="max-width:260px"><div class="truncate">{{ ch.url }}</div></td>
+                  <td class="mono muted" style="max-width:260px"><div class="truncate" :title="ch.url">{{ ch.url }}</div></td>
                   <td class="text-center">
-                    <button class="btn btn-ghost" style="padding:5px 10px; font-size:12px" @click="toggleChannel(ch)">
+                    <button
+                      class="btn btn-ghost" style="padding:5px 10px; font-size:12px"
+                      @click="toggleChannel(ch)"
+                      :aria-label="(ch.is_active ? t('deactivate') : t('activate')) + ' ' + ch.name"
+                      role="switch" :aria-checked="ch.is_active.toString()"
+                    >
                       <span :style="{ color: ch.is_active ? 'var(--success)' : 'var(--text3)' }">{{ ch.is_active ? '● ' + t('activeLabel') : '○ ' + t('offLabel') }}</span>
                     </button>
                   </td>
                   <td>
                     <div class="flex gap-1.5 justify-end">
-                      <button class="btn btn-secondary" style="padding:5px 10px; font-size:12px" @click="editChannel(ch)">{{ t('edit') }}</button>
-                      <button class="btn btn-danger"    style="padding:5px 10px; font-size:12px" @click="removeChannel(ch.id)">{{ t('delete') }}</button>
+                      <button class="btn btn-secondary" style="padding:5px 10px; font-size:12px" @click="editChannel(ch)" :aria-label="t('edit') + ' ' + ch.name">{{ t('edit') }}</button>
+                      <button class="btn btn-danger"    style="padding:5px 10px; font-size:12px" @click="removeChannel(ch.id)" :aria-label="t('delete') + ' ' + ch.name">{{ t('delete') }}</button>
                     </div>
                   </td>
                 </tr>
@@ -611,7 +614,7 @@
               <tbody v-else>
                 <tr><td colspan="10">
                   <div class="empty-state">
-                    <div class="icon">📺</div>
+                    <div class="icon" aria-hidden="true">📺</div>
                     <h3>{{ t('emptyLibraryTitle') }}</h3>
                     <p>{{ t('emptyLibraryDesc') }}</p>
                     <button class="btn btn-primary mt-4" @click="triggerImport">{{ t('importPlaylist') }}</button>
@@ -623,12 +626,877 @@
 
           <div class="flex flex-wrap gap-3 items-center justify-between mt-3">
             <div class="text-sm muted">{{ t('showing') }} <strong style="color:var(--text)">{{ paginatedChannels.length }}</strong> {{ t('of') }} <strong style="color:var(--text)">{{ filteredChannels.length }}</strong> {{ t('filteredChannels') }}</div>
-            <div class="flex items-center gap-2">
-              <button class="btn btn-secondary" style="padding:6px 14px" @click="prevPage" :disabled="pagination.page === 1">{{ t('previous') }}</button>
-              <div class="stat-pill">{{ t('page') }} {{ pagination.page }} / {{ totalPages }}</div>
-              <button class="btn btn-secondary" style="padding:6px 14px" @click="nextPage" :disabled="pagination.page >= totalPages">{{ t('next') }}</button>
+            <div class="flex items-center gap-2" role="navigation" :aria-label="t('pagination')">
+              <button class="btn btn-secondary" style="padding:6px 14px" @click="prevPage" :disabled="pagination.page === 1" aria-label="Previous page">{{ t('previous') }}</button>
+              <div class="stat-pill" aria-live="polite">{{ t('page') }} {{ pagination.page }} / {{ totalPages }}</div>
+              <button class="btn btn-secondary" style="padding:6px 14px" @click="nextPage" :disabled="pagination.page >= totalPages" aria-label="Next page">{{ t('next') }}</button>
             </div>
           </div>
         </section>
 
-        <!-- ══ CONTENT TAB ══ --
+        <!-- ══ CONTENT TAB ══ -->
+        <section v-if="activeTab === 'content'" class="space-y-4" aria-label="Content overview">
+          <div class="glass rounded-[24px] p-4 md:p-5">
+            <div class="sec-label">{{ t('tabContent') }}</div>
+            <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-4">{{ t('contentHeading') }}</h2>
+
+            <!-- Quality stat cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+              <div class="stat-card">
+                <div class="num" style="color:var(--purple)">{{ stats.qualities['4K'] }}</div>
+                <div class="lbl">4K</div>
+              </div>
+              <div class="stat-card">
+                <div class="num" style="color:var(--primary)">{{ stats.qualities['FHD'] }}</div>
+                <div class="lbl">FHD</div>
+              </div>
+              <div class="stat-card">
+                <div class="num" style="color:var(--success)">{{ stats.qualities['HD'] }}</div>
+                <div class="lbl">HD</div>
+              </div>
+              <div class="stat-card">
+                <div class="num" style="color:var(--gray)">{{ stats.qualities['SD'] }}</div>
+                <div class="lbl">SD</div>
+              </div>
+            </div>
+
+            <!-- Groups list -->
+            <div class="sec-label mb-2">{{ t('groupsOverview') }}</div>
+            <div v-if="groupList.length" class="space-y-1" role="list">
+              <div class="group-item" v-for="[g, count] in groupList" :key="g || '__nogroup__'" role="listitem">
+                <span class="font-medium text-sm">{{ g || '—' }}</span>
+                <div class="flex items-center gap-2">
+                  <span class="stat-pill"><strong>{{ count }}</strong></span>
+                  <button
+                    class="btn btn-ghost" style="padding:4px 10px;font-size:12px"
+                    @click="filters.group = g; activeTab = 'library'"
+                    :aria-label="t('filterByGroup') + ': ' + (g || t('noGroup'))"
+                  >↗</button>
+                </div>
+              </div>
+            </div>
+            <div v-else class="empty-state">
+              <div class="icon" aria-hidden="true">📊</div>
+              <h3>{{ t('noGroups') }}</h3>
+              <p>{{ t('noGroupsDesc') }}</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ DESIGN TAB ══ -->
+        <section v-if="activeTab === 'design'" class="glass rounded-[24px] p-4 md:p-5" aria-label="Design settings">
+          <div class="sec-label">{{ t('tabDesign') }}</div>
+          <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-4">{{ t('designHeading') }}</h2>
+
+          <div class="space-y-2">
+            <!-- Theme -->
+            <div class="design-row">
+              <span class="font-medium">{{ t('theme') }}</span>
+              <div class="seg" role="group" :aria-label="t('theme')">
+                <button class="seg-btn" :class="{ active: theme === 'light' }" @click="setTheme('light')" :aria-pressed="(theme === 'light').toString()">☀︎ {{ t('light') }}</button>
+                <button class="seg-btn" :class="{ active: theme === 'dark' }"  @click="setTheme('dark')"  :aria-pressed="(theme === 'dark').toString()">☾ {{ t('dark') }}</button>
+              </div>
+            </div>
+
+            <!-- Language -->
+            <div class="design-row">
+              <span class="font-medium">{{ t('language') }}</span>
+              <div class="lang-sw" role="group" :aria-label="t('langLabel')">
+                <button :class="{ active: lang === 'sk' }" @click="setLang('sk')" aria-label="Slovenčina" :aria-pressed="(lang === 'sk').toString()">SK</button>
+                <button :class="{ active: lang === 'en' }" @click="setLang('en')" aria-label="English"    :aria-pressed="(lang === 'en').toString()">EN</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 p-4 rounded-[var(--radius-md)]" style="background:var(--fill);border:1px solid var(--border)">
+            <p class="text-sm" style="color:var(--text3)">{{ t('designInfoDesc') }}</p>
+          </div>
+        </section>
+
+      </main>
+    </div><!-- /grid -->
+
+    <!-- ══════════════════════ MODALS ══════════════════════ -->
+
+    <!-- Import Modal -->
+    <div v-if="modal.import" class="modal-overlay" @click.self="modal.import = false"
+         role="dialog" aria-modal="true" :aria-label="t('importTitle')">
+      <div class="modal-card glass-s">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold" id="import-title">{{ t('importTitle') }}</h2>
+          <button class="btn btn-ghost" style="padding:6px 10px" @click="modal.import = false" :aria-label="t('close')">✕</button>
+        </div>
+
+        <div class="seg mb-4" style="width:100%" role="group" :aria-label="t('importMode')">
+          <button class="seg-btn flex-1" :class="{ active: importMode === 'file' }" @click="importMode = 'file'" :aria-pressed="(importMode === 'file').toString()">{{ t('importFromFile') }}</button>
+          <button class="seg-btn flex-1" :class="{ active: importMode === 'url'  }" @click="importMode = 'url'"  :aria-pressed="(importMode === 'url').toString()">{{ t('importFromUrl') }}</button>
+        </div>
+
+        <div v-if="importMode === 'file'">
+          <input type="file" accept=".m3u,.m3u8,.xspf" ref="importFileRef" @change="importFromFile" class="sr-only" aria-hidden="true" tabindex="-1" />
+          <button class="btn btn-secondary" style="width:100%;padding:14px 16px;font-size:14px" @click="importFileRef.click()">
+            📂 {{ t('chooseFile') }}
+          </button>
+        </div>
+        <div v-else class="flex gap-2">
+          <input class="field flex-1" v-model.trim="importUrl" :placeholder="t('urlPlaceholder')"
+                 @keyup.enter="importFromUrl" aria-label="Playlist URL" type="url" />
+          <button class="btn btn-primary" @click="importFromUrl" :disabled="!importUrl || importLoading">
+            {{ importLoading ? t('importing') : t('importBtn') }}
+          </button>
+        </div>
+
+        <p class="text-xs mt-3" style="color:var(--text4)">M3U · M3U8 · XSPF</p>
+      </div>
+    </div>
+
+    <!-- Edit / Add Channel Modal -->
+    <div v-if="modal.edit || modal.add" class="modal-overlay" @click.self="closeEditSafe"
+         role="dialog" aria-modal="true" aria-labelledby="modal-edit-title">
+      <div class="modal-card glass-s" v-if="editCh">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-xl font-bold" id="modal-edit-title">{{ modal.add ? t('addChannel_title') : t('editChannel') }}</h2>
+          <button class="btn btn-ghost" style="padding:6px 10px" @click="closeEditSafe" :aria-label="t('close')">✕</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <label class="label" for="edit-name">{{ t('channelName') }} *</label>
+            <input id="edit-name" class="field" v-model="editCh.name" :placeholder="t('channelName')" aria-required="true" />
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="label" for="edit-url">{{ t('streamUrl') }} *</label>
+            <input id="edit-url" class="field mono" v-model="editCh.url" placeholder="https:// or rtmp://…" aria-required="true" />
+          </div>
+
+          <div>
+            <label class="label" for="edit-tvgid">{{ t('tvgId') }}</label>
+            <input id="edit-tvgid" class="field" v-model="editCh.tvg_id" placeholder="tvg-id" />
+          </div>
+          <div>
+            <label class="label" for="edit-tvgname">{{ t('tvgName') }}</label>
+            <input id="edit-tvgname" class="field" v-model="editCh.tvg_name" placeholder="tvg-name" />
+          </div>
+
+          <div>
+            <label class="label" for="edit-logo">{{ t('tvgLogo') }}</label>
+            <input id="edit-logo" class="field" v-model="editCh.tvg_logo" placeholder="https://…" type="url" />
+          </div>
+          <div>
+            <label class="label" for="edit-country">{{ t('tvgCountry') }}</label>
+            <input id="edit-country" class="field" v-model="editCh.tvg_country" placeholder="SK, CZ, EN…" />
+          </div>
+
+          <div>
+            <label class="label" for="edit-group">{{ t('groupTitle') }}</label>
+            <input id="edit-group" class="field" v-model="editCh.group_title" :placeholder="t('groupTitle')" />
+          </div>
+          <div>
+            <label class="label" for="edit-quality">{{ t('qualityLabel') }}</label>
+            <select id="edit-quality" class="select" v-model="editCh.quality">
+              <option value="">{{ t('autoDetect') }}</option>
+              <option value="4K">4K</option>
+              <option value="FHD">FHD</option>
+              <option value="HD">HD</option>
+              <option value="SD">SD</option>
+            </select>
+          </div>
+
+          <div class="md:col-span-2 flex items-center gap-3 pt-1">
+            <button
+              role="switch" :aria-checked="editCh.is_active.toString()"
+              :aria-label="t('activeStatus')"
+              class="btn btn-ghost"
+              @click="editCh.is_active = !editCh.is_active"
+              :style="{ color: editCh.is_active ? 'var(--success)' : 'var(--text3)' }"
+            >{{ editCh.is_active ? '● ' + t('activeLabel') : '○ ' + t('offLabel') }}</button>
+            <span class="text-sm" style="color:var(--text3)">{{ t('activeStatus') }}</span>
+          </div>
+        </div>
+
+        <div class="flex gap-2 justify-end mt-5 pt-4" style="border-top:1px solid var(--sep)">
+          <button class="btn btn-secondary" @click="closeEditSafe">{{ t('cancel') }}</button>
+          <button class="btn btn-primary" @click="saveEdit" :disabled="!editCh.name || !editCh.url">{{ t('save') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirm -->
+    <div v-if="modal.deleteConfirm" class="modal-overlay"
+         role="alertdialog" aria-modal="true" aria-labelledby="delete-title">
+      <div class="modal-card glass-s" style="max-width:400px">
+        <h2 class="text-xl font-bold mb-2" id="delete-title">{{ t('confirmDelete') }}</h2>
+        <p class="text-sm mb-5" style="color:var(--text3)">{{ t('confirmDeleteDesc') }}</p>
+        <div class="flex gap-2 justify-end">
+          <button class="btn btn-secondary" @click="modal.deleteConfirm = false">{{ t('cancel') }}</button>
+          <button class="btn btn-danger"    @click="confirmDelete">{{ t('deleteBtn') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unsaved Changes Alert -->
+    <div v-if="modal.unsaved" class="modal-overlay" style="z-index:70"
+         role="alertdialog" aria-modal="true" aria-labelledby="unsaved-title">
+      <div class="modal-card glass-s" style="max-width:380px">
+        <h2 class="text-xl font-bold mb-2" id="unsaved-title">{{ t('unsavedTitle') }}</h2>
+        <p class="text-sm mb-5" style="color:var(--text3)">{{ t('unsavedDesc') }}</p>
+        <div class="flex gap-2 justify-end">
+          <button class="btn btn-secondary" @click="modal.unsaved = false">{{ t('keepEditing') }}</button>
+          <button class="btn btn-danger"    @click="forceCloseEdit">{{ t('discardChanges') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <transition name="fade">
+      <div v-if="toast.show" class="toast" role="status" aria-live="polite" aria-atomic="true">{{ toast.message }}</div>
+    </transition>
+
+  </div><!-- /max-w -->
+</div><!-- /app -->
+
+<script>
+const { createApp, ref, computed, reactive, watch, onMounted, onUnmounted } = Vue
+
+createApp({
+  setup() {
+    const STORAGE_KEY = 'iptv-channels'
+    const LANG_KEY    = 'iptv-lang'
+    const THEME_KEY   = 'iptv-theme'
+
+    /* ── i18n ── */
+    const messages = {
+      sk: {
+        appSubtitle:      'Importuj, upravuj a exportuj M3U / XSPF playlisty',
+        importPlaylist:   'Import Playlist',
+        exportM3U:        'Export M3U',
+        exportXSPF:       'Export XSPF',
+        addChannel:       '+ Pridať kanál',
+        clearAll:         'Vymazať všetko',
+        total:            'kanálov',
+        active:           'aktívnych',
+        groups:           'skupín',
+        workspace:        'Pracovný priestor',
+        tabLibrary:       'Knižnica',
+        tabLibraryDesc:   'Kanály a playlist',
+        tabContent:       'Obsah',
+        tabContentDesc:   'Skupiny a štatistiky',
+        tabDesign:        'Dizajn',
+        tabDesignDesc:    'Vzhľad aplikácie',
+        filterSet:        'Filter',
+        search:           'Hľadať',
+        searchPlaceholder:'Názov kanálu alebo URL…',
+        group:            'Skupina',
+        allGroups:        'Všetky skupiny',
+        quality:          'Kvalita',
+        allQuality:       'Všetky kvality',
+        status:           'Stav',
+        all:              'Všetky',
+        activeLabel:      'Aktívny',
+        offLabel:         'Vypnutý',
+        activate:         'Aktivovať',
+        deactivate:       'Deaktivovať',
+        country:          'Krajina',
+        perPage:          'Na stránku',
+        resetFilters:     'Resetovať filtre',
+        quickStats:       'Rýchle štatistiky',
+        totalChannels:    'Celkový počet',
+        activeChannels:   'Aktívne',
+        designInfo:       'O dizajne',
+        designInfoDesc:   'Aplikácia používa Apple HIG dizajn systém s dynamickými farbami, skleným efektom a plynulými animáciami.',
+        libraryHeading:   'Moje kanály',
+        sortLabel:        'Zoradiť podľa',
+        sortName:         'Názov',
+        sortGroup:        'Skupina',
+        sortQuality:      'Kvalita',
+        sortCountry:      'Krajina',
+        logo:             'Logo',
+        name:             'Názov',
+        untitled:         'Bez názvu',
+        noTvgName:        'bez TVG-NAME',
+        actions:          'Akcie',
+        edit:             'Upraviť',
+        delete:           'Zmazať',
+        showing:          'Zobrazených',
+        of:               'z',
+        filteredChannels: 'filtrovaných',
+        pagination:       'Stránkovanie',
+        previous:         '← Predch.',
+        next:             'Ďalší →',
+        page:             'Strana',
+        emptyLibraryTitle:'Playlist je prázdny',
+        emptyLibraryDesc: 'Importuj M3U alebo XSPF súbor pre začatie',
+        contentHeading:   'Skupiny kanálov',
+        noGroups:         'Žiadne skupiny',
+        noGroupsDesc:     'Importuj playlist pre zobrazenie skupín',
+        noGroup:          'Bez skupiny',
+        channels:         'kanálov',
+        filterByGroup:    'Filtrovať skupinu',
+        groupsOverview:   'Prehľad skupín',
+        designHeading:    'Nastavenia dizajnu',
+        theme:            'Téma',
+        language:         'Jazyk',
+        importMode:       'Spôsob importu',
+        switchLight:      'Prepnúť na svetlú tému',
+        switchDark:       'Prepnúť na tmavú tému',
+        langLabel:        'Výber jazyka',
+        light:            'Svetlá',
+        dark:             'Tmavá',
+        importTitle:      'Import Playlist',
+        importFromFile:   'Zo súboru',
+        importFromUrl:    'Z URL',
+        chooseFile:       'Vybrať súbor (M3U / XSPF)',
+        urlPlaceholder:   'https://example.com/playlist.m3u',
+        importing:        'Importujem…',
+        importBtn:        'Importovať',
+        close:            'Zavrieť',
+        cancel:           'Zrušiť',
+        save:             'Uložiť',
+        editChannel:      'Upraviť kanál',
+        addChannel_title: 'Pridať kanál',
+        channelName:      'Názov kanálu',
+        tvgId:            'TVG-ID',
+        tvgName:          'TVG-Name',
+        tvgLogo:          'Logo URL',
+        tvgCountry:       'Krajina',
+        groupTitle:       'Skupina',
+        streamUrl:        'URL streamu',
+        qualityLabel:     'Kvalita',
+        activeStatus:     'Aktívny kanál',
+        autoDetect:       'Automaticky',
+        validationError:  'Vyplň povinné polia (Názov, URL)',
+        channelSaved:     'Kanál bol uložený',
+        channelDeleted:   'Kanál bol zmazaný',
+        allCleared:       'Všetky kanály boli zmazané',
+        confirmDelete:    'Zmazať kanál?',
+        confirmDeleteDesc:'Táto akcia je nevratná.',
+        confirmClearAll:  'Naozaj zmazať všetky kanály?',
+        deleteBtn:        'Zmazať',
+        unsavedTitle:     'Neuložené zmeny',
+        unsavedDesc:      'Máš neuložené zmeny. Zavrieť bez uloženia?',
+        discardChanges:   'Zahodiť zmeny',
+        keepEditing:      'Pokračovať v úprave',
+        exported:         'Playlist exportovaný',
+        importError:      'Chyba importu',
+        imported:         'Importovaných',
+      },
+      en: {
+        appSubtitle:      'Import, edit and export M3U / XSPF playlists',
+        importPlaylist:   'Import Playlist',
+        exportM3U:        'Export M3U',
+        exportXSPF:       'Export XSPF',
+        addChannel:       '+ Add Channel',
+        clearAll:         'Clear All',
+        total:            'channels',
+        active:           'active',
+        groups:           'groups',
+        workspace:        'Workspace',
+        tabLibrary:       'Library',
+        tabLibraryDesc:   'Channels & playlist',
+        tabContent:       'Content',
+        tabContentDesc:   'Groups & statistics',
+        tabDesign:        'Design',
+        tabDesignDesc:    'App appearance',
+        filterSet:        'Filters',
+        search:           'Search',
+        searchPlaceholder:'Channel name or URL…',
+        group:            'Group',
+        allGroups:        'All groups',
+        quality:          'Quality',
+        allQuality:       'All qualities',
+        status:           'Status',
+        all:              'All',
+        activeLabel:      'Active',
+        offLabel:         'Inactive',
+        activate:         'Activate',
+        deactivate:       'Deactivate',
+        country:          'Country',
+        perPage:          'Per page',
+        resetFilters:     'Reset filters',
+        quickStats:       'Quick stats',
+        totalChannels:    'Total channels',
+        activeChannels:   'Active',
+        designInfo:       'About design',
+        designInfoDesc:   'The app uses Apple HIG design system with dynamic colors, glass effects, and smooth animations.',
+        libraryHeading:   'My Channels',
+        sortLabel:        'Sort by',
+        sortName:         'Name',
+        sortGroup:        'Group',
+        sortQuality:      'Quality',
+        sortCountry:      'Country',
+        logo:             'Logo',
+        name:             'Name',
+        untitled:         'Untitled',
+        noTvgName:        'no TVG-NAME',
+        actions:          'Actions',
+        edit:             'Edit',
+        delete:           'Delete',
+        showing:          'Showing',
+        of:               'of',
+        filteredChannels: 'filtered',
+        pagination:       'Pagination',
+        previous:         '← Prev',
+        next:             'Next →',
+        page:             'Page',
+        emptyLibraryTitle:'Playlist is empty',
+        emptyLibraryDesc: 'Import an M3U or XSPF file to get started',
+        contentHeading:   'Channel Groups',
+        noGroups:         'No groups',
+        noGroupsDesc:     'Import a playlist to see groups',
+        noGroup:          'No group',
+        channels:         'channels',
+        filterByGroup:    'Filter by group',
+        groupsOverview:   'Groups overview',
+        designHeading:    'Design Settings',
+        theme:            'Theme',
+        language:         'Language',
+        importMode:       'Import mode',
+        switchLight:      'Switch to light theme',
+        switchDark:       'Switch to dark theme',
+        langLabel:        'Language selector',
+        light:            'Light',
+        dark:             'Dark',
+        importTitle:      'Import Playlist',
+        importFromFile:   'From file',
+        importFromUrl:    'From URL',
+        chooseFile:       'Choose file (M3U / XSPF)',
+        urlPlaceholder:   'https://example.com/playlist.m3u',
+        importing:        'Importing…',
+        importBtn:        'Import',
+        close:            'Close',
+        cancel:           'Cancel',
+        save:             'Save',
+        editChannel:      'Edit channel',
+        addChannel_title: 'Add channel',
+        channelName:      'Channel name',
+        tvgId:            'TVG-ID',
+        tvgName:          'TVG-Name',
+        tvgLogo:          'Logo URL',
+        tvgCountry:       'Country',
+        groupTitle:       'Group',
+        streamUrl:        'Stream URL',
+        qualityLabel:     'Quality',
+        activeStatus:     'Active channel',
+        autoDetect:       'Auto detect',
+        validationError:  'Fill in required fields (Name, URL)',
+        channelSaved:     'Channel saved',
+        channelDeleted:   'Channel deleted',
+        allCleared:       'All channels cleared',
+        confirmDelete:    'Delete channel?',
+        confirmDeleteDesc:'This action cannot be undone.',
+        confirmClearAll:  'Delete all channels?',
+        deleteBtn:        'Delete',
+        unsavedTitle:     'Unsaved Changes',
+        unsavedDesc:      'You have unsaved changes. Close without saving?',
+        discardChanges:   'Discard changes',
+        keepEditing:      'Keep editing',
+        exported:         'Playlist exported',
+        importError:      'Import error',
+        imported:         'Imported',
+      }
+    }
+
+    /* ── State ── */
+    const channels      = ref([])
+    const lang          = ref('sk')
+    const theme         = ref('dark')
+    const activeTab     = ref('library')
+    const selectedId    = ref(null)
+    const importMode    = ref('file')
+    const importUrl     = ref('')
+    const importLoading = ref(false)
+    const importFileRef = ref(null)
+
+    const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
+    const sort       = reactive({ by: 'name', asc: true })
+    const pagination = reactive({ page: 1, limit: 50 })
+    const modal      = reactive({ import: false, edit: false, add: false, deleteConfirm: false, unsaved: false })
+    const toast      = reactive({ show: false, message: '' })
+    const editCh     = ref(null)
+    const editSnapshot = ref(null)
+    const deleteTarget = ref(null)
+
+    let toastTimer = null
+    let _uid = Date.now()
+
+    /* ── i18n ── */
+    const t = (key) => messages[lang.value]?.[key] ?? messages.en?.[key] ?? key
+
+    /* ── Computed ── */
+    const visibleTabs = computed(() => [
+      { id: 'library', icon: '📺', labelKey: 'tabLibrary', descKey: 'tabLibraryDesc' },
+      { id: 'content', icon: '📊', labelKey: 'tabContent', descKey: 'tabContentDesc' },
+      { id: 'design',  icon: '🎨', labelKey: 'tabDesign',  descKey: 'tabDesignDesc'  },
+    ])
+
+    const groupOptions = computed(() =>
+      [...new Set(channels.value.map(c => c.group_title).filter(Boolean))].sort()
+    )
+
+    const filteredChannels = computed(() => {
+      let arr = channels.value
+
+      if (filters.search) {
+        const q = filters.search.toLowerCase()
+        arr = arr.filter(c =>
+          (c.name     || '').toLowerCase().includes(q) ||
+          (c.url      || '').toLowerCase().includes(q) ||
+          (c.tvg_name || '').toLowerCase().includes(q)
+        )
+      }
+      if (filters.group)   arr = arr.filter(c => c.group_title === filters.group)
+      if (filters.quality) arr = arr.filter(c => c.quality === filters.quality)
+      if (filters.status === 'active')   arr = arr.filter(c =>  c.is_active)
+      if (filters.status === 'inactive') arr = arr.filter(c => !c.is_active)
+      if (filters.country) {
+        const cu = filters.country.toUpperCase()
+        arr = arr.filter(c => (c.tvg_country || '').toUpperCase() === cu)
+      }
+
+      const fieldMap = { name: 'name', group: 'group_title', quality: 'quality', country: 'tvg_country' }
+      const f = fieldMap[sort.by] || 'name'
+      return [...arr].sort((a, b) => {
+        const av = (a[f] || '').toLowerCase()
+        const bv = (b[f] || '').toLowerCase()
+        return sort.asc ? av.localeCompare(bv) : bv.localeCompare(av)
+      })
+    })
+
+    const totalPages = computed(() =>
+      Math.max(1, Math.ceil(filteredChannels.value.length / pagination.limit))
+    )
+
+    const paginatedChannels = computed(() => {
+      const s = (pagination.page - 1) * pagination.limit
+      return filteredChannels.value.slice(s, s + pagination.limit)
+    })
+
+    const stats = computed(() => {
+      const total  = channels.value.length
+      const active = channels.value.filter(c => c.is_active).length
+      const groups = new Set(channels.value.map(c => c.group_title).filter(Boolean)).size
+      const qualities = { '4K': 0, 'FHD': 0, 'HD': 0, 'SD': 0 }
+      channels.value.forEach(c => {
+        if (c.quality && qualities[c.quality] !== undefined) qualities[c.quality]++
+      })
+      return { total, active, groups, qualities }
+    })
+
+    const groupList = computed(() => {
+      const m = {}
+      channels.value.forEach(c => {
+        const g = c.group_title || ''
+        m[g] = (m[g] || 0) + 1
+      })
+      return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0]))
+    })
+
+    const editIsDirty = computed(() => {
+      if (!editCh.value || !editSnapshot.value) return false
+      return JSON.stringify(editCh.value) !== editSnapshot.value
+    })
+
+    /* ── Helpers ── */
+    function persist() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value)) } catch {}
+    }
+
+    function showToast(msg) {
+      clearTimeout(toastTimer)
+      toast.message = msg
+      toast.show = true
+      toastTimer = setTimeout(() => { toast.show = false }, 2800)
+    }
+
+    function newId() { return 'ch_' + (++_uid) }
+
+    /* ── Theme / Lang ── */
+    function setTheme(newTheme) {
+      theme.value = newTheme
+      document.documentElement.setAttribute('data-theme', newTheme)
+      try { localStorage.setItem(THEME_KEY, newTheme) } catch {}
+    }
+
+    function toggleTheme() { setTheme(theme.value === 'dark' ? 'light' : 'dark') }
+
+    function setLang(l) {
+      lang.value = l
+      document.documentElement.lang = l
+      try { localStorage.setItem(LANG_KEY, l) } catch {}
+    }
+
+    /* ── Table ── */
+    function setSort(by) {
+      if (sort.by === by) sort.asc = !sort.asc
+      else { sort.by = by; sort.asc = true }
+      pagination.page = 1
+    }
+
+    function prevPage() { if (pagination.page > 1) pagination.page-- }
+    function nextPage() { if (pagination.page < totalPages.value) pagination.page++ }
+
+    function resetFilters() {
+      Object.assign(filters, { search: '', group: '', quality: '', status: 'all', country: '' })
+      pagination.page = 1
+    }
+
+    /* ── Channel CRUD ── */
+    function toggleChannel(ch) { ch.is_active = !ch.is_active; persist() }
+
+    function editChannel(ch) {
+      editCh.value = { ...ch }
+      editSnapshot.value = JSON.stringify({ ...ch })
+      modal.add  = false
+      modal.edit = true
+    }
+
+    function openAddChannel() {
+      editCh.value = {
+        id: null, name: '', tvg_id: '', tvg_name: '', tvg_logo: '',
+        tvg_country: '', group_title: '', url: '', quality: '', is_active: true
+      }
+      editSnapshot.value = JSON.stringify({ ...editCh.value })
+      modal.edit = false
+      modal.add  = true
+    }
+
+    function closeEditSafe() {
+      if (editIsDirty.value) { modal.unsaved = true }
+      else { modal.edit = false; modal.add = false }
+    }
+
+    function forceCloseEdit() {
+      modal.unsaved = false; modal.edit = false; modal.add = false
+    }
+
+    function saveEdit() {
+      if (!editCh.value?.name?.trim() || !editCh.value?.url?.trim()) {
+        return showToast(t('validationError'))
+      }
+      const idx = channels.value.findIndex(c => c.id === editCh.value.id)
+      if (idx >= 0) {
+        channels.value.splice(idx, 1, { ...editCh.value })
+      } else {
+        channels.value.push({ ...editCh.value, id: newId() })
+      }
+      persist()
+      modal.edit = false; modal.add = false; modal.unsaved = false
+      showToast(t('channelSaved'))
+    }
+
+    function removeChannel(id) { deleteTarget.value = id; modal.deleteConfirm = true }
+
+    function confirmDelete() {
+      channels.value = channels.value.filter(c => c.id !== deleteTarget.value)
+      persist(); modal.deleteConfirm = false
+      showToast(t('channelDeleted'))
+    }
+
+    function clearAll() {
+      if (!confirm(t('confirmClearAll'))) return
+      channels.value = []; persist()
+      showToast(t('allCleared'))
+    }
+
+    /* ── Import ── */
+    function triggerImport() { modal.import = true }
+
+    function importFromFile(e) {
+      const file = e.target.files[0]; if (!file) return
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const fmt = file.name.toLowerCase().endsWith('.xspf') ? 'xspf' : 'm3u'
+        processImport(ev.target.result, fmt)
+        modal.import = false
+      }
+      reader.readAsText(file, 'UTF-8')
+      e.target.value = ''
+    }
+
+    async function importFromUrl() {
+      if (!importUrl.value) return
+      importLoading.value = true
+      try {
+        const r = await fetch(importUrl.value)
+        if (!r.ok) throw new Error('HTTP ' + r.status)
+        const text = await r.text()
+        const fmt = importUrl.value.toLowerCase().endsWith('.xspf') ? 'xspf' : 'm3u'
+        processImport(text, fmt)
+        modal.import = false
+        importUrl.value = ''
+      } catch (e) {
+        showToast(t('importError') + ': ' + e.message)
+      } finally {
+        importLoading.value = false
+      }
+    }
+
+    function processImport(text, fmt) {
+      const fresh = fmt === 'm3u' ? parseM3U(text) : parseXSPF(text)
+      const existing = new Set(channels.value.map(c => c.url))
+      const unique = fresh.filter(c => !existing.has(c.url))
+      channels.value = [...channels.value, ...unique]
+      persist()
+      showToast(t('imported') + ' ' + unique.length + ' ' + t('channels'))
+    }
+
+    function parseM3U(text) {
+      const lines = text.split(/\r?\n/)
+      const result = []
+      let meta = null
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim()
+        if (line.startsWith('#EXTINF:')) {
+          meta = parseExtinf(line)
+        } else if (line && !line.startsWith('#')) {
+          result.push({ id: newId(), ...(meta || {}), url: line, is_active: true })
+          meta = null
+        }
+      }
+      return result
+    }
+
+    function parseXSPF(text) {
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(text, 'text/xml')
+      const tracks = doc.querySelectorAll('track')
+      const result = []
+      tracks.forEach(tr => {
+        const g = (tag) => tr.querySelector(tag)?.textContent?.trim() || ''
+        const url = g('location')
+        if (url) result.push({
+          id: newId(), name: g('title'), url,
+          tvg_id: '', tvg_name: g('title'), tvg_logo: g('image'),
+          tvg_country: '', group_title: g('annotation'),
+          quality: detectQuality(g('title')), is_active: true
+        })
+      })
+      return result
+    }
+
+    function parseExtinf(line) {
+      const nameM = line.match(/,(.+)$/)
+      const name  = nameM ? nameM[1].trim() : ''
+      return {
+        name,
+        tvg_id:      extractAttr(line, 'tvg-id'),
+        tvg_name:    extractAttr(line, 'tvg-name') || name,
+        tvg_logo:    extractAttr(line, 'tvg-logo'),
+        tvg_country: extractAttr(line, 'tvg-country'),
+        group_title: extractAttr(line, 'group-title'),
+        quality:     detectQuality(name),
+      }
+    }
+
+    function extractAttr(line, attr) {
+      const m = line.match(new RegExp(attr + '="([^"]*)"', 'i'))
+      return m ? m[1] : ''
+    }
+
+    function detectQuality(name) {
+      const n = (name || '').toUpperCase()
+      if (n.includes('4K') || n.includes('UHD') || n.includes('2160')) return '4K'
+      if (n.includes('FHD') || n.includes('1080') || n.includes('FULL HD')) return 'FHD'
+      if ((n.includes('HD') || n.includes('720')) && !n.includes('UHD') && !n.includes('FHD')) return 'HD'
+      if (n.includes('SD') || n.includes('480') || n.includes('360')) return 'SD'
+      return ''
+    }
+
+    /* ── Export ── */
+    function exportPlaylist(fmt) {
+      const active = channels.value.filter(c => c.is_active)
+      if (!active.length) return
+
+      let content, filename, type
+      if (fmt === 'm3u') {
+        content = '#EXTM3U\n'
+        active.forEach(c => {
+          content += '#EXTINF:-1'
+          if (c.tvg_id)      content += ` tvg-id="${xmlEsc(c.tvg_id)}"`
+          if (c.tvg_name)    content += ` tvg-name="${xmlEsc(c.tvg_name)}"`
+          if (c.tvg_logo)    content += ` tvg-logo="${xmlEsc(c.tvg_logo)}"`
+          if (c.group_title) content += ` group-title="${xmlEsc(c.group_title)}"`
+          if (c.tvg_country) content += ` tvg-country="${xmlEsc(c.tvg_country)}"`
+          content += `,${c.name}\n${c.url}\n`
+        })
+        filename = 'playlist.m3u'; type = 'audio/x-mpegurl'
+      } else {
+        content  = '<?xml version="1.0" encoding="UTF-8"?>\n'
+        content += '<playlist version="1" xmlns="http://xspf.org/ns/0/">\n  <trackList>\n'
+        active.forEach(c => {
+          content += '    <track>\n'
+          content += `      <title>${xmlEsc(c.name)}</title>\n`
+          content += `      <location>${xmlEsc(c.url)}</location>\n`
+          if (c.tvg_logo)    content += `      <image>${xmlEsc(c.tvg_logo)}</image>\n`
+          if (c.group_title) content += `      <annotation>${xmlEsc(c.group_title)}</annotation>\n`
+          content += '    </track>\n'
+        })
+        content += '  </trackList>\n</playlist>'
+        filename = 'playlist.xspf'; type = 'application/xspf+xml'
+      }
+
+      const blob = new Blob([content], { type })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = filename; a.click()
+      URL.revokeObjectURL(url)
+      showToast(t('exported'))
+    }
+
+    function xmlEsc(s) {
+      return (s || '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    }
+
+    /* ── Keyboard ── */
+    function handleKeydown(e) {
+      if (e.key !== 'Escape') return
+      if (modal.unsaved)      { modal.unsaved = false; return }
+      if (modal.deleteConfirm){ modal.deleteConfirm = false; return }
+      if (modal.edit || modal.add) { closeEditSafe(); return }
+      if (modal.import)       { modal.import = false; return }
+    }
+
+    /* ── Lifecycle ── */
+    onMounted(() => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        if (saved) channels.value = JSON.parse(saved)
+      } catch {}
+
+      const savedTheme = localStorage.getItem(THEME_KEY) || 'dark'
+      setTheme(savedTheme)
+
+      const savedLang = localStorage.getItem(LANG_KEY) || 'sk'
+      setLang(savedLang)
+
+      document.addEventListener('keydown', handleKeydown)
+    })
+
+    onUnmounted(() => {
+      document.removeEventListener('keydown', handleKeydown)
+    })
+
+    watch(
+      [() => filters.search, () => filters.group, () => filters.quality,
+       () => filters.status, () => filters.country, () => pagination.limit],
+      () => { pagination.page = 1 }
+    )
+
+    return {
+      channels, lang, theme, activeTab, selectedId,
+      importMode, importUrl, importLoading, importFileRef,
+      filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,
+      stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs,
+      t, setTheme, toggleTheme, setLang, setSort, prevPage, nextPage, resetFilters,
+      toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,
+      removeChannel, confirmDelete, clearAll, triggerImport, importFromFile, importFromUrl,
+      exportPlaylist,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

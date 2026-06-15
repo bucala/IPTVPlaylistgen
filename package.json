@@ -5,6 +5,7 @@
   "description": "Simple Apple style IPTV playlist generator with Netlify, Electron and Capacitor support.",
   "main": "electron/main.js",
   "scripts": {
+    "build": "echo 'Static site — no build step'",
     "start": "npx serve .",
     "android:add": "npx cap add android",
     "android:sync": "npx cap sync android",

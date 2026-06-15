@@ -343,6 +343,26 @@
       width: 32px; height: 32px; border-radius: var(--radius-xs);
       object-fit: cover; background: var(--fill); border: 1px solid var(--border); flex-shrink: 0;
     }
+    .logo-fade { animation: logo-in .2s ease both; }
+    @keyframes logo-in { from { opacity:0; transform:scale(.88) } to { opacity:1; transform:scale(1) } }
+    .logo-initials {
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:700; letter-spacing:.01em; color:var(--text3);
+    }
+    tbody tr { cursor:pointer; }
+    /* ── EPG ── */
+    .epg-tag { font-size:10px; font-weight:500; margin-top:2px; line-height:1.3; }
+    .epg-tag.now { color:var(--primary); }
+    .epg-tag.nxt { color:var(--text3); }
+    .epg-dot { display:inline-block; width:6px; height:6px; border-radius:50%; flex-shrink:0; vertical-align:middle; margin-right:3px; }
+    .epg-panel { border-radius:var(--radius-md); border:1px solid var(--border); overflow:hidden; background:var(--surface); box-shadow:var(--shadow-sm); }
+    .epg-panel-head { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--surface-s); border-bottom:1px solid var(--sep); font-weight:600; font-size:13px; }
+    .epg-row { display:flex; gap:12px; align-items:flex-start; padding:7px 14px; border-bottom:1px solid var(--sep); font-size:12px; }
+    .epg-row:last-child { border-bottom:none; }
+    .epg-row.on-air { background:var(--primary-l); }
+    .epg-time { min-width:96px; color:var(--text3); font-variant-numeric:tabular-nums; font-family:'SF Mono','Fira Code',monospace; flex-shrink:0; }
+    .epg-title { color:var(--text); font-weight:500; }
+    .epg-desc { font-size:11px; color:var(--text3); margin-top:1px; }
 
     /* ── App icon ── */
     .app-icon {
@@ -445,6 +465,8 @@
             <button class="btn btn-primary"    @click="triggerImport">{{ t('importPlaylist') }}</button>
             <button class="btn btn-secondary"  @click="exportPlaylist('m3u')"  :disabled="stats.total === 0">{{ t('exportM3U') }}</button>
             <button class="btn btn-secondary"  @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
+            <button class="btn btn-secondary"  @click="epgLoaded ? clearEpg() : triggerEpgImport()" :style="epgLoaded ? 'color:var(--success)' : ''">📡 {{ epgLoaded ? t('clearEpg') : t('epgImport') }}</button>
+            <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" class="sr-only" @change="importEpgFromFile" />
             <button class="btn btn-ghost"      @click="openAddChannel">{{ t('addChannel') }}</button>
             <button class="btn btn-danger"     @click="clearAll" :disabled="stats.total === 0">{{ t('clearAll') }}</button>
           </div>
@@ -671,22 +693,26 @@
                 </tr>
               </thead>
               <tbody v-if="paginatedChannels.length">
-                <tr v-for="(ch, i) in paginatedChannels" :key="ch.id" :class="{ selected: selectedId === ch.id }">
+                <tr v-for="(ch, i) in paginatedChannels" :key="ch.id" :class="{ selected: selectedId === ch.id }" @click="selectRow(ch, $event)">
                   <td class="muted">{{ (pagination.page - 1) * pagination.limit + i + 1 }}</td>
                   <td>
-                    <img v-if="ch.tvg_logo" :src="ch.tvg_logo" class="ch-logo" loading="lazy" :alt="ch.name + ' logo'" />
-                    <div v-else class="ch-logo flex items-center justify-center text-base" aria-hidden="true">📺</div>
+                    <img v-if="ch.tvg_logo && !logoErrors.has(ch.id)" :src="ch.tvg_logo" class="ch-logo logo-fade" loading="lazy" :alt="ch.name + ' logo'" @error="logoErrors.add(ch.id)" />
+                    <div v-else class="ch-logo logo-initials" :title="ch.name" aria-hidden="true">{{ (ch.name||'?').slice(0,2).toUpperCase() }}</div>
                   </td>
                   <td>
                     <div class="font-semibold">{{ ch.name || t('untitled') }}</div>
                     <div class="text-xs muted">{{ ch.tvg_name || t('noTvgName') }}</div>
+                    <div v-if="epgLoaded && getCurrentProgram(ch)" class="epg-tag now">{{ t('nowPlaying') }}: {{ getCurrentProgram(ch).title }}</div>
+                    <div v-else-if="epgLoaded && getNextProgram(ch)" class="epg-tag nxt">{{ t('nextProgram') }}: {{ getNextProgram(ch).title }}</div>
                   </td>
                   <td class="muted">{{ ch.group_title || '—' }}</td>
                   <td>
                     <span v-if="ch.quality" class="q-badge" :class="'q-' + ch.quality">{{ ch.quality }}</span>
                     <span v-else class="muted">—</span>
                   </td>
-                  <td class="mono muted">{{ ch.tvg_id || '—' }}</td>
+                  <td class="mono muted">
+                    <span v-if="epgLoaded && ch.tvg_id" class="epg-dot" :style="{ background: epgData[ch.tvg_id] ? 'var(--success)' : 'var(--text4)' }" :title="epgData[ch.tvg_id] ? t('epgMatchTip') : t('noEpgMatchTip')" aria-hidden="true"></span>{{ ch.tvg_id || '—' }}
+                  </td>
                   <td class="uppercase text-xs muted">{{ ch.tvg_country || '—' }}</td>
                   <td class="mono muted" style="max-width:260px"><div class="truncate" :title="ch.url">{{ ch.url }}</div></td>
                   <td class="text-center">
@@ -719,6 +745,24 @@
               </tbody>
             </table>
           </div>
+
+          <!-- EPG Schedule panel -->
+          <transition name="fade">
+            <div v-if="selectedId && epgLoaded" class="epg-panel mt-3">
+              <div class="epg-panel-head">
+                <span>{{ (channels.find(c => c.id === selectedId) || {}).name || '' }} — {{ t('schedule') }}</span>
+                <button class="btn btn-ghost" style="padding:3px 8px;font-size:12px" @click.stop="selectedId = null">✕</button>
+              </div>
+              <template v-if="getTodayPrograms(channels.find(c => c.id === selectedId) || {}).length">
+                <div v-for="prog in getTodayPrograms(channels.find(c => c.id === selectedId) || {})" :key="prog.start?.getTime()"
+                     class="epg-row" :class="{ 'on-air': prog.start <= new Date() && prog.stop > new Date() }">
+                  <div class="epg-time">{{ formatEpgTime(prog.start) }}–{{ formatEpgTime(prog.stop) }}</div>
+                  <div><div class="epg-title">{{ prog.title }}</div><div v-if="prog.desc" class="epg-desc">{{ prog.desc }}</div></div>
+                </div>
+              </template>
+              <div v-else class="epg-row" style="justify-content:center;padding:16px;color:var(--text3)">{{ t('noEpg') }}</div>
+            </div>
+          </transition>
 
           <div class="flex flex-wrap gap-3 items-center justify-between mt-3">
             <div class="text-sm muted">{{ t('showing') }} <strong style="color:var(--text)">{{ paginatedChannels.length }}</strong> {{ t('of') }} <strong style="color:var(--text)">{{ filteredChannels.length }}</strong> {{ t('filteredChannels') }}</div>
@@ -875,9 +919,19 @@
             <input id="edit-tvgname" class="field" v-model="editCh.tvg_name" placeholder="tvg-name" />
           </div>
 
-          <div>
+          <div class="md:col-span-2">
             <label class="label" for="edit-logo">{{ t('tvgLogo') }}</label>
-            <input id="edit-logo" class="field" v-model="editCh.tvg_logo" placeholder="https://…" type="url" />
+            <div class="flex gap-2 items-center">
+              <input id="edit-logo" class="field" v-model="editCh.tvg_logo" placeholder="https://…" type="url" />
+              <div class="ch-logo flex-shrink-0">
+                <img v-if="editCh.tvg_logo" :src="editCh.tvg_logo" class="ch-logo" :alt="editCh.name || 'logo'" @error="$event.target.style.opacity='.2'" />
+                <div v-else class="ch-logo logo-initials">{{ (editCh.name||'?').slice(0,2).toUpperCase() }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="md:col-span-2">
+            <label class="label" for="edit-tvgurl">{{ t('tvgUrl') }}</label>
+            <input id="edit-tvgurl" class="field mono" v-model="editCh.tvg_url" placeholder="https://epg.example.com/epg.xml" type="url" />
           </div>
           <div>
             <label class="label" for="edit-country">{{ t('tvgCountry') }}</label>
@@ -1079,6 +1133,18 @@ createApp({
         exported:         'Playlist exportovaný',
         importError:      'Chyba importu',
         imported:         'Importovaných',
+        epgImport:        'Import EPG (XMLTV)',
+        epgLoadedMsg:     'EPG načítané',
+        epgPrograms:      'programov',
+        epgChannels:      'kanálov s EPG',
+        tvgUrl:           'TVG URL (EPG zdroj)',
+        nowPlaying:       '▶ Teraz',
+        nextProgram:      '◎ Ďalší',
+        schedule:         'Program dnes',
+        noEpg:            'Žiadne EPG dáta pre tento kanál',
+        epgMatchTip:      'EPG dostupné',
+        noEpgMatchTip:    'Bez EPG',
+        clearEpg:         'Zmazať EPG',
       },
       en: {
         appSubtitle:      'Import, edit and export M3U / XSPF playlists',
@@ -1196,6 +1262,18 @@ createApp({
         exported:         'Playlist exported',
         importError:      'Import error',
         imported:         'Imported',
+        epgImport:        'Import EPG (XMLTV)',
+        epgLoadedMsg:     'EPG loaded',
+        epgPrograms:      'programs',
+        epgChannels:      'channels with EPG',
+        tvgUrl:           'TVG URL (EPG source)',
+        nowPlaying:       '▶ Now',
+        nextProgram:      '◎ Next',
+        schedule:         "Today's schedule",
+        noEpg:            'No EPG data for this channel',
+        epgMatchTip:      'EPG available',
+        noEpgMatchTip:    'No EPG',
+        clearEpg:         'Clear EPG',
       }
     }
 
@@ -1211,6 +1289,10 @@ createApp({
     const importFileRef = ref(null)
 
     const mobFilterOpen = ref(false)
+    const epgRef        = ref(null)
+    const epgData       = ref({})
+    const epgLoaded     = ref(false)
+    const logoErrors    = reactive(new Set())
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
@@ -1364,7 +1446,7 @@ createApp({
 
     function openAddChannel() {
       editCh.value = {
-        id: null, name: '', tvg_id: '', tvg_name: '', tvg_logo: '',
+        id: null, name: '', tvg_id: '', tvg_name: '', tvg_logo: '', tvg_url: '',
         tvg_country: '', group_title: '', url: '', quality: '', is_active: true
       }
       editSnapshot.value = JSON.stringify({ ...editCh.value })
@@ -1515,6 +1597,7 @@ createApp({
         tvg_id:      extractAttr(line, 'tvg-id'),
         tvg_name:    extractAttr(line, 'tvg-name') || name,
         tvg_logo:    extractAttr(line, 'tvg-logo'),
+        tvg_url:     extractAttr(line, 'tvg-url'),
         tvg_country: extractAttr(line, 'tvg-country'),
         group_title: extractAttr(line, 'group-title'),
         quality:     detectQuality(name),
@@ -1548,6 +1631,7 @@ createApp({
           if (c.tvg_id)      content += ` tvg-id="${xmlEsc(c.tvg_id)}"`
           if (c.tvg_name)    content += ` tvg-name="${xmlEsc(c.tvg_name)}"`
           if (c.tvg_logo)    content += ` tvg-logo="${xmlEsc(c.tvg_logo)}"`
+          if (c.tvg_url)     content += ` tvg-url="${xmlEsc(c.tvg_url)}"`
           if (c.group_title) content += ` group-title="${xmlEsc(c.group_title)}"`
           if (c.tvg_country) content += ` tvg-country="${xmlEsc(c.tvg_country)}"`
           content += `,${c.name}\n${c.url}\n`
@@ -1623,6 +1707,89 @@ createApp({
 
     watch(() => activeTab.value, () => { mobFilterOpen.value = false })
 
+    /* ── EPG ── */
+    function parseXMLTVDate(str) {
+      if (!str) return null
+      const m = str.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\s*([+-]\d{2}:?\d{2})?/)
+      if (!m) return null
+      const [, y, mo, d, h, mi, s, tz] = m
+      let offset = 0
+      if (tz) {
+        const sign = tz[0] === '-' ? -1 : 1
+        const digits = tz.slice(1).replace(':','')
+        offset = sign * (parseInt(digits.slice(0,2)) * 60 + parseInt(digits.slice(2,4))) * 60000
+      }
+      return new Date(Date.UTC(+y, +mo-1, +d, +h, +mi, +s) - offset)
+    }
+
+    function parseXMLTV(xmlText) {
+      const doc = new DOMParser().parseFromString(xmlText, 'text/xml')
+      if (doc.querySelector('parsererror')) throw new Error('Invalid XML')
+      const programs = {}
+      doc.querySelectorAll('programme').forEach(prog => {
+        const ch = prog.getAttribute('channel'); if (!ch) return
+        const start = parseXMLTVDate(prog.getAttribute('start'))
+        const stop  = parseXMLTVDate(prog.getAttribute('stop'))
+        const title = prog.querySelector('title')?.textContent?.trim() || ''
+        const desc  = prog.querySelector('desc')?.textContent?.trim()  || ''
+        if (!programs[ch]) programs[ch] = []
+        programs[ch].push({ start, stop, title, desc })
+      })
+      return programs
+    }
+
+    function importEpgFromFile(event) {
+      const file = event.target.files?.[0]; if (!file) return
+      if (file.size > MAX_FILE_SIZE) return showToast(t('fileTooLarge'))
+      const reader = new FileReader()
+      reader.onload = e => {
+        try {
+          const programs = parseXMLTV(e.target.result)
+          epgData.value = programs
+          epgLoaded.value = true
+          const chCount = Object.keys(programs).length
+          const pCount  = Object.values(programs).reduce((s, a) => s + a.length, 0)
+          showToast(`${t('epgLoadedMsg')}: ${pCount} ${t('epgPrograms')}, ${chCount} ${t('epgChannels')}`)
+        } catch { showToast(t('importError')) }
+        event.target.value = ''
+      }
+      reader.readAsText(file, 'UTF-8')
+    }
+
+    function clearEpg() { epgData.value = {}; epgLoaded.value = false }
+    function triggerEpgImport() { epgRef.value?.click() }
+
+    function getCurrentProgram(ch) {
+      if (!epgLoaded.value || !ch.tvg_id) return null
+      const now = new Date()
+      return (epgData.value[ch.tvg_id] || []).find(p => p.start <= now && p.stop > now) || null
+    }
+
+    function getNextProgram(ch) {
+      if (!epgLoaded.value || !ch.tvg_id) return null
+      const now = new Date()
+      return (epgData.value[ch.tvg_id] || []).filter(p => p.start > now).sort((a,b) => a.start-b.start)[0] || null
+    }
+
+    function getTodayPrograms(ch) {
+      if (!ch?.tvg_id) return []
+      const today = new Date(); today.setHours(0,0,0,0)
+      const tmrw  = new Date(today); tmrw.setDate(tmrw.getDate()+1)
+      return (epgData.value[ch.tvg_id] || [])
+        .filter(p => p.start >= today && p.start < tmrw)
+        .sort((a,b) => a.start - b.start)
+    }
+
+    function formatEpgTime(date) {
+      if (!date) return ''
+      return date.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
+    }
+
+    function selectRow(ch, event) {
+      if (event.target.closest('button, a')) return
+      selectedId.value = selectedId.value === ch.id ? null : ch.id
+    }
+
     return {
       channels, lang, theme, activeTab, selectedId,
       importMode, importUrl, importLoading, importFileRef,
@@ -1633,6 +1800,10 @@ createApp({
       toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,
       removeChannel, confirmDelete, clearAll, triggerImport, importFromFile, importFromUrl,
       exportPlaylist,
+      epgData, epgLoaded, epgRef, logoErrors,
+      triggerEpgImport, importEpgFromFile, clearEpg,
+      getCurrentProgram, getNextProgram, getTodayPrograms, formatEpgTime,
+      selectRow,
     }
   }
 }).mount('#app')

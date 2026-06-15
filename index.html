@@ -970,6 +970,9 @@ createApp({
         activeStatus:     'Aktívny kanál',
         autoDetect:       'Automaticky',
         validationError:  'Vyplň povinné polia (Názov, URL)',
+        invalidUrl:       'Neplatná URL — povolené schémy: http, https, rtmp, rtmps, rtsp, udp, rtp',
+        fileTooLarge:     'Súbor je príliš veľký (max 50 MB)',
+        skippedDuplicates:'preskočených (duplicity)',
         channelSaved:     'Kanál bol uložený',
         channelDeleted:   'Kanál bol zmazaný',
         allCleared:       'Všetky kanály boli zmazané',
@@ -1084,6 +1087,9 @@ createApp({
         activeStatus:     'Active channel',
         autoDetect:       'Auto detect',
         validationError:  'Fill in required fields (Name, URL)',
+        invalidUrl:       'Invalid URL — allowed schemes: http, https, rtmp, rtmps, rtsp, udp, rtp',
+        fileTooLarge:     'File is too large (max 50 MB)',
+        skippedDuplicates:'skipped (duplicates)',
         channelSaved:     'Channel saved',
         channelDeleted:   'Channel deleted',
         allCleared:       'All channels cleared',
@@ -1274,9 +1280,20 @@ createApp({
       modal.unsaved = false; modal.edit = false; modal.add = false
     }
 
+    const ALLOWED_SCHEMES = new Set(['http', 'https', 'rtmp', 'rtmps', 'rtsp', 'udp', 'rtp'])
+    function validUrl(url) {
+      try {
+        const scheme = (url || '').split('://')[0].toLowerCase()
+        return ALLOWED_SCHEMES.has(scheme)
+      } catch { return false }
+    }
+
     function saveEdit() {
       if (!editCh.value?.name?.trim() || !editCh.value?.url?.trim()) {
         return showToast(t('validationError'))
+      }
+      if (!validUrl(editCh.value.url)) {
+        return showToast(t('invalidUrl'))
       }
       const idx = channels.value.findIndex(c => c.id === editCh.value.id)
       if (idx >= 0) {
@@ -1306,8 +1323,15 @@ createApp({
     /* ── Import ── */
     function triggerImport() { modal.import = true }
 
+    const MAX_FILE_SIZE = 50 * 1024 * 1024  // 50 MB
+
     function importFromFile(e) {
       const file = e.target.files[0]; if (!file) return
+      if (file.size > MAX_FILE_SIZE) {
+        showToast(t('fileTooLarge'))
+        e.target.value = ''
+        return
+      }
       const reader = new FileReader()
       reader.onload = (ev) => {
         const fmt = file.name.toLowerCase().endsWith('.xspf') ? 'xspf' : 'm3u'
@@ -1340,9 +1364,12 @@ createApp({
       const fresh = fmt === 'm3u' ? parseM3U(text) : parseXSPF(text)
       const existing = new Set(channels.value.map(c => c.url))
       const unique = fresh.filter(c => !existing.has(c.url))
+      const skipped = fresh.length - unique.length
       channels.value = [...channels.value, ...unique]
       persist()
-      showToast(t('imported') + ' ' + unique.length + ' ' + t('channels'))
+      let msg = t('imported') + ' ' + unique.length + ' ' + t('channels')
+      if (skipped > 0) msg += ' · ' + skipped + ' ' + t('skippedDuplicates')
+      showToast(msg)
     }
 
     function parseM3U(text) {

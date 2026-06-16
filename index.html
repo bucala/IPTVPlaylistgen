@@ -1007,40 +1007,44 @@
     <!-- Autodetect Modal -->
     <div v-if="modal.autoDetect" class="modal-overlay" @click.self="modal.autoDetect = false"
          role="dialog" aria-modal="true" :aria-label="t('autoDetectTitle')">
-      <div class="modal-card glass-s" style="width:min(960px,100%)">
+      <div class="modal-card glass-s" style="width:min(1020px,100%)">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-bold flex items-center gap-2"><span v-html="icon('search', 20)"></span>{{ t('autoDetectTitle') }}</h2>
           <button class="btn btn-ghost" style="padding:6px 10px" @click="modal.autoDetect = false" :aria-label="t('close')" v-html="icon('x', 16)"></button>
         </div>
 
-        <!-- EPG import section (shown when EPG not loaded) -->
-        <div v-if="!epgLoaded" class="mb-4 p-3 rounded-xl" style="background:var(--surface);border:1px solid var(--sep)">
-          <div class="text-sm mb-3" style="color:var(--text3)">{{ t('autoDetectNoEpg') }}</div>
-          <div class="flex gap-2 mb-2">
-            <input class="field flex-1" type="url" v-model="epgImportUrl" :placeholder="t('epgUrlPlaceholder')" @keydown.enter="importEpgFromUrl(epgImportUrl)" />
-            <button class="btn btn-primary" style="white-space:nowrap" :disabled="!epgImportUrl || epgImportLoading" @click="importEpgFromUrl(epgImportUrl)">
+        <!-- Source selection panel -->
+        <div class="mb-4 p-3 rounded-xl" style="background:var(--surface);border:1px solid var(--sep)">
+          <div class="font-semibold text-sm mb-1 flex items-center gap-1.5"><span v-html="icon('antenna', 14)"></span>{{ t('autoDetectSources') }}</div>
+          <div class="text-xs mb-3" style="color:var(--text3)">{{ t('autoDetectSourcesDesc') }}</div>
+          <div class="flex flex-wrap gap-2 mb-3">
+            <label v-for="src in IPTV_SOURCES" :key="src.id"
+                   class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg cursor-pointer text-sm"
+                   :style="autoDetectSelectedSources.has(src.id) ? 'background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary);border:1px solid color-mix(in srgb,var(--primary) 30%,transparent)' : 'background:var(--bg);border:1px solid var(--sep)'">
+              <input type="checkbox" :checked="autoDetectSelectedSources.has(src.id)" @change="toggleAutoDetectSource(src.id, $event.target.checked)" class="sr-only" />
+              <span v-html="icon('globe', 13)" style="flex-shrink:0"></span>
+              {{ src.label }}
+            </label>
+          </div>
+          <div class="flex gap-2">
+            <input class="field flex-1 text-sm" type="url" v-model="autoDetectCustomUrl" :placeholder="t('autoDetectCustomUrlPh')" @keydown.enter="fetchAndRunAutoDetect" />
+            <button class="btn btn-primary" style="white-space:nowrap" :disabled="sourceLoading" @click="fetchAndRunAutoDetect">
               <span class="inline-flex items-center gap-1.5">
-                <span v-html="epgImportLoading ? icon('refresh', 14) : icon('arrowUR', 14)"></span>
-                {{ t('epgImportFromUrl') }}
+                <span v-html="sourceLoading ? icon('refresh', 14) : icon('search', 14)"></span>
+                {{ sourceLoading ? t('autoDetectFetching') : t('autoDetectFetch') }}
               </span>
             </button>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs" style="color:var(--text4)">{{ t('epgImport') }}</span>
-            <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px" @click="triggerEpgImport">
-              <span class="inline-flex items-center gap-1.5"><span v-html="icon('folder', 13)"></span>{{ t('openFile') }}</span>
-            </button>
-          </div>
         </div>
 
-        <!-- Prefilter notice (shown when specific channels selected) -->
-        <div v-if="epgLoaded && autoDetectPrefilter" class="mb-3 px-3 py-2 rounded-lg text-sm flex items-center gap-2" style="background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary)">
-          <span v-html="icon('search', 14)"></span>
+        <!-- Prefilter notice -->
+        <div v-if="autoDetectPrefilter" class="mb-3 px-3 py-2 rounded-lg text-sm flex items-center gap-2" style="background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary)">
+          <span v-html="icon('circle', 14)"></span>
           {{ t('autoDetectPrefiltered').replace('{n}', autoDetectPrefilter.size) }}
         </div>
 
-        <!-- Summary cards -->
-        <div v-if="epgLoaded" class="grid grid-cols-3 gap-3 mb-4">
+        <!-- Summary cards (when results loaded) -->
+        <div v-if="sourceLoaded && autoDetectSummary.total > 0" class="grid grid-cols-3 gap-3 mb-4">
           <div class="stat-card">
             <div class="num" style="color:var(--primary)">{{ autoDetectSummary.matched }}</div>
             <div class="lbl">{{ t('autoDetectMatched') }}</div>
@@ -1055,18 +1059,18 @@
           </div>
         </div>
 
-        <!-- Filter tabs (only when EPG loaded) -->
-        <div v-if="epgLoaded" class="flex items-center gap-2 mb-3">
+        <!-- Filter tabs + re-run (when results loaded) -->
+        <div v-if="sourceLoaded && autoDetectSummary.total > 0" class="flex items-center gap-2 mb-3">
           <div class="seg flex-1" role="group">
             <button class="seg-btn flex-1" :class="{ active: autoDetectFilter === 'all' }" @click="autoDetectFilter = 'all'">{{ t('all') }}</button>
             <button class="seg-btn flex-1" :class="{ active: autoDetectFilter === 'matched' }" @click="autoDetectFilter = 'matched'">{{ t('autoDetectMatchedOnly') }}</button>
             <button class="seg-btn flex-1" :class="{ active: autoDetectFilter === 'unmatched' }" @click="autoDetectFilter = 'unmatched'">{{ t('autoDetectUnmatched') }}</button>
           </div>
-          <button class="btn btn-ghost" style="padding:6px 12px" @click="runAutoDetect"><span class="inline-flex items-center gap-1.5"><span v-html="icon('refresh', 14)"></span>{{ t('autoDetectRerun') }}</span></button>
+          <button class="btn btn-ghost" style="padding:6px 12px" @click="fetchAndRunAutoDetect" :disabled="sourceLoading"><span class="inline-flex items-center gap-1.5"><span v-html="icon('refresh', 14)"></span>{{ t('autoDetectRerun') }}</span></button>
         </div>
 
-        <!-- Results table (only when EPG loaded) -->
-        <div v-if="epgLoaded" class="table-shell" style="max-height:42vh">
+        <!-- Results table -->
+        <div v-if="sourceLoaded && autoDetectSummary.total > 0" class="table-shell" style="max-height:38vh">
           <table>
             <thead>
               <tr>
@@ -1088,7 +1092,7 @@
                   <div class="text-xs" style="color:var(--text3)">{{ r.ch.tvg_id || '—' }}</div>
                 </td>
                 <td>
-                  <div v-if="r.suggestedId" class="space-y-1">
+                  <div v-if="r.suggestedId || r.suggestedName || r.suggestedLogo" class="space-y-1">
                     <div class="flex items-center gap-1">
                       <span class="label" style="min-width:52px;margin:0">TVG-ID</span>
                       <input class="field" style="font-size:12px;padding:4px 7px" v-model="r.editId" :placeholder="t('tvgId')" />
@@ -1129,10 +1133,9 @@
           </table>
         </div>
 
-        <!-- Footer info + actions -->
+        <!-- Footer -->
         <div class="mt-4 pt-4" style="border-top:1px solid var(--sep)">
-          <!-- Per-field sync stats (only when EPG loaded and results exist) -->
-          <template v-if="epgLoaded && autoDetectSummary.total > 0">
+          <template v-if="sourceLoaded && autoDetectSummary.total > 0">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
               <div class="stat-card" style="padding:.5rem .8rem">
                 <div class="num" style="font-size:1.1rem;color:var(--primary)">{{ autoDetectFieldStats.tvgIdPct }}%</div>
@@ -1148,7 +1151,7 @@
               </div>
               <div class="stat-card" style="padding:.5rem .8rem">
                 <div class="num" style="font-size:1.1rem;color:var(--warning)">{{ autoDetectFieldStats.tvgUrlPct }}%</div>
-                <div class="lbl">TVG URL (EPG)</div>
+                <div class="lbl">TVG URL</div>
               </div>
             </div>
             <div class="flex flex-wrap gap-3 items-center justify-between">
@@ -1181,6 +1184,13 @@
 
 <script>
 const { createApp, ref, computed, reactive, watch, onMounted, onUnmounted } = Vue
+
+const IPTV_SOURCES = [
+  { id: 'iptv-sk',  label: 'iptv-org / SK',  url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/sk.m3u' },
+  { id: 'iptv-cz',  label: 'iptv-org / CZ',  url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/cz.m3u' },
+  { id: 'iptv-all', label: 'iptv-org / Všetky', url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/index.m3u' },
+  { id: 'freetv',   label: 'Free-TV / IPTV',  url: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8' },
+]
 
 createApp({
   setup() {
@@ -1323,13 +1333,17 @@ createApp({
         language:            'Jazyk',
         theme:               'Téma',
         tvgUrl:              'TVG URL (EPG zdroj)',
-        autoDetectBtn:          'Autodetekcia',
-        autoDetectNeedEpg:      'Najprv načítaj EPG (XMLTV)',
-        autoDetectTitle:        'Autodetekcia metadát z EPG',
-        autoDetectNoEpg:        'EPG nie je načítané. Importuj XMLTV zdroj pre spustenie autodetekcie.',
-        autoDetectPrefiltered:  'Spracovávajú sa len vybrané kanály ({n}). Pre všetky kanály zruš výber.',
-        epgUrlPlaceholder:      'URL XMLTV súboru (https://...)',
-        epgImportFromUrl:       'Načítať z URL',
+        autoDetectBtn:           'Autodetekcia',
+        autoDetectTitle:         'Autodetekcia metadát z IPTV zdrojov',
+        autoDetectPrefiltered:   'Spracovávajú sa len vybrané kanály ({n}). Pre všetky kanály zruš výber.',
+        autoDetectSources:       'Zdroje metadát',
+        autoDetectSourcesDesc:   'Vyber IPTV zdroje pre vyhľadanie metadát (TVG-ID, TVG-Name, Logo, TVG URL).',
+        autoDetectCustomUrl:     'Vlastná M3U URL (voliteľné)',
+        autoDetectCustomUrlPh:   'https://raw.githubusercontent.com/...',
+        autoDetectFetch:         'Načítať a spustiť',
+        autoDetectFetching:      'Načítavam zdroje...',
+        autoDetectNoSources:     'Vyber aspoň jeden zdroj',
+        autoDetectSourcesLoaded: 'Načítaných {n} kanálov zo zdrojov',
         autoDetectMatched:   'Nájdených',
         autoDetectSelected:  'Vybraných',
         autoDetectMatchedOnly:'Len nájdené',
@@ -1481,13 +1495,17 @@ createApp({
         language:            'Language',
         theme:               'Theme',
         tvgUrl:              'TVG URL (EPG source)',
-        autoDetectBtn:          'Auto-detect',
-        autoDetectNeedEpg:      'Load EPG (XMLTV) first',
-        autoDetectTitle:        'Metadata Auto-detection from EPG',
-        autoDetectNoEpg:        'No EPG loaded. Import an XMLTV source to run auto-detection.',
-        autoDetectPrefiltered:  'Processing only selected channels ({n}). Deselect all to process everything.',
-        epgUrlPlaceholder:      'XMLTV file URL (https://...)',
-        epgImportFromUrl:       'Load from URL',
+        autoDetectBtn:           'Auto-detect',
+        autoDetectTitle:         'Metadata Auto-detection from IPTV Sources',
+        autoDetectPrefiltered:   'Processing only selected channels ({n}). Deselect all to process everything.',
+        autoDetectSources:       'Metadata Sources',
+        autoDetectSourcesDesc:   'Select IPTV sources to search for metadata (TVG-ID, TVG-Name, Logo, TVG URL).',
+        autoDetectCustomUrl:     'Custom M3U URL (optional)',
+        autoDetectCustomUrlPh:   'https://raw.githubusercontent.com/...',
+        autoDetectFetch:         'Fetch & Run',
+        autoDetectFetching:      'Loading sources...',
+        autoDetectNoSources:     'Select at least one source',
+        autoDetectSourcesLoaded: 'Loaded {n} channels from sources',
         autoDetectMatched:   'Matched',
         autoDetectSelected:  'Selected',
         autoDetectMatchedOnly:'Matched only',
@@ -1528,9 +1546,12 @@ createApp({
 
     const autoDetectResults    = ref([])
     const autoDetectFilter     = ref('all')
-    const autoDetectPrefilter  = ref(null)   // Set of channel IDs to process, null = all
-    const epgImportUrl         = ref('')
-    const epgImportLoading     = ref(false)
+    const autoDetectPrefilter  = ref(null)  // Set of channel IDs to process, null = all
+    const autoDetectCustomUrl  = ref('')
+    const sourceIndex          = ref([])    // { name, tvg_id, tvg_name, tvg_logo, tvg_url }
+    const sourceLoading        = ref(false)
+    const sourceLoaded         = ref(false)
+    const autoDetectSelectedSources = reactive(new Set(['iptv-sk', 'iptv-cz']))
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
@@ -2080,25 +2101,58 @@ createApp({
     function clearEpg() { epgData.value = {}; epgChannelMeta.value = {}; epgLoaded.value = false }
     function triggerEpgImport() { epgRef.value?.click() }
 
-    async function importEpgFromUrl(url) {
-      if (!url) return
-      epgImportLoading.value = true
-      try {
-        const res = await fetch(url)
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const text = await res.text()
-        const { programs, channelMeta } = parseXMLTV(text)
-        epgData.value = programs
-        epgChannelMeta.value = channelMeta
-        epgLoaded.value = true
-        const chCount = Object.keys(programs).length
-        const pCount  = Object.values(programs).reduce((s, a) => s + a.length, 0)
-        showToast(`${t('epgLoadedMsg')}: ${pCount} ${t('epgPrograms')}, ${chCount} ${t('epgChannels')}`)
-      } catch { showToast(t('importError')) }
-      finally { epgImportLoading.value = false }
+    function parseM3UforAutoDetect(text) {
+      const lines = text.split('\n')
+      const result = []
+      let extinf = null
+      for (const line of lines) {
+        const l = line.trim()
+        if (l.startsWith('#EXTINF:')) {
+          extinf = l
+        } else if (extinf && l && !l.startsWith('#')) {
+          const nameM = extinf.match(/,(.+)$/)
+          result.push({
+            name:     nameM ? nameM[1].trim() : '',
+            tvg_id:   extractAttr(extinf, 'tvg-id'),
+            tvg_name: extractAttr(extinf, 'tvg-name'),
+            tvg_logo: extractAttr(extinf, 'tvg-logo'),
+            tvg_url:  extractAttr(extinf, 'tvg-url'),
+          })
+          extinf = null
+        }
+      }
+      return result
     }
 
-    watch(epgLoaded, val => { if (val && modal.autoDetect) runAutoDetect() })
+    async function fetchAndRunAutoDetect() {
+      const urls = [
+        ...IPTV_SOURCES.filter(s => autoDetectSelectedSources.has(s.id)).map(s => s.url),
+        ...(autoDetectCustomUrl.value.trim() ? [autoDetectCustomUrl.value.trim()] : [])
+      ]
+      if (urls.length === 0) { showToast(t('autoDetectNoSources')); return }
+      sourceLoading.value = true
+      sourceLoaded.value  = false
+      sourceIndex.value   = []
+      try {
+        const all = []
+        await Promise.all(urls.map(async url => {
+          const res = await fetch(url)
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          const text = await res.text()
+          all.push(...parseM3UforAutoDetect(text))
+        }))
+        sourceIndex.value = all
+        sourceLoaded.value = true
+        showToast(t('autoDetectSourcesLoaded').replace('{n}', all.length))
+        runAutoDetect()
+      } catch { showToast(t('importError')) }
+      finally { sourceLoading.value = false }
+    }
+
+    function toggleAutoDetectSource(id, checked) {
+      if (checked) autoDetectSelectedSources.add(id)
+      else autoDetectSelectedSources.delete(id)
+    }
 
     function getCurrentProgram(ch) {
       if (!epgLoaded.value || !ch.tvg_id) return null
@@ -2154,43 +2208,37 @@ createApp({
     }
 
     function runAutoDetect() {
-      if (!epgLoaded.value) { autoDetectResults.value = []; return }
+      if (!sourceLoaded.value || sourceIndex.value.length === 0) { autoDetectResults.value = []; return }
       const channelsToProcess = autoDetectPrefilter.value
         ? channels.value.filter(ch => autoDetectPrefilter.value.has(ch.id))
         : channels.value
-      // Use union of programme channel IDs and <channel> metadata IDs for best coverage
-      const allEpgIds = new Set([...Object.keys(epgData.value), ...Object.keys(epgChannelMeta.value)])
-      const epgNorm = [...allEpgIds].map(id => {
-        const meta = epgChannelMeta.value[id]
-        return {
-          id,
-          meta,
-          nId:   normName(id),
-          nName: meta?.displayName ? normName(meta.displayName) : ''
-        }
-      })
+      const srcNorm = sourceIndex.value.map(s => ({
+        ...s,
+        nName: normName(s.tvg_name || s.name),
+        nId:   normName(s.tvg_id),
+      }))
       autoDetectResults.value = channelsToProcess.map(ch => {
         const chNorm = normName(ch.name)
         let best = null, bestScore = 0
-        epgNorm.forEach(e => {
-          const s = Math.max(
-            strSimilarity(chNorm, e.nId),
-            e.nName ? strSimilarity(chNorm, e.nName) : 0
+        srcNorm.forEach(s => {
+          const sc = Math.max(
+            strSimilarity(chNorm, s.nName),
+            s.nId ? strSimilarity(chNorm, s.nId) : 0
           )
-          if (s > bestScore) { bestScore = s; best = e }
+          if (sc > bestScore) { bestScore = sc; best = s }
         })
         const matched = best && bestScore >= 0.2
         return {
           ch,
-          suggestedId:   matched ? best.id : '',
-          suggestedName: matched ? (best.meta?.displayName || best.id) : '',
-          suggestedLogo: matched ? (best.meta?.icon || '') : '',
+          suggestedId:   matched ? (best.tvg_id   || '') : '',
+          suggestedName: matched ? (best.tvg_name  || best.name) : '',
+          suggestedLogo: matched ? (best.tvg_logo  || '') : '',
           score:         matched ? bestScore : 0,
           selected:      matched && bestScore >= 0.5,
-          editId:        matched ? best.id                       : (ch.tvg_id   || ''),
-          editName:      matched ? (best.meta?.displayName || best.id) : (ch.tvg_name || ''),
-          editLogo:      matched ? (best.meta?.icon        || '') : (ch.tvg_logo || ''),
-          editTvgUrl:    ch.tvg_url || '',
+          editId:        matched ? (best.tvg_id   || '')            : (ch.tvg_id   || ''),
+          editName:      matched ? (best.tvg_name  || best.name)    : (ch.tvg_name || ''),
+          editLogo:      matched ? (best.tvg_logo  || '')           : (ch.tvg_logo || ''),
+          editTvgUrl:    matched ? (best.tvg_url   || '')           : (ch.tvg_url  || ''),
         }
       }).sort((a, b) => b.score - a.score)
     }
@@ -2198,9 +2246,8 @@ createApp({
     function openAutoDetect() {
       autoDetectFilter.value = 'all'
       autoDetectPrefilter.value = selectedRows.size > 0 ? new Set(selectedRows) : null
-      epgImportUrl.value = ''
       modal.autoDetect = true
-      if (epgLoaded.value) runAutoDetect()
+      if (sourceLoaded.value) runAutoDetect()
     }
 
     function applyAutoDetect() {
@@ -2268,13 +2315,15 @@ createApp({
       toggleRowSelect, toggleSelectAll, deleteSelected,
       exportPlaylist,
       epgData, epgLoaded, epgRef, logoErrors,
-      triggerEpgImport, importEpgFromFile, importEpgFromUrl, clearEpg,
-      epgImportUrl, epgImportLoading,
+      triggerEpgImport, importEpgFromFile, clearEpg,
       getCurrentProgram, getNextProgram, getTodayPrograms, formatEpgTime,
       selectRow,
+      IPTV_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter,
+      autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
+      fetchAndRunAutoDetect, toggleAutoDetectSource,
     }
   }
 }).mount('#app')

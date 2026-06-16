@@ -1051,6 +1051,24 @@
             <span v-html="sourceLoading ? icon('refresh', 13) : icon('search', 13)"></span>
             <span class="text-xs">{{ sourceLoading ? t('autoDetectFetching') : t('autoDetectFetch') }}</span>
           </button>
+          <!-- Enrichment sources row -->
+          <div class="flex flex-wrap items-center gap-1.5 w-full pt-2" style="border-top:1px solid var(--sep)">
+            <span class="text-xs mr-1" style="color:var(--text3);white-space:nowrap">{{ t('autoDetectEnrichWith') }}</span>
+            <label v-for="src in ENRICHMENT_SOURCES" :key="src.id" class="cursor-pointer select-none" :title="src.detail">
+              <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
+                     @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
+              <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                   :style="enrichmentSelectedSources.has(src.id)
+                     ? 'background:var(--purple);color:#fff'
+                     : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
+                <span v-if="enrichmentSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
+                {{ src.label }}
+              </div>
+            </label>
+            <span v-if="enrichmentLoaded" class="text-xs flex items-center gap-1 ml-1" style="color:var(--success)">
+              <span v-html="icon('check', 10)"></span>{{ t('autoDetectEnrichLoaded') }}
+            </span>
+          </div>
         </div>
 
         <!-- ── Stats + filter (always visible) ── -->
@@ -1262,6 +1280,11 @@ const IPTV_SOURCES = [
   { id: 'freetv',   label: 'Free-TV', detail: 'Free-TV/IPTV',    url: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8' },
 ]
 
+const ENRICHMENT_SOURCES = [
+  { id: 'epg-index',   label: 'EPG index',   detail: 'iptv-org/epg (CC0)',  type: 'epg',  url: 'https://iptv-org.github.io/epg/channels.json' },
+  { id: 'logo-jaruba', label: 'Logá (jaruba)', detail: 'jaruba/channel-logos (MIT)', type: 'logo', url: 'https://jaruba.github.io/channel-logos/logo_paths.json' },
+]
+
 createApp({
   setup() {
     const STORAGE_KEY = 'iptv-channels'
@@ -1430,6 +1453,8 @@ createApp({
         autoDetectApplied:       'Aplikovaných {n} kanálov',
         autoDetectKeepOriginal:  'Pôvodné',
         autoDetectUseSuggested:  'Navrhnuté',
+        autoDetectEnrichWith:    'Obohatiť z:',
+        autoDetectEnrichLoaded:  'Index načítaný',
         deleteSelected:      'Vymazať',
         confirmDeleteSel:    'Naozaj vymazať {n} vybraných kanálov?',
         channelsDeletedN:    'Vymazaných {n} kanálov',
@@ -1594,6 +1619,8 @@ createApp({
         autoDetectApplied:       'Applied {n} channels',
         autoDetectKeepOriginal:  'Keep original',
         autoDetectUseSuggested:  'Use suggested',
+        autoDetectEnrichWith:    'Enrich with:',
+        autoDetectEnrichLoaded:  'Index loaded',
         deleteSelected:      'Delete',
         confirmDeleteSel:    'Delete {n} selected channels?',
         channelsDeletedN:    'Deleted {n} channels',
@@ -1627,6 +1654,11 @@ createApp({
     const sourceLoaded         = ref(false)
     const autoDetectSelectedSources = reactive(new Set(['iptv-sk', 'iptv-cz']))
     const expandedRows              = reactive(new Set())
+    const epgChannelIndex           = ref({})   // id.toLowerCase() → guide URL
+    const logoChannelIndex          = ref({})   // normName → logo URL
+    const enrichmentLoading         = ref(false)
+    const enrichmentLoaded          = ref(false)
+    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-jaruba']))
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
@@ -2201,6 +2233,36 @@ createApp({
       return result
     }
 
+    async function fetchEnrichmentIndexes() {
+      const sources = ENRICHMENT_SOURCES.filter(s => enrichmentSelectedSources.has(s.id))
+      if (sources.length === 0) return
+      enrichmentLoading.value = true
+      enrichmentLoaded.value  = false
+      await Promise.all(sources.map(async src => {
+        try {
+          const res = await fetch(src.url)
+          if (!res.ok) return
+          const data = await res.json()
+          if (src.type === 'epg') {
+            const idx = {}
+            for (const ch of data) {
+              if (ch.id && ch.guides?.length > 0) idx[ch.id.toLowerCase()] = ch.guides[0]
+            }
+            epgChannelIndex.value = idx
+          } else if (src.type === 'logo') {
+            const idx = {}
+            for (const [name, path] of Object.entries(data)) {
+              const key = normName(name)
+              if (key) idx[key] = `https://jaruba.github.io/channel-logos/${path}`
+            }
+            logoChannelIndex.value = idx
+          }
+        } catch {}
+      }))
+      enrichmentLoading.value = false
+      enrichmentLoaded.value  = true
+    }
+
     async function fetchAndRunAutoDetect() {
       const urls = [
         ...IPTV_SOURCES.filter(s => autoDetectSelectedSources.has(s.id)).map(s => s.url),
@@ -2210,14 +2272,20 @@ createApp({
       sourceLoading.value = true
       sourceLoaded.value  = false
       sourceIndex.value   = []
+      epgChannelIndex.value  = {}
+      logoChannelIndex.value = {}
+      enrichmentLoaded.value = false
       try {
         const all = []
-        await Promise.all(urls.map(async url => {
-          const res = await fetch(url)
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          const text = await res.text()
-          all.push(...parseM3UforAutoDetect(text))
-        }))
+        await Promise.all([
+          Promise.all(urls.map(async url => {
+            const res = await fetch(url)
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            const text = await res.text()
+            all.push(...parseM3UforAutoDetect(text))
+          })),
+          fetchEnrichmentIndexes(),
+        ])
         sourceIndex.value = all
         sourceLoaded.value = true
         showToast(t('autoDetectSourcesLoaded').replace('{n}', all.length))
@@ -2229,6 +2297,11 @@ createApp({
     function toggleAutoDetectSource(id, checked) {
       if (checked) autoDetectSelectedSources.add(id)
       else autoDetectSelectedSources.delete(id)
+    }
+
+    function toggleEnrichmentSource(id, checked) {
+      if (checked) enrichmentSelectedSources.add(id)
+      else enrichmentSelectedSources.delete(id)
     }
 
     function getCurrentProgram(ch) {
@@ -2305,6 +2378,21 @@ createApp({
           if (sc > bestScore) { bestScore = sc; best = s }
         })
         const matched = best && bestScore >= 0.2
+        let editId     = matched ? (best.tvg_id   || '')         : (ch.tvg_id   || '')
+        let editName   = matched ? (best.tvg_name  || best.name) : (ch.tvg_name || '')
+        let editLogo   = matched ? (best.tvg_logo  || '')        : (ch.tvg_logo || '')
+        let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
+
+        // Enrich TVG-URL from EPG channel index (iptv-org/epg CC0)
+        if (!editTvgUrl && editId) {
+          editTvgUrl = epgChannelIndex.value[editId.toLowerCase()] || ''
+        }
+        // Enrich logo from channel-logos index (jaruba MIT)
+        if (!editLogo) {
+          const logoKey = normName(editName || ch.name)
+          editLogo = logoChannelIndex.value[logoKey] || ''
+        }
+
         return {
           ch,
           suggestedId:   matched ? (best.tvg_id   || '') : '',
@@ -2313,10 +2401,7 @@ createApp({
           suggestedTvgUrl: matched ? (best.tvg_url   || '') : '',
           score:         matched ? bestScore : 0,
           selected:      matched && bestScore >= 0.5,
-          editId:        matched ? (best.tvg_id   || '')            : (ch.tvg_id   || ''),
-          editName:      matched ? (best.tvg_name  || best.name)    : (ch.tvg_name || ''),
-          editLogo:      matched ? (best.tvg_logo  || '')           : (ch.tvg_logo || ''),
-          editTvgUrl:    matched ? (best.tvg_url   || '')           : (ch.tvg_url  || ''),
+          editId, editName, editLogo, editTvgUrl,
         }
       }).sort((a, b) => b.score - a.score)
     }
@@ -2403,12 +2488,13 @@ createApp({
       triggerEpgImport, importEpgFromFile, clearEpg,
       getCurrentProgram, getNextProgram, getTodayPrograms, formatEpgTime,
       selectRow,
-      IPTV_SOURCES,
+      IPTV_SOURCES, ENRICHMENT_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter,
       autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
+      epgChannelIndex, logoChannelIndex, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
-      fetchAndRunAutoDetect, toggleAutoDetectSource, toggleExpand,
+      fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, toggleExpand,
     }
   }
 }).mount('#app')

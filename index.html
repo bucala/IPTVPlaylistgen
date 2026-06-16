@@ -1029,7 +1029,7 @@
         <!-- ── Compact source bar ── -->
         <div class="mb-3 p-2.5 rounded-xl flex flex-wrap items-center gap-2" style="background:var(--surface);border:1px solid var(--sep);flex-shrink:0">
           <!-- Pills -->
-          <label v-for="src in IPTV_SOURCES" :key="src.id" class="cursor-pointer select-none">
+          <label v-for="src in IPTV_SOURCES" :key="src.id" class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
             <input type="checkbox" :checked="autoDetectSelectedSources.has(src.id)"
                    @change="toggleAutoDetectSource(src.id, $event.target.checked)" class="sr-only" />
             <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
@@ -1058,7 +1058,7 @@
             <span class="text-xs mr-1" style="color:var(--text3);white-space:nowrap">{{ t('autoDetectEnrichWith') }}</span>
             <!-- Metadata enrichment (purple) -->
             <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type !== 'epg-xml')" :key="src.id">
-              <label class="cursor-pointer select-none" :title="src.detail">
+              <label class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
                 <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
                        @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
                 <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
@@ -1075,7 +1075,7 @@
             <span class="text-xs" style="color:var(--text3);white-space:nowrap">EPG:</span>
             <!-- EPG XML sources (orange/warning) -->
             <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type === 'epg-xml')" :key="src.id">
-              <label class="cursor-pointer select-none" :title="src.detail">
+              <label class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
                 <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
                        @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
                 <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
@@ -2397,7 +2397,9 @@ createApp({
       return (s || '')
         .toLowerCase()
         .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\[[^\]]*\]|\([^)]*\)/g, '')
         .replace(/\b(hd|fhd|4k|uhd|sd|tv|sk|cz|cs|en|pl|de|at|hu|it|fr|uk|us|ro|hr|rs|si|bg|mk)\b/g, '')
+        .replace(/\b\d{3,4}[pi]\b/g, '')
         .replace(/[^a-z0-9]+/g, ' ')
         .trim()
     }
@@ -2407,16 +2409,30 @@ createApp({
       if (na === nb) return 1
       const longer  = na.length >= nb.length ? na : nb
       const shorter = na.length <  nb.length ? na : nb
-      if (longer.includes(shorter)) return shorter.length / longer.length
-      const makeTrigrams = s => {
-        const r = new Set()
-        const p = ' ' + s + ' '
-        for (let i = 0; i < p.length - 2; i++) r.add(p.slice(i, i + 3))
-        return r
+
+      let base
+      if (longer.includes(shorter)) {
+        base = shorter.length / longer.length
+      } else {
+        const makeTrigrams = s => {
+          const r = new Set()
+          const p = ' ' + s + ' '
+          for (let i = 0; i < p.length - 2; i++) r.add(p.slice(i, i + 3))
+          return r
+        }
+        const ta = makeTrigrams(na), tb = makeTrigrams(nb)
+        let inter = 0; ta.forEach(t => { if (tb.has(t)) inter++ })
+        base = (2 * inter) / (ta.size + tb.size)
       }
-      const ta = makeTrigrams(na), tb = makeTrigrams(nb)
-      let inter = 0; ta.forEach(t => { if (tb.has(t)) inter++ })
-      return (2 * inter) / (ta.size + tb.size)
+
+      // Penalize when the longer string has unmatched significant words
+      const lw = longer.split(' ').filter(w => w.length > 1)
+      const sw = new Set(shorter.split(' ').filter(w => w.length > 1))
+      if (lw.length >= 2 && sw.size > 0) {
+        const coverage = lw.filter(w => sw.has(w)).length / lw.length
+        return base * (coverage * 0.6 + 0.4)
+      }
+      return base
     }
 
     function runAutoDetect() {
@@ -2475,7 +2491,7 @@ createApp({
           suggestedTvgUrl: matched ? (best.tvg_url   || '') : '',
           score:         matched ? bestScore : 0,
           // Auto-select: M3U match ≥ 50%, OR EPG XML confirmed existing tvg-id
-          selected:      (matched && bestScore >= 0.5) || xmlConfirmed,
+          selected:      (matched && bestScore >= 0.65) || xmlConfirmed,
           editId, editName, editLogo, editTvgUrl,
         }
       }).sort((a, b) => b.score - a.score)

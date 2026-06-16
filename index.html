@@ -25,6 +25,7 @@
        Apple HIG Design Tokens
        ─────────────────────────────────────────────── */
     :root {
+      color-scheme: light;
       --bg:              #f2f2f7;
       --bg2:             #ffffff;
       --surface:         rgba(255,255,255,0.82);
@@ -59,6 +60,7 @@
       --ease:            200ms cubic-bezier(0.25,0.46,0.45,0.94);
     }
     [data-theme="dark"] {
+      color-scheme: dark;
       --bg:              #000000;
       --bg2:             #1c1c1e;
       --surface:         rgba(28,28,30,0.88);
@@ -1282,7 +1284,7 @@ const IPTV_SOURCES = [
 
 const ENRICHMENT_SOURCES = [
   { id: 'epg-index',   label: 'EPG index',   detail: 'iptv-org/epg (CC0)',  type: 'epg',  url: 'https://iptv-org.github.io/epg/channels.json' },
-  { id: 'logo-jaruba', label: 'Logá (jaruba)', detail: 'jaruba/channel-logos (MIT)', type: 'logo', url: 'https://jaruba.github.io/channel-logos/logo_paths.json' },
+  { id: 'logo-api',    label: 'Logá (API)',    detail: 'iptv-org/api (CC0)',            type: 'logo', url: 'https://iptv-org.github.io/api/channels.json' },
 ]
 
 createApp({
@@ -1656,9 +1658,10 @@ createApp({
     const expandedRows              = reactive(new Set())
     const epgChannelIndex           = ref({})   // id.toLowerCase() → guide URL
     const logoChannelIndex          = ref({})   // normName → logo URL
+    const logoChannelIndexById      = ref({})   // id.toLowerCase() → logo URL
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
-    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-jaruba']))
+    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api']))
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
@@ -2250,12 +2253,20 @@ createApp({
             }
             epgChannelIndex.value = idx
           } else if (src.type === 'logo') {
-            const idx = {}
-            for (const [name, path] of Object.entries(data)) {
-              const key = normName(name)
-              if (key) idx[key] = `https://jaruba.github.io/channel-logos/${path}`
+            // iptv-org/api channels.json: [{id, name, alt_names, logo, ...}]
+            const byName = {}, byId = {}
+            for (const ch of data) {
+              if (!ch.logo) continue
+              if (ch.id) byId[ch.id.toLowerCase()] = ch.logo
+              const key = normName(ch.name)
+              if (key) byName[key] = ch.logo
+              for (const alt of (ch.alt_names || [])) {
+                const akey = normName(alt)
+                if (akey && !byName[akey]) byName[akey] = ch.logo
+              }
             }
-            logoChannelIndex.value = idx
+            logoChannelIndex.value   = byName
+            logoChannelIndexById.value = byId
           }
         } catch {}
       }))
@@ -2272,9 +2283,10 @@ createApp({
       sourceLoading.value = true
       sourceLoaded.value  = false
       sourceIndex.value   = []
-      epgChannelIndex.value  = {}
-      logoChannelIndex.value = {}
-      enrichmentLoaded.value = false
+      epgChannelIndex.value      = {}
+      logoChannelIndex.value     = {}
+      logoChannelIndexById.value = {}
+      enrichmentLoaded.value     = false
       try {
         const all = []
         await Promise.all([
@@ -2387,10 +2399,10 @@ createApp({
         if (!editTvgUrl && editId) {
           editTvgUrl = epgChannelIndex.value[editId.toLowerCase()] || ''
         }
-        // Enrich logo from channel-logos index (jaruba MIT)
+        // Enrich logo from iptv-org/api: try by ID first, then by name (CC0)
         if (!editLogo) {
-          const logoKey = normName(editName || ch.name)
-          editLogo = logoChannelIndex.value[logoKey] || ''
+          if (editId) editLogo = logoChannelIndexById.value[editId.toLowerCase()] || ''
+          if (!editLogo) editLogo = logoChannelIndex.value[normName(editName || ch.name)] || ''
         }
 
         return {
@@ -2491,7 +2503,7 @@ createApp({
       IPTV_SOURCES, ENRICHMENT_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter,
       autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
-      epgChannelIndex, logoChannelIndex, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
+      epgChannelIndex, logoChannelIndex, logoChannelIndexById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
       fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, toggleExpand,

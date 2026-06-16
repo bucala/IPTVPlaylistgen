@@ -457,9 +457,9 @@
             <button class="btn btn-secondary"  @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
             <button class="btn btn-secondary"  @click="epgLoaded ? clearEpg() : triggerEpgImport()" :style="epgLoaded ? 'color:var(--success)' : ''"><span v-html="icon('antenna', 15)"></span>{{ epgLoaded ? t('clearEpg') : t('epgImport') }}</button>
             <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" class="sr-only" @change="importEpgFromFile" />
-            <button class="btn btn-secondary"  @click="openAutoDetect" :disabled="stats.total === 0" :title="!epgLoaded ? t('autoDetectNeedEpg') : ''"><span v-html="icon('search', 15)"></span>{{ t('autoDetectBtn') }}</button>
+            <button class="btn btn-secondary"  @click="openAutoDetect" :disabled="stats.total === 0 || !epgLoaded" :title="!epgLoaded ? t('autoDetectNeedEpg') : ''"><span v-html="icon('search', 15)"></span>{{ t('autoDetectBtn') }}</button>
             <button class="btn btn-ghost"      @click="openAddChannel"><span class="inline-flex items-center gap-1.5"><span v-html="icon('plus', 14)"></span>{{ t('addChannel') }}</span></button>
-            <button class="btn btn-danger"     @click="clearAll" :disabled="stats.total === 0">{{ t('clearAll') }}</button>
+            <button class="btn btn-danger"     @click="deleteSelected" :disabled="selectedRowsCount === 0">{{ t('deleteSelected') }}{{ selectedRowsCount > 0 ? ' (' + selectedRowsCount + ')' : '' }}</button>
           </div>
         </div>
       </div>
@@ -680,7 +680,10 @@
             <table role="grid">
               <thead>
                 <tr>
-                  <th scope="col" class="w-12 sortable" @click="setSort('index')" :aria-sort="sort.by==='index' ? (sort.asc?'ascending':'descending') : 'none'">#<span class="sort-ic" v-html="sort.by==='index' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
+                  <th scope="col" class="w-9" style="padding:10px 8px">
+                    <input type="checkbox" :checked="allPageSelected" @change="toggleSelectAll($event.target.checked)" :title="t('autoDetectSelectAll')" />
+                  </th>
+                  <th scope="col" class="w-10 sortable" @click="setSort('index')" :aria-sort="sort.by==='index' ? (sort.asc?'ascending':'descending') : 'none'">#<span class="sort-ic" v-html="sort.by==='index' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
                   <th scope="col" class="w-14">{{ t('logo') }}</th>
                   <th scope="col" class="sortable" @click="setSort('name')" :aria-sort="sort.by==='name' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('name') }}<span class="sort-ic" v-html="sort.by==='name' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
                   <th scope="col" class="w-[150px] sortable" @click="setSort('group')" :aria-sort="sort.by==='group' ? (sort.asc?'ascending':'descending') : 'none'">{{ t('group') }}<span class="sort-ic" v-html="sort.by==='group' ? (sort.asc ? icon('chevUp',12) : icon('chevDown',12)) : ''" aria-hidden="true"></span></th>
@@ -693,7 +696,8 @@
                 </tr>
               </thead>
               <tbody v-if="paginatedChannels.length">
-                <tr v-for="(ch, i) in paginatedChannels" :key="ch.id" :class="{ selected: selectedId === ch.id }" @click="selectRow(ch, $event)">
+                <tr v-for="(ch, i) in paginatedChannels" :key="ch.id" :class="{ selected: selectedId === ch.id || selectedRows.has(ch.id) }" @click="selectRow(ch, $event)">
+                  <td style="padding:9px 8px" @click.stop><input type="checkbox" :checked="selectedRows.has(ch.id)" @change="toggleRowSelect(ch, $event.target.checked)" /></td>
                   <td class="muted">{{ (pagination.page - 1) * pagination.limit + i + 1 }}</td>
                   <td>
                     <img v-if="ch.tvg_logo && !logoErrors.has(ch.id)" :src="ch.tvg_logo" class="ch-logo logo-fade" loading="lazy" :alt="ch.name + ' logo'" @error="logoErrors.add(ch.id)" />
@@ -734,7 +738,7 @@
                 </tr>
               </tbody>
               <tbody v-else>
-                <tr><td colspan="10">
+                <tr><td colspan="11">
                   <div class="empty-state">
                     <div class="icon" aria-hidden="true" v-html="icon('tv', 44)"></div>
                     <h3>{{ t('emptyLibraryTitle') }}</h3>
@@ -1071,11 +1075,12 @@
                       <span class="label" style="min-width:52px;margin:0">Logo</span>
                       <input class="field" style="font-size:12px;padding:4px 7px" v-model="r.editLogo" :placeholder="t('tvgLogo')" type="url" />
                     </div>
+                    <div class="flex items-center gap-1">
+                      <span class="label" style="min-width:52px;margin:0">TVG URL</span>
+                      <input class="field" style="font-size:12px;padding:4px 7px" v-model="r.editTvgUrl" :placeholder="t('tvgUrl')" type="url" />
+                    </div>
                   </div>
                   <span v-else class="text-xs" style="color:var(--text4)">{{ t('autoDetectNoMatch') }}</span>
-                </td>
-                <td>
-                  <input class="field" style="font-size:12px;padding:4px 7px" v-model="r.editTvgUrl" :placeholder="t('tvgUrl')" type="url" />
                 </td>
                 <td class="text-center">
                   <div v-if="r.score > 0">
@@ -1301,6 +1306,9 @@ createApp({
         autoDetectMatchPct:  '{pct}% pokrytie',
         autoDetectApply:     'Aplikovať vybrané',
         autoDetectApplied:   'Aplikovaných {n} kanálov',
+        deleteSelected:      'Vymazať',
+        confirmDeleteSel:    'Naozaj vymazať {n} vybraných kanálov?',
+        channelsDeletedN:    'Vymazaných {n} kanálov',
       },
       en: {
         appSubtitle:      'Import, edit and export M3U / XSPF playlists',
@@ -1451,6 +1459,9 @@ createApp({
         autoDetectMatchPct:  '{pct}% coverage',
         autoDetectApply:     'Apply selected',
         autoDetectApplied:   'Applied {n} channels',
+        deleteSelected:      'Delete',
+        confirmDeleteSel:    'Delete {n} selected channels?',
+        channelsDeletedN:    'Deleted {n} channels',
       }
     }
 
@@ -1477,8 +1488,9 @@ createApp({
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
-    const pagination = reactive({ page: 1, limit: 50 })
-    const modal      = reactive({ import: false, edit: false, add: false, deleteConfirm: false, unsaved: false, autoDetect: false })
+    const pagination    = reactive({ page: 1, limit: 100 })
+    const selectedRows  = reactive(new Set())
+    const modal         = reactive({ import: false, edit: false, add: false, deleteConfirm: false, unsaved: false, autoDetect: false })
     const toast      = reactive({ show: false, message: '' })
     const editCh     = ref(null)
     const editSnapshot = ref(null)
@@ -1635,6 +1647,13 @@ createApp({
       const f = filteredAutoDetectResults.value
       return f.length > 0 && f.every(r => r.selected)
     })
+
+    const selectedRowsCount = computed(() => selectedRows.size)
+
+    const allPageSelected = computed(() =>
+      paginatedChannels.value.length > 0 &&
+      paginatedChannels.value.every(ch => selectedRows.has(ch.id))
+    )
 
     /* ── Helpers ── */
     function persist() {
@@ -2070,8 +2089,9 @@ createApp({
 
     function runAutoDetect() {
       if (!epgLoaded.value) return
-      const epgIds = Object.keys(epgData.value)
-      const epgNorm = epgIds.map(id => {
+      // Use union of programme channel IDs and <channel> metadata IDs for best coverage
+      const allEpgIds = new Set([...Object.keys(epgData.value), ...Object.keys(epgChannelMeta.value)])
+      const epgNorm = [...allEpgIds].map(id => {
         const meta = epgChannelMeta.value[id]
         return {
           id,
@@ -2099,9 +2119,9 @@ createApp({
           score:         matched ? bestScore : 0,
           selected:      matched && bestScore >= 0.5,
           editId:        matched ? best.id                       : (ch.tvg_id   || ''),
-          editName:      matched ? (best.meta?.displayName || '') : (ch.tvg_name || ''),
+          editName:      matched ? (best.meta?.displayName || best.id) : (ch.tvg_name || ''),
           editLogo:      matched ? (best.meta?.icon        || '') : (ch.tvg_logo || ''),
-          editTvgUrl:    ch.tvg_url || (matched && best.meta?.tvgUrl ? best.meta.tvgUrl : '') || '',
+          editTvgUrl:    ch.tvg_url || '',
         }
       }).sort((a, b) => b.score - a.score)
     }
@@ -2137,8 +2157,30 @@ createApp({
     }
 
     function selectRow(ch, event) {
-      if (event.target.closest('button, a')) return
+      if (event.target.closest('button, a, input[type="checkbox"]')) return
       selectedId.value = selectedId.value === ch.id ? null : ch.id
+    }
+
+    function toggleRowSelect(ch, checked) {
+      if (checked) selectedRows.add(ch.id)
+      else selectedRows.delete(ch.id)
+    }
+
+    function toggleSelectAll(checked) {
+      paginatedChannels.value.forEach(ch => {
+        if (checked) selectedRows.add(ch.id)
+        else selectedRows.delete(ch.id)
+      })
+    }
+
+    function deleteSelected() {
+      const n = selectedRows.size
+      if (n === 0) return
+      if (!confirm(t('confirmDeleteSel').replace('{n}', n))) return
+      channels.value = channels.value.filter(c => !selectedRows.has(c.id))
+      selectedRows.clear()
+      persist()
+      showToast(t('channelsDeletedN').replace('{n}', n))
     }
 
     return {
@@ -2148,9 +2190,11 @@ createApp({
       filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,
       mobFilterOpen, hasActiveFilters,
       stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs,
+      selectedRows, selectedRowsCount, allPageSelected,
       t, setTheme, toggleTheme, setLang, setSort, prevPage, nextPage, resetFilters,
       toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,
       removeChannel, confirmDelete, clearAll, triggerImport, importFromFile, importFromUrl,
+      toggleRowSelect, toggleSelectAll, deleteSelected,
       exportPlaylist,
       epgData, epgLoaded, epgRef, logoErrors,
       triggerEpgImport, importEpgFromFile, clearEpg,

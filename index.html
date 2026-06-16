@@ -1056,17 +1056,37 @@
           <!-- Enrichment sources row -->
           <div class="flex flex-wrap items-center gap-1.5 w-full pt-2" style="border-top:1px solid var(--sep)">
             <span class="text-xs mr-1" style="color:var(--text3);white-space:nowrap">{{ t('autoDetectEnrichWith') }}</span>
-            <label v-for="src in ENRICHMENT_SOURCES" :key="src.id" class="cursor-pointer select-none" :title="src.detail">
-              <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
-                     @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
-              <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
-                   :style="enrichmentSelectedSources.has(src.id)
-                     ? 'background:var(--purple);color:#fff'
-                     : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
-                <span v-if="enrichmentSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
-                {{ src.label }}
-              </div>
-            </label>
+            <!-- Metadata enrichment (purple) -->
+            <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type !== 'epg-xml')" :key="src.id">
+              <label class="cursor-pointer select-none" :title="src.detail">
+                <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
+                       @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
+                <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                     :style="enrichmentSelectedSources.has(src.id)
+                       ? 'background:var(--purple);color:#fff'
+                       : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
+                  <span v-if="enrichmentSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
+                  {{ src.label }}
+                </div>
+              </label>
+            </template>
+            <!-- Divider -->
+            <div style="width:1px;height:18px;background:var(--sep);flex-shrink:0"></div>
+            <span class="text-xs" style="color:var(--text3);white-space:nowrap">EPG:</span>
+            <!-- EPG XML sources (orange/warning) -->
+            <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type === 'epg-xml')" :key="src.id">
+              <label class="cursor-pointer select-none" :title="src.detail">
+                <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
+                       @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
+                <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                     :style="enrichmentSelectedSources.has(src.id)
+                       ? 'background:var(--warning);color:#000'
+                       : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
+                  <span v-if="enrichmentSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
+                  {{ src.label }}
+                </div>
+              </label>
+            </template>
             <span v-if="enrichmentLoaded" class="text-xs flex items-center gap-1 ml-1" style="color:var(--success)">
               <span v-html="icon('check', 10)"></span>{{ t('autoDetectEnrichLoaded') }}
             </span>
@@ -1283,8 +1303,11 @@ const IPTV_SOURCES = [
 ]
 
 const ENRICHMENT_SOURCES = [
-  { id: 'epg-index',   label: 'EPG index',   detail: 'iptv-org/epg (CC0)',  type: 'epg',  url: 'https://iptv-org.github.io/epg/channels.json' },
-  { id: 'logo-api',    label: 'Logá (API)',    detail: 'iptv-org/api (CC0)',            type: 'logo', url: 'https://iptv-org.github.io/api/channels.json' },
+  { id: 'epg-index',   label: 'EPG index',    detail: 'iptv-org/epg (CC0)',              type: 'epg',     url: 'https://iptv-org.github.io/epg/channels.json' },
+  { id: 'logo-api',    label: 'Logá (API)',    detail: 'iptv-org/api (CC0)',              type: 'logo',    url: 'https://iptv-org.github.io/api/channels.json' },
+  { id: 'epg-sk',      label: 'SK EPG',        detail: 'open-epg.com/slovakia1 (SK)',    type: 'epg-xml', url: 'https://www.open-epg.com/files/slovakia1.xml' },
+  { id: 'epg-cz',      label: 'CZ EPG',        detail: 'open-epg.com/czech1 (CZ)',       type: 'epg-xml', url: 'https://www.open-epg.com/files/czech1.xml' },
+  { id: 'epg-glcz',    label: 'Globe CZ',      detail: 'globetvapp/epg Czech1 (GitHub)', type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Czech/czech1.xml' },
 ]
 
 createApp({
@@ -1657,6 +1680,7 @@ createApp({
     const autoDetectSelectedSources = reactive(new Set(['iptv-sk', 'iptv-cz']))
     const expandedRows              = reactive(new Set())
     const epgChannelIndex           = ref({})   // id.toLowerCase() → guide URL
+    const epgXmlIndex               = ref({})   // id.toLowerCase() → source XML URL
     const logoChannelIndex          = ref({})   // normName → logo URL
     const logoChannelIndexById      = ref({})   // id.toLowerCase() → logo URL
     const enrichmentLoading         = ref(false)
@@ -2243,6 +2267,31 @@ createApp({
       enrichmentLoaded.value  = false
       await Promise.all(sources.map(async src => {
         try {
+          if (src.type === 'epg-xml') {
+            // Stream XML, stop at first <programme> — avoids downloading the full guide
+            const ctrl = new AbortController()
+            const res  = await fetch(src.url, { signal: ctrl.signal })
+            if (!res.ok) return
+            const reader  = res.body.getReader()
+            const decoder = new TextDecoder()
+            let text = ''
+            while (true) {
+              const { value, done } = await reader.read()
+              if (value) text += decoder.decode(value, { stream: !done })
+              const stop = text.indexOf('<programme')
+              if (done || stop !== -1) {
+                if (!done) ctrl.abort()
+                if (stop !== -1) text = text.slice(0, stop)
+                break
+              }
+            }
+            const re = /<channel\s+id="([^"]+)"/g
+            let m
+            while ((m = re.exec(text)) !== null) {
+              epgXmlIndex.value[m[1].toLowerCase()] = src.url
+            }
+            return
+          }
           const res = await fetch(src.url)
           if (!res.ok) return
           const data = await res.json()
@@ -2284,6 +2333,7 @@ createApp({
       sourceLoaded.value  = false
       sourceIndex.value   = []
       epgChannelIndex.value      = {}
+      epgXmlIndex.value          = {}
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
       enrichmentLoaded.value     = false
@@ -2395,13 +2445,25 @@ createApp({
         let editLogo   = matched ? (best.tvg_logo  || '')        : (ch.tvg_logo || '')
         let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
 
-        // Enrich TVG-URL from EPG channel index (iptv-org/epg CC0)
+        // Enrich TVG-URL: 1) iptv-org/epg guide index, 2) EPG XML source index
         if (!editTvgUrl && editId) {
           editTvgUrl = epgChannelIndex.value[editId.toLowerCase()] || ''
         }
-        // Enrich logo from iptv-org/api: try by ID first, then by name (CC0)
+        if (!editTvgUrl) {
+          // Check epgXmlIndex using both the matched/existing editId and the channel's original tvg_id
+          const lookupId = editId || ch.tvg_id || ''
+          editTvgUrl = epgXmlIndex.value[lookupId.toLowerCase()]
+            || (ch.tvg_id ? epgXmlIndex.value[ch.tvg_id.toLowerCase()] : '')
+            || ''
+        }
+
+        // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
+        const xmlConfirmed = !!ch.tvg_id && !!epgXmlIndex.value[ch.tvg_id.toLowerCase()] && !ch.tvg_url
+
+        // Enrich logo: strip Enigma2 quality suffix (@SD/@HD/…) before ID lookup
         if (!editLogo) {
-          if (editId) editLogo = logoChannelIndexById.value[editId.toLowerCase()] || ''
+          const cleanId = (editId || ch.tvg_id || '').replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '').toLowerCase()
+          if (cleanId) editLogo = logoChannelIndexById.value[cleanId] || ''
           if (!editLogo) editLogo = logoChannelIndex.value[normName(editName || ch.name)] || ''
         }
 
@@ -2412,7 +2474,8 @@ createApp({
           suggestedLogo:   matched ? (best.tvg_logo  || '') : '',
           suggestedTvgUrl: matched ? (best.tvg_url   || '') : '',
           score:         matched ? bestScore : 0,
-          selected:      matched && bestScore >= 0.5,
+          // Auto-select: M3U match ≥ 50%, OR EPG XML confirmed existing tvg-id
+          selected:      (matched && bestScore >= 0.5) || xmlConfirmed,
           editId, editName, editLogo, editTvgUrl,
         }
       }).sort((a, b) => b.score - a.score)
@@ -2503,7 +2566,7 @@ createApp({
       IPTV_SOURCES, ENRICHMENT_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter,
       autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
-      epgChannelIndex, logoChannelIndex, logoChannelIndexById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
+      epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
       fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, toggleExpand,

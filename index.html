@@ -260,10 +260,10 @@
     .table-shell {
       border-radius: var(--radius-md); border: 1px solid var(--border);
       background: var(--surface); box-shadow: var(--shadow-sm);
-      overflow: auto; max-height: 62vh;
+      overflow-x: scroll; overflow-y: auto; max-height: 62vh;
       backdrop-filter: blur(20px);
     }
-    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    table { width: 100%; border-collapse: collapse; min-width: 860px; }
     thead th {
       position: sticky; top: 0; z-index: 5;
       background: var(--surface-s); color: var(--text3);
@@ -867,7 +867,7 @@
     <!-- ══════════════════════ MODALS ══════════════════════ -->
 
     <!-- Import Modal -->
-    <div v-if="modal.import" class="modal-overlay" @click.self="modal.import = false"
+    <div v-if="modal.import" class="modal-overlay" @mousedown.self="modal.import = false"
          role="dialog" aria-modal="true" :aria-label="t('importTitle')">
       <div class="modal-card glass-s">
         <div class="flex items-center justify-between mb-4">
@@ -899,7 +899,7 @@
     </div>
 
     <!-- Edit / Add Channel Modal -->
-    <div v-if="modal.edit || modal.add" class="modal-overlay" @click.self="closeEditSafe"
+    <div v-if="modal.edit || modal.add" class="modal-overlay" @mousedown.self="closeEditSafe"
          role="dialog" aria-modal="true" aria-labelledby="modal-edit-title">
       <div class="modal-card glass-s" v-if="editCh">
         <div class="flex items-center justify-between mb-5">
@@ -1007,7 +1007,7 @@
     </div>
 
     <!-- Autodetect Modal -->
-    <div v-if="modal.autoDetect" class="modal-overlay" @click.self="modal.autoDetect = false"
+    <div v-if="modal.autoDetect" class="modal-overlay" @mousedown.self="modal.autoDetect = false"
          role="dialog" aria-modal="true" :aria-label="t('autoDetectTitle')">
       <div class="modal-card glass-s" style="width:min(1060px,100%);max-height:96vh;display:flex;flex-direction:column;overflow:hidden">
 

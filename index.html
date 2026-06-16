@@ -1681,8 +1681,9 @@ createApp({
     const expandedRows              = reactive(new Set())
     const epgChannelIndex           = ref({})   // id.toLowerCase() → guide URL
     const epgXmlIndex               = ref({})   // id.toLowerCase() → source XML URL
-    const logoChannelIndex          = ref({})   // normName → logo URL
-    const logoChannelIndexById      = ref({})   // id.toLowerCase() → logo URL
+    const logoChannelIndex          = ref({})      // normName → logo URL
+    const logoChannelIndexById      = ref({})      // id.toLowerCase() → logo URL
+    const apiNormMap                = ref(new Map()) // normName/collapsed → {id, name, logo}
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
     const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api']))
@@ -2303,19 +2304,32 @@ createApp({
             epgChannelIndex.value = idx
           } else if (src.type === 'logo') {
             // iptv-org/api channels.json: [{id, name, alt_names, logo, ...}]
-            const byName = {}, byId = {}
+            const byName = {}, byId = {}, nMap = new Map()
+            const addToNMap = (key, entry) => {
+              if (!nMap.has(key)) nMap.set(key, entry)
+              const kc = key.replace(/\s+/g, '')
+              if (kc !== key && !nMap.has(kc)) nMap.set(kc, entry)
+            }
             for (const ch of data) {
-              if (!ch.logo) continue
-              if (ch.id) byId[ch.id.toLowerCase()] = ch.logo
+              const logo = ch.logo || ''
+              if (ch.id) byId[ch.id.toLowerCase()] = logo
+              const entry = { id: ch.id || '', name: ch.name, logo }
               const key = normName(ch.name)
-              if (key) byName[key] = ch.logo
+              if (key) {
+                if (logo) byName[key] = logo
+                addToNMap(key, entry)
+              }
               for (const alt of (ch.alt_names || [])) {
                 const akey = normName(alt)
-                if (akey && !byName[akey]) byName[akey] = ch.logo
+                if (akey) {
+                  if (logo && !byName[akey]) byName[akey] = logo
+                  addToNMap(akey, entry)
+                }
               }
             }
             logoChannelIndex.value   = byName
             logoChannelIndexById.value = byId
+            apiNormMap.value         = nMap
           }
         } catch {}
       }))
@@ -2328,7 +2342,8 @@ createApp({
         ...IPTV_SOURCES.filter(s => autoDetectSelectedSources.has(s.id)).map(s => s.url),
         ...(autoDetectCustomUrl.value.trim() ? [autoDetectCustomUrl.value.trim()] : [])
       ]
-      if (urls.length === 0) { showToast(t('autoDetectNoSources')); return }
+      const hasEnrichment = ENRICHMENT_SOURCES.some(s => enrichmentSelectedSources.has(s.id))
+      if (urls.length === 0 && !hasEnrichment) { showToast(t('autoDetectNoSources')); return }
       sourceLoading.value = true
       sourceLoaded.value  = false
       sourceIndex.value   = []
@@ -2336,16 +2351,17 @@ createApp({
       epgXmlIndex.value          = {}
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
+      apiNormMap.value           = new Map()
       enrichmentLoaded.value     = false
       try {
         const all = []
         await Promise.all([
-          Promise.all(urls.map(async url => {
+          urls.length > 0 ? Promise.all(urls.map(async url => {
             const res = await fetch(url)
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const text = await res.text()
             all.push(...parseM3UforAutoDetect(text))
-          })),
+          })) : Promise.resolve(),
           fetchEnrichmentIndexes(),
         ])
         sourceIndex.value = all
@@ -2436,7 +2452,9 @@ createApp({
     }
 
     function runAutoDetect() {
-      if (!sourceLoaded.value || sourceIndex.value.length === 0) { autoDetectResults.value = []; return }
+      const hasApiData = apiNormMap.value.size > 0
+      const hasSrcData = sourceLoaded.value && sourceIndex.value.length > 0
+      if (!hasApiData && !hasSrcData) { autoDetectResults.value = []; return }
       const channelsToProcess = autoDetectPrefilter.value
         ? channels.value.filter(ch => autoDetectPrefilter.value.has(ch.id))
         : channels.value
@@ -2448,6 +2466,15 @@ createApp({
       autoDetectResults.value = channelsToProcess.map(ch => {
         const chNorm = normName(ch.name)
         let best = null, bestScore = 0
+
+        // Fast O(1) lookup against iptv-org/api channel database (exact normName or space-collapsed)
+        const apiHit = apiNormMap.value.get(chNorm) || apiNormMap.value.get(chNorm.replace(/\s+/g, ''))
+        if (apiHit) {
+          bestScore = 0.95
+          best = { tvg_id: apiHit.id, tvg_name: apiHit.name, tvg_logo: apiHit.logo, tvg_url: '', name: apiHit.name }
+        }
+
+        // Fuzzy matching against M3U sources (may override if score > 0.95)
         srcNorm.forEach(s => {
           const sc = Math.max(
             strSimilarity(chNorm, s.nName),
@@ -2507,7 +2534,7 @@ createApp({
       autoDetectPrefilter.value = selectedRows.size > 0 ? new Set(selectedRows) : null
       expandedRows.clear()
       modal.autoDetect = true
-      if (sourceLoaded.value) runAutoDetect()
+      if (sourceLoaded.value || apiNormMap.value.size > 0) runAutoDetect()
       else if (!sourceLoading.value) fetchAndRunAutoDetect()
     }
 

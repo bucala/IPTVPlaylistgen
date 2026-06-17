@@ -260,7 +260,8 @@
     .table-shell {
       border-radius: var(--radius-md); border: 1px solid var(--border);
       background: var(--surface); box-shadow: var(--shadow-sm);
-      overflow-x: scroll; overflow-y: auto; max-height: 62vh;
+      overflow-x: scroll; overflow-y: auto;
+      height: calc(100dvh - 320px); min-height: 240px;
       backdrop-filter: blur(20px);
     }
     table { width: 100%; border-collapse: collapse; min-width: 860px; }
@@ -1162,10 +1163,10 @@
               <template v-else-if="filteredAutoDetectResults.length">
                 <template v-for="r in filteredAutoDetectResults" :key="r.ch.id">
                   <tr :class="{ selected: r.selected }"
-                      :style="r.score > 0 ? 'cursor:pointer' : ''"
-                      @click.stop="r.score > 0 && toggleExpand(r.ch.id)">
+                      style="cursor:pointer"
+                      @click.stop="toggleExpand(r.ch.id)">
                     <td @click.stop>
-                      <input type="checkbox" v-model="r.selected" :disabled="r.score === 0" />
+                      <input type="checkbox" v-model="r.selected" />
                     </td>
                     <td>
                       <div class="font-semibold text-sm">{{ r.ch.name }}</div>
@@ -1174,11 +1175,11 @@
                     <td>
                       <template v-if="r.score > 0">
                         <div class="flex items-center gap-1.5">
-                          <img v-if="r.suggestedLogo" :src="r.suggestedLogo" width="18" height="18"
-                               style="border-radius:3px;object-fit:contain;flex-shrink:0"
+                          <img v-if="r.editLogo || r.suggestedLogo" :src="r.editLogo || r.suggestedLogo" width="22" height="22"
+                               style="border-radius:4px;object-fit:contain;flex-shrink:0;background:var(--fill)"
                                @error="e => e.target.style.display='none'" />
                           <div>
-                            <div class="font-semibold text-sm">{{ r.suggestedName || r.editName }}</div>
+                            <div class="font-semibold text-sm">{{ r.editName || r.suggestedName }}</div>
                             <div class="text-xs mono" style="color:var(--text4)">{{ r.editId || '—' }}</div>
                           </div>
                         </div>
@@ -1193,13 +1194,39 @@
                       <span v-else style="color:var(--text4)">—</span>
                     </td>
                     <td class="text-center" style="color:var(--text4)">
-                      <span v-if="r.score > 0" v-html="expandedRows.has(r.ch.id) ? icon('chevUp', 14) : icon('chevDown', 14)"></span>
+                      <span v-html="expandedRows.has(r.ch.id) ? icon('chevUp', 14) : icon('chevDown', 14)"></span>
                     </td>
                   </tr>
-                  <!-- Expanded edit panel -->
-                  <tr v-if="expandedRows.has(r.ch.id) && r.score > 0"
+                  <!-- Expanded edit + manual search panel -->
+                  <tr v-if="expandedRows.has(r.ch.id)"
                       style="background:color-mix(in srgb,var(--primary) 5%,transparent)">
                     <td colspan="5" style="padding:10px 14px">
+                      <!-- Manual search -->
+                      <div class="mb-3" @click.stop>
+                        <div class="flex items-center gap-2 mb-1.5">
+                          <span class="label" style="min-width:58px;margin:0;font-size:11px;white-space:nowrap">Hľadaj</span>
+                          <input class="field flex-1" style="font-size:12px;padding:4px 7px"
+                                 v-model="r._manualQuery"
+                                 @input="r._manualResults = searchApiChannels(r._manualQuery)"
+                                 placeholder="Hľadaj kanál v databáze…" @click.stop />
+                        </div>
+                        <div v-if="r._manualResults && r._manualResults.length"
+                             style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-top:2px">
+                          <button v-for="m in r._manualResults" :key="m.id"
+                                  class="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs hover:bg-[var(--fill)] transition-colors"
+                                  style="border-bottom:1px solid var(--sep)"
+                                  @click="applyManualMatch(r, m)">
+                            <img v-if="m.logo" :src="m.logo" width="18" height="18"
+                                 style="border-radius:3px;object-fit:contain;flex-shrink:0"
+                                 @error="e => e.target.style.display='none'" />
+                            <div v-else style="width:18px;height:18px;border-radius:3px;background:var(--fill);flex-shrink:0"></div>
+                            <span class="font-medium">{{ m.name }}</span>
+                            <span class="mono ml-auto" style="color:var(--text4)">{{ m.id }}</span>
+                            <span class="font-bold ml-1" style="color:var(--primary)">{{ Math.round(m._score * 100) }}%</span>
+                          </button>
+                        </div>
+                      </div>
+                      <!-- Edit fields -->
                       <div class="grid gap-2" style="grid-template-columns:1fr 1fr">
                         <div class="flex items-center gap-2">
                           <span class="label" style="min-width:58px;margin:0;font-size:11px">TVG-ID</span>
@@ -1230,7 +1257,7 @@
                                 @click="r.editId=r.ch.tvg_id||'';r.editName=r.ch.tvg_name||'';r.editLogo=r.ch.tvg_logo||'';r.editTvgUrl=r.ch.tvg_url||''">
                           {{ t('autoDetectKeepOriginal') }}
                         </button>
-                        <button class="btn btn-secondary" style="font-size:11px;padding:3px 9px"
+                        <button v-if="r.score > 0" class="btn btn-secondary" style="font-size:11px;padding:3px 9px"
                                 @click="r.editId=r.suggestedId;r.editName=r.suggestedName;r.editLogo=r.suggestedLogo;r.editTvgUrl=r.suggestedTvgUrl||''">
                           {{ t('autoDetectUseSuggested') }}
                         </button>
@@ -1684,6 +1711,7 @@ createApp({
     const logoChannelIndex          = ref({})      // normName → logo URL
     const logoChannelIndexById      = ref({})      // id.toLowerCase() → logo URL
     const apiNormMap                = ref(new Map()) // normName/collapsed → {id, name, logo}
+    const apiSearchList             = ref([])      // [{id,name,logo,normKey}] for manual search
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
     const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api']))
@@ -2304,7 +2332,7 @@ createApp({
             epgChannelIndex.value = idx
           } else if (src.type === 'logo') {
             // iptv-org/api channels.json: [{id, name, alt_names, logo, ...}]
-            const byName = {}, byId = {}, nMap = new Map()
+            const byName = {}, byId = {}, nMap = new Map(), searchArr = []
             const addToNMap = (key, entry) => {
               if (!nMap.has(key)) nMap.set(key, entry)
               const kc = key.replace(/\s+/g, '')
@@ -2313,23 +2341,26 @@ createApp({
             for (const ch of data) {
               const logo = ch.logo || ''
               if (ch.id) byId[ch.id.toLowerCase()] = logo
-              const entry = { id: ch.id || '', name: ch.name, logo }
+              const entry = { id: ch.id || '', name: ch.name || '', logo }
               const key = normName(ch.name)
               if (key) {
                 if (logo) byName[key] = logo
                 addToNMap(key, entry)
+                searchArr.push({ id: ch.id || '', name: ch.name || '', logo, normKey: key })
               }
               for (const alt of (ch.alt_names || [])) {
                 const akey = normName(alt)
                 if (akey) {
                   if (logo && !byName[akey]) byName[akey] = logo
                   addToNMap(akey, entry)
+                  if (akey !== key) searchArr.push({ id: ch.id || '', name: ch.name || '', logo, normKey: akey })
                 }
               }
             }
             logoChannelIndex.value   = byName
             logoChannelIndexById.value = byId
             apiNormMap.value         = nMap
+            apiSearchList.value      = searchArr
           }
         } catch {}
       }))
@@ -2352,6 +2383,7 @@ createApp({
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
       apiNormMap.value           = new Map()
+      apiSearchList.value        = []
       enrichmentLoaded.value     = false
       try {
         const all = []
@@ -2370,6 +2402,29 @@ createApp({
         runAutoDetect()
       } catch { showToast(t('importError')) }
       finally { sourceLoading.value = false }
+    }
+
+    function searchApiChannels(query) {
+      const q = normName(query)
+      if (!q || q.length < 2 || apiSearchList.value.length === 0) return []
+      const prefix = q.slice(0, Math.min(q.length, 4))
+      const pre = apiSearchList.value.filter(a => a.normKey.includes(prefix))
+      const pool = pre.length > 0 ? pre : apiSearchList.value
+      return pool
+        .map(a => ({ ...a, _score: strSimilarity(q, a.normKey) }))
+        .filter(a => a._score > 0.2)
+        .sort((a, b) => b._score - a._score)
+        .slice(0, 8)
+    }
+
+    function applyManualMatch(row, match) {
+      row.editId     = match.id
+      row.editName   = match.name
+      row.editLogo   = match.logo
+      row.editTvgUrl = epgChannelIndex.value[match.id.toLowerCase()] || ''
+      row.selected   = true
+      row._manualQuery   = ''
+      row._manualResults = []
     }
 
     function toggleAutoDetectSource(id, checked) {
@@ -2520,6 +2575,7 @@ createApp({
           // Auto-select: M3U match ≥ 50%, OR EPG XML confirmed existing tvg-id
           selected:      (matched && bestScore >= 0.65) || xmlConfirmed,
           editId, editName, editLogo, editTvgUrl,
+          _manualQuery: '', _manualResults: [],
         }
       }).sort((a, b) => b.score - a.score)
     }
@@ -2609,10 +2665,11 @@ createApp({
       IPTV_SOURCES, ENRICHMENT_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter,
       autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
-      epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
+      epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, apiSearchList, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
       fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, toggleExpand,
+      searchApiChannels, applyManualMatch,
     }
   }
 }).mount('#app')

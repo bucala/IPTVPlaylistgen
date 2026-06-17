@@ -1860,7 +1860,7 @@ createApp({
       const withId   = arr.filter(r => r.suggestedId   || r.editId).length
       const withName = arr.filter(r => r.suggestedName || r.editName).length
       const withLogo = arr.filter(r => r.suggestedLogo || r.editLogo).length
-      const withUrl  = arr.filter(r => r.editTvgUrl).length
+      const withUrl  = arr.filter(r => r.suggestedTvgUrl || r.editTvgUrl).length
       return {
         tvgIdPct:   Math.round(withId   / total * 100),
         tvgNamePct: Math.round(withName / total * 100),

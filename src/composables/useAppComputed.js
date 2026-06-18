@@ -1,36 +1,17 @@
 import { computed } from 'vue'
 
 export function useAppComputed(channels, filters, sort, pagination, epgLoaded) {
-
-
-
-  return {
-    stats, filteredChannels, paginatedChannels,
-    totalPages, groupOptions, groupList,
-    hasActiveFilters, visibleTabs,
-  }
-}
-
-// Icon helper (SVG)
-export     function icon(name, size = 16) {
-      const s = Number(size) || 16
-      const p = ICONS[name] || ''
-      return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:middle;flex-shrink:0">${p}</svg>`
-    }
-
-    /* ── i18n ── */
-    const t = (key) => messages[lang.value]?.[key] ?? messages.en?.[key] ?? key
-
-    /* ── Computed ── */
     const visibleTabs = computed(() => [
       { id: 'library', svgKey: 'tv',       labelKey: 'tabLibrary', descKey: 'tabLibraryDesc' },
       { id: 'content', svgKey: 'barChart', labelKey: 'tabContent', descKey: 'tabContentDesc' },
       { id: 'design',  svgKey: 'sliders',  labelKey: 'tabDesign',  descKey: 'tabDesignDesc'  },
     ])
 
+
     const groupOptions = computed(() =>
       [...new Set(channels.value.map(c => c.group_title).filter(Boolean))].sort()
     )
+
 
     const filteredChannels = computed(() => {
       let arr = channels.value
@@ -68,14 +49,17 @@ export     function icon(name, size = 16) {
       })
     })
 
+
     const totalPages = computed(() =>
       Math.max(1, Math.ceil(filteredChannels.value.length / pagination.limit))
     )
+
 
     const paginatedChannels = computed(() => {
       const s = (pagination.page - 1) * pagination.limit
       return filteredChannels.value.slice(s, s + pagination.limit)
     })
+
 
     const stats = computed(() => {
       const total  = channels.value.length
@@ -88,6 +72,7 @@ export     function icon(name, size = 16) {
       return { total, active, groups, qualities }
     })
 
+
     const groupList = computed(() => {
       const m = {}
       channels.value.forEach(c => {
@@ -97,58 +82,14 @@ export     function icon(name, size = 16) {
       return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0]))
     })
 
+
     const hasActiveFilters = computed(() =>
       !!(filters.search || filters.group || filters.quality || filters.country || filters.status !== 'all')
     )
 
-    const editIsDirty = computed(() => {
-      if (!editCh.value || !editSnapshot.value) return false
-      return JSON.stringify(editCh.value) !== editSnapshot.value
-    })
 
-    const filteredAutoDetectResults = computed(() => {
-      const r = autoDetectResults.value
-      if (autoDetectFilter.value === 'matched')   return r.filter(x => x.score > 0)
-      if (autoDetectFilter.value === 'unmatched') return r.filter(x => x.score === 0)
-      return r
-    })
-
-    const autoDetectFieldStats = computed(() => {
-      const arr = autoDetectResults.value
-      const total = arr.length || 1
-      const withId   = arr.filter(r => r.suggestedId   || r.editId).length
-      const withName = arr.filter(r => r.suggestedName || r.editName).length
-      const withLogo = arr.filter(r => r.suggestedLogo || r.editLogo).length
-      const withUrl  = arr.filter(r => r.editTvgUrl).length
-      return {
-        tvgIdPct:   Math.round(withId   / total * 100),
-        tvgNamePct: Math.round(withName / total * 100),
-        logoPct:    Math.round(withLogo / total * 100),
-        tvgUrlPct:  Math.round(withUrl  / total * 100),
-      }
-    })
-
-    const autoDetectSummary = computed(() => ({
-      total:    autoDetectResults.value.length,
-      matched:  autoDetectResults.value.filter(r => r.score > 0).length,
-      selected: autoDetectResults.value.filter(r => r.selected).length,
-    }))
-
-    const autoDetectAllSelected = computed(() => {
-      const f = filteredAutoDetectResults.value
-      return f.length > 0 && f.every(r => r.selected)
-    })
-
-    const selectedRowsCount = computed(() => selectedRows.size)
-
-    const allPageSelected = computed(() =>
-      filteredChannels.value.length > 0 &&
-      filteredChannels.value.every(ch => selectedRows.has(ch.id))
-    )
-
-    /* ── Helpers ── */
-    function persist() {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value)) } catch {}
-    }
-
-
+  return {
+    visibleTabs, groupOptions, filteredChannels,
+    totalPages, paginatedChannels, stats, groupList, hasActiveFilters,
+  }
+}

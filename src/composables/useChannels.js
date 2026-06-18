@@ -1,80 +1,41 @@
-import { ref, computed, reactive } from 'vue'
-import { uiStore, sessionStore } from './storage.js'
+import { ref, reactive } from 'vue'
 
 const ALLOWED_SCHEMES = /^(https?|rtmps?|rtsp|udp|rtp):/i
 
-    const channels      = ref([])
-    const lang          = ref('sk')
-    const theme         = ref('dark')
-    const activeTab     = ref('library')
-    const selectedId    = ref(null)
-    const importMode    = ref('file')
-    const importUrl     = ref('')
-    const importLoading = ref(false)
-    const importFileRef = ref(null)
-
-    const mobFilterOpen = ref(false)
-    const epgRef        = ref(null)
-
 export function useChannels(t, showToast) {
-  function persist() {
-    uiStore.set('iptv-channels', channels.value)
-  }
+  const channels      = ref((() => { try { return JSON.parse(localStorage.getItem('iptv-channels') || '[]') } catch { return [] } })())
+  const importMode    = ref('file')
+  const importUrl     = ref('')
+  const importLoading = ref(false)
+  const importFileRef = ref(null)
+  const logoErrors    = reactive(new Set())
+  const modal         = reactive({ import: false, edit: false, add: false, deleteConfirm: false, unsaved: false, autoDetect: false })
+  const editCh        = ref(null)
+  const editSnapshot  = ref(null)
+  const deleteTarget  = ref(null)
+  const selectedRows  = reactive(new Set())
+  let _uid = Date.now()
 
-      function persist() {
+    function persist() {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value)) } catch {}
     }
 
-    function showToast(msg) {
-      clearTimeout(toastTimer)
-      toast.message = msg
-      toast.show = true
-      toastTimer = setTimeout(() => { toast.show = false }, 2800)
-    }
 
-      function newId() { return 'ch_' + (++_uid) }
+    function newId() { return 'ch_' + (++_uid) }
 
-    /* ── Theme / Lang ── */
-    function setTheme(newTheme) {
-      theme.value = newTheme
-      document.documentElement.setAttribute('data-theme', newTheme)
-      try { localStorage.setItem(THEME_KEY, newTheme) } catch {}
-    }
 
-    function toggleTheme() { setTheme(theme.value === 'dark' ? 'light' : 'dark') }
+    function toggleChannel(ch) { ch.is_active = !ch.is_active; persist() }
 
-    function setLang(l) {
-      lang.value = l
-      document.documentElement.lang = l
-      try { localStorage.setItem(LANG_KEY, l) } catch {}
-    }
 
-    /* ── Table ── */
-    function setSort(by) {
-      if (sort.by === by) sort.asc = !sort.asc
-      else { sort.by = by; sort.asc = true }
-      pagination.page = 1
-    }
-
-    function prevPage() { if (pagination.page > 1) pagination.page-- }
-    function nextPage() { if (pagination.page < totalPages.value) pagination.page++ }
-
-    function resetFilters() {
-      Object.assign(filters, { search: '', group: '', quality: '', status: 'all', country: '' })
-      pagination.page = 1
-    }
-
-    /* ── Channel CRUD ── */
-      function toggleChannel(ch) { ch.is_active = !ch.is_active; persist() }
-
-      function editChannel(ch) {
+    function editChannel(ch) {
       editCh.value = { ...ch }
       editSnapshot.value = JSON.stringify({ ...ch })
       modal.add  = false
       modal.edit = true
     }
 
-      function openAddChannel() {
+
+    function openAddChannel() {
       editCh.value = {
         id: null, name: '', tvg_id: '', tvg_name: '', tvg_logo: '', tvg_url: '',
         tvg_country: '', group_title: '', url: '', quality: '', is_active: true
@@ -84,16 +45,19 @@ export function useChannels(t, showToast) {
       modal.add  = true
     }
 
-      function closeEditSafe() {
+
+    function closeEditSafe() {
       if (editIsDirty.value) { modal.unsaved = true }
       else { modal.edit = false; modal.add = false }
     }
 
-      function forceCloseEdit() {
+
+    function forceCloseEdit() {
       modal.unsaved = false; modal.edit = false; modal.add = false
     }
 
     const ALLOWED_SCHEMES = new Set(['http', 'https', 'rtmp', 'rtmps', 'rtsp', 'udp', 'rtp'])
+
     function validUrl(url) {
       try {
         const scheme = (url || '').split('://')[0].toLowerCase()
@@ -101,7 +65,8 @@ export function useChannels(t, showToast) {
       } catch { return false }
     }
 
-      function saveEdit() {
+
+    function saveEdit() {
       if (!editCh.value?.name?.trim() || !editCh.value?.url?.trim()) {
         return showToast(t('validationError'))
       }
@@ -119,26 +84,31 @@ export function useChannels(t, showToast) {
       showToast(t('channelSaved'))
     }
 
-      function removeChannel(id) { deleteTarget.value = id; modal.deleteConfirm = true }
 
-      function confirmDelete() {
+    function removeChannel(id) { deleteTarget.value = id; modal.deleteConfirm = true }
+
+
+    function confirmDelete() {
       channels.value = channels.value.filter(c => c.id !== deleteTarget.value)
       persist(); modal.deleteConfirm = false
       showToast(t('channelDeleted'))
     }
 
-      function clearAll() {
+
+    function clearAll() {
       if (!confirm(t('confirmClearAll'))) return
       channels.value = []; persist()
       showToast(t('allCleared'))
     }
 
     /* ── Import ── */
-      function triggerImport() { modal.import = true }
+
+    function triggerImport() { modal.import = true }
 
     const MAX_FILE_SIZE = 50 * 1024 * 1024  // 50 MB
 
-      function importFromFile(e) {
+
+    function importFromFile(e) {
       const file = e.target.files[0]; if (!file) return
       if (file.size > MAX_FILE_SIZE) {
         showToast(t('fileTooLarge'))
@@ -155,7 +125,7 @@ export function useChannels(t, showToast) {
       reader.readAsText(file, 'UTF-8')
     }
 
-      async function importFromUrl() {
+    async function importFromUrl() {
       if (!importUrl.value) return
       importLoading.value = true
       const ctrl = new AbortController()
@@ -176,6 +146,7 @@ export function useChannels(t, showToast) {
       }
     }
 
+
     function processImport(text, fmt) {
       const fresh = fmt === 'm3u' ? parseM3U(text) : parseXSPF(text)
       const existingUrls = new Set(channels.value.map(c => c.url))
@@ -190,6 +161,7 @@ export function useChannels(t, showToast) {
       if (skipped > 0) msg += ' · ' + skipped + ' ' + t('skippedDuplicates')
       showToast(msg)
     }
+
 
     function parseM3U(text) {
       const lines = text.split(/\r?\n/)
@@ -206,6 +178,7 @@ export function useChannels(t, showToast) {
       }
       return result
     }
+
 
     function parseXSPF(text) {
       const parser = new DOMParser()
@@ -225,6 +198,7 @@ export function useChannels(t, showToast) {
       return result
     }
 
+
     function parseExtinf(line) {
       const nameM = line.match(/,(.+)$/)
       const name  = nameM ? nameM[1].trim() : ''
@@ -240,10 +214,12 @@ export function useChannels(t, showToast) {
       }
     }
 
+
     function extractAttr(line, attr) {
       const m = line.match(new RegExp(attr + '="([^"]*)"', 'i'))
       return m ? m[1] : ''
     }
+
 
     function detectQuality(name) {
       const n = (name || '').toUpperCase()
@@ -255,7 +231,8 @@ export function useChannels(t, showToast) {
     }
 
     /* ── Export ── */
-      function exportPlaylist(fmt) {
+
+    function exportPlaylist(fmt) {
       const active = channels.value.filter(c => c.is_active)
       if (!active.length) return
 
@@ -296,16 +273,52 @@ export function useChannels(t, showToast) {
       showToast(t('exported'))
     }
 
+
+    function xmlEsc(s) {
+      return (s || '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    }
+
+    /* ── Keyboard ── */
+
+    function selectRow(ch, event) {
+      if (event.target.closest('button, a, input[type="checkbox"]')) return
+      selectedId.value = selectedId.value === ch.id ? null : ch.id
+    }
+
+
+    function toggleRowSelect(ch, checked) {
+      if (checked) selectedRows.add(ch.id)
+      else selectedRows.delete(ch.id)
+    }
+
+
+    function toggleSelectAll(checked) {
+      filteredChannels.value.forEach(ch => {
+        if (checked) selectedRows.add(ch.id)
+        else selectedRows.delete(ch.id)
+      })
+    }
+
+
+    function deleteSelected() {
+      const n = selectedRows.size
+      if (n === 0) return
+      if (!confirm(t('confirmDeleteSel').replace('{n}', n))) return
+      channels.value = channels.value.filter(c => !selectedRows.has(c.id))
+      selectedRows.clear()
+      persist()
+      showToast(t('channelsDeletedN').replace('{n}', n))
+    }
+
   return {
-    channels, modal, editCh, editIsDirty, deleteTarget,
-    selectedId, selectedRows, importMode, importUrl,
-    importLoading, importFileRef, logoErrors,
-    persist,
-    toggleChannel, editChannel, openAddChannel,
-    closeEditSafe, forceCloseEdit, saveEdit,
+    channels, importMode, importUrl, importLoading, importFileRef,
+    logoErrors, modal, editCh, editSnapshot, deleteTarget, selectedRows,
+    persist, newId, toggleChannel, editChannel, openAddChannel,
+    closeEditSafe, forceCloseEdit, validUrl, saveEdit,
     removeChannel, confirmDelete, clearAll,
-    triggerImport, importFromFile, importFromUrl,
-    exportPlaylist,
+    triggerImport, importFromFile, exportPlaylist,
+    selectRow, toggleRowSelect, toggleSelectAll, deleteSelected,
   }
 }
-

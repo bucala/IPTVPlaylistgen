@@ -1,19 +1,17 @@
 import { ref } from 'vue'
-import { uiStore } from './storage.js'
 
 export function useTheme() {
-  const theme = ref(uiStore.get('iptv-theme', 'dark'))
+  const theme = ref((() => { try { return localStorage.getItem('iptv-theme') || 'dark' } catch { return 'dark' } })())
 
-  function setTheme(t) {
-    theme.value = t
-    uiStore.set('iptv-theme', t)
-    document.documentElement.setAttribute('data-theme', t)
-  }
+    function setTheme(newTheme) {
+      theme.value = newTheme
+      document.documentElement.setAttribute('data-theme', newTheme)
+      try { localStorage.setItem(THEME_KEY, newTheme) } catch {}
+    }
 
-  function toggleTheme() {
-    setTheme(theme.value === 'dark' ? 'light' : 'dark')
-  }
+
+    function toggleTheme() { setTheme(theme.value === 'dark' ? 'light' : 'dark') }
+
 
   return { theme, setTheme, toggleTheme }
 }
-

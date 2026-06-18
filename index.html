@@ -2502,17 +2502,19 @@ createApp({
         const matched = best && bestScore >= 0.2
         let editId     = matched ? (best.tvg_id   || '')         : (ch.tvg_id   || '')
         let editName   = matched ? (best.tvg_name  || best.name) : (ch.tvg_name || '')
-        let editLogo   = matched ? (best.tvg_logo  || '')        : (ch.tvg_logo || '')
         let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
 
-        // Enrich TVG-URL: 1) iptv-org/epg guide index, 2) EPG XML source index
+        // Enrich TVG-URL: try exact id, then id without @quality suffix, then EPG XML index
         if (!editTvgUrl && editId) {
-          editTvgUrl = epgChannelIndex.value[editId.toLowerCase()] || ''
+          const idLow   = editId.toLowerCase()
+          const idClean = idLow.replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '')
+          editTvgUrl = epgChannelIndex.value[idLow] || epgChannelIndex.value[idClean] || ''
         }
         if (!editTvgUrl) {
-          // Check epgXmlIndex using both the matched/existing editId and the channel's original tvg_id
-          const lookupId = editId || ch.tvg_id || ''
-          editTvgUrl = epgXmlIndex.value[lookupId.toLowerCase()]
+          const lookupId = (editId || ch.tvg_id || '').toLowerCase()
+          const lookupClean = lookupId.replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '')
+          editTvgUrl = epgXmlIndex.value[lookupId]
+            || epgXmlIndex.value[lookupClean]
             || (ch.tvg_id ? epgXmlIndex.value[ch.tvg_id.toLowerCase()] : '')
             || ''
         }
@@ -2520,19 +2522,22 @@ createApp({
         // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
         const xmlConfirmed = !!ch.tvg_id && !!epgXmlIndex.value[ch.tvg_id.toLowerCase()] && !ch.tvg_url
 
-        // Enrich logo: strip Enigma2 quality suffix (@SD/@HD/…) before ID lookup
-        if (!editLogo) {
-          const cleanId = (editId || ch.tvg_id || '').replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '').toLowerCase()
-          if (cleanId) editLogo = logoChannelIndexById.value[cleanId] || ''
-          if (!editLogo) editLogo = logoChannelIndex.value[normName(editName || ch.name)] || ''
-        }
+        // Enrich logo: iptv-org CDN takes priority over M3U/local URLs
+        // 1) exact editId, 2) editId without @quality suffix, 3) channel name, 4) M3U source logo
+        const fullIdLow  = (editId || ch.tvg_id || '').toLowerCase()
+        const cleanIdLow = fullIdLow.replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '')
+        let editLogo = logoChannelIndexById.value[fullIdLow]
+          || logoChannelIndexById.value[cleanIdLow]
+          || logoChannelIndex.value[normName(editName || ch.name)]
+          || (matched ? (best.tvg_logo || '') : (ch.tvg_logo || ''))
+          || ''
 
         return {
           ch,
-          suggestedId:   matched ? (best.tvg_id   || '') : '',
-          suggestedName: matched ? (best.tvg_name  || best.name) : '',
-          suggestedLogo:   matched ? (best.tvg_logo  || '') : '',
-          suggestedTvgUrl: matched ? (best.tvg_url   || '') : '',
+          suggestedId:     matched ? (best.tvg_id   || '') : '',
+          suggestedName:   matched ? (best.tvg_name  || best.name) : '',
+          suggestedLogo:   editLogo,
+          suggestedTvgUrl: editTvgUrl,
           score:         matched ? bestScore : 0,
           // Auto-select: M3U match ≥ 50%, OR EPG XML confirmed existing tvg-id
           selected:      (matched && bestScore >= 0.65) || xmlConfirmed,

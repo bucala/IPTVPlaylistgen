@@ -1,18 +1,42 @@
 <template>
-  <div :data-theme="theme" style="background:var(--bg);color:var(--text);min-height:100vh">
-    <p style="padding:2rem">✅ Composables načítané — template sa portuje</p>
+  <div :data-theme="theme" style="background:var(--bg);color:var(--text);min-height:100vh;padding:1rem md:1.5rem">
+
+    <AppHeader
+      :stats="stats"
+      :epg-loaded="epgLoaded"
+      :selected-rows-count="selectedRowsCount"
+      :t="t"
+      @import="triggerImport"
+      @export-m3u="exportPlaylist('m3u')"
+      @export-xspf="exportPlaylist('xspf')"
+      @epg-toggle="epgLoaded ? clearEpg() : triggerEpgImport()"
+      @epg-file="importEpgFromFile"
+      @auto-detect="openAutoDetect"
+      @add-channel="openAddChannel"
+      @delete-selected="deleteSelected"
+    />
+
+    <!-- Toast -->
+    <div v-if="toast.show"
+         style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:9999"
+         class="glass-s rounded-[14px] px-5 py-3 text-sm font-medium">
+      {{ toast.message }}
+    </div>
+
+    <p style="padding:1rem;opacity:.5;font-size:.85rem">🚧 Tabs a modály sa portujú…</p>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
-import { useI18n }         from './composables/useI18n.js'
-import { useTheme }        from './composables/useTheme.js'
-import { useChannels }     from './composables/useChannels.js'
-import { useEpg }          from './composables/useEpg.js'
-import { useAutoDetect }   from './composables/useAutoDetect.js'
-import { useAppComputed }  from './composables/useAppComputed.js'
-import { icon }            from './composables/useIcons.js'
+import { useI18n }        from './composables/useI18n.js'
+import { useTheme }       from './composables/useTheme.js'
+import { useChannels }    from './composables/useChannels.js'
+import { useEpg }         from './composables/useEpg.js'
+import { useAutoDetect }  from './composables/useAutoDetect.js'
+import { useAppComputed } from './composables/useAppComputed.js'
+import { icon }           from './composables/useIcons.js'
+import AppHeader          from './components/AppHeader.vue'
 
 const toast = reactive({ show: false, message: '' })
 let toastTimer = null
@@ -37,7 +61,7 @@ const {
 
 const {
   epgRef, epgData, epgChannelMeta, epgLoaded,
-  parseXMLTV, importEpgFromFile, clearEpg, triggerEpgImport,
+  importEpgFromFile, clearEpg, triggerEpgImport,
   getCurrentProgram, getNextProgram, getTodayPrograms, formatEpgTime,
 } = useEpg()
 
@@ -53,7 +77,6 @@ const {
 } = useAppComputed(channels, filters, sort, pagination, epgLoaded)
 
 const {
-  IPTV_SOURCES, ENRICHMENT_SOURCES,
   autoDetectResults, autoDetectFilter, autoDetectPrefilter,
   autoDetectCustomUrl, sourceLoading, sourceLoaded,
   autoDetectSelectedSources, expandedRows, apiNormMap,
@@ -61,6 +84,7 @@ const {
   filteredAutoDetectResults, autoDetectFieldStats, autoDetectSummary, autoDetectAllSelected,
   runAutoDetect, toggleExpand, openAutoDetect, applyAutoDetect, toggleAllAutoDetect,
   toggleAutoDetectSource, toggleEnrichmentSource,
+  IPTV_SOURCES, ENRICHMENT_SOURCES,
 } = useAutoDetect(
   channels,
   computed(() => epgData.value),
@@ -69,67 +93,6 @@ const {
   computed(() => ({})),
   t, showToast
 )
-
-    function setSort(by) {
-      if (sort.by === by) sort.asc = !sort.asc
-      else { sort.by = by; sort.asc = true }
-      pagination.page = 1
-    }
-
-
-    function prevPage() { if (pagination.page > 1) pagination.page-- }
-
-    function nextPage() { if (pagination.page < totalPages.value) pagination.page++ }
-
-    function resetFilters() {
-      Object.assign(filters, { search: '', group: '', quality: '', status: 'all', country: '' })
-      pagination.page = 1
-    }
-
-    /* ── Channel CRUD ── */
-
-    function handleKeydown(e) {
-      if (e.key !== 'Escape') return
-      if (modal.unsaved)      { modal.unsaved = false; return }
-      if (modal.deleteConfirm){ modal.deleteConfirm = false; return }
-      if (modal.edit || modal.add) { closeEditSafe(); return }
-      if (modal.import)       { modal.import = false; return }
-      if (modal.autoDetect)   { modal.autoDetect = false; return }
-    }
-
-    /* ── Lifecycle ── */
-    onMounted(() => {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY)
-        if (saved) channels.value = JSON.parse(saved)
-      } catch {}
-
-      const savedTheme = localStorage.getItem(THEME_KEY) || 'dark'
-      setTheme(savedTheme)
-
-      const savedLang = localStorage.getItem(LANG_KEY) || 'sk'
-      setLang(savedLang)
-
-      document.addEventListener('keydown', handleKeydown)
-
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {})
-      }
-    })
-
-    onUnmounted(() => {
-      document.removeEventListener('keydown', handleKeydown)
-    })
-
-    watch(
-      [() => filters.search, () => filters.group, () => filters.quality,
-       () => filters.status, () => filters.country, () => pagination.limit],
-      () => { pagination.page = 1; selectedRows.clear() }
-    )
-
-    watch(() => activeTab.value, () => { mobFilterOpen.value = false; selectedRows.clear() })
-
-    /* ── EPG ── */
 
 const selectedRowsCount = computed(() => selectedRows.size)
 const allPageSelected   = computed(() =>
@@ -140,6 +103,28 @@ const editIsDirty = computed(() => {
   if (!editCh.value || !editSnapshot.value) return false
   return JSON.stringify(editCh.value) !== JSON.stringify(editSnapshot.value)
 })
+
+function setSort(by) {
+  if (sort.by === by) sort.asc = !sort.asc
+  else { sort.by = by; sort.asc = true }
+  pagination.page = 1
+}
+function prevPage() { if (pagination.page > 1) pagination.page-- }
+function nextPage() { if (pagination.page < totalPages.value) pagination.page++ }
+function resetFilters() {
+  filters.search = ''; filters.group = ''
+  filters.quality = ''; filters.status = 'all'; filters.country = ''
+  pagination.page = 1
+}
+function handleKeydown(e) {
+  if (e.key === 'Escape') {
+    if (modal.unsaved) return
+    if (modal.edit || modal.add) { closeEditSafe(); return }
+    if (modal.import) { modal.import = false; return }
+    if (modal.deleteConfirm) { modal.deleteConfirm = false; return }
+    if (modal.autoDetect) { modal.autoDetect = false; return }
+  }
+}
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)

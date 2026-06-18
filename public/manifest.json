@@ -1,0 +1,25 @@
+{
+  "name": "IPTV Playlist Generator",
+  "short_name": "IPTV Playlist",
+  "description": "Simple Apple-style IPTV playlist manager. Import, edit and export M3U / XSPF playlists.",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#0a84ff",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,8 +1,6 @@
 {
   "appId": "com.bucala.qrcodenator",
   "appName": "QRcodenator",
-  "webDir": "dist",
-  "server": {
-    "androidScheme": "https"
-  }
+  "webDir": "www",
+  "server": { "androidScheme": "https" }
 }

@@ -1,22 +1,19 @@
 <template>
-  <main class="min-h-screen bg-slate-950 text-slate-100">
-    <div class="mx-auto max-w-5xl px-6 py-10">
-      <header class="mb-8">
-        <h1 class="text-3xl font-bold">IPTV Playlist Generator</h1>
-        <p class="mt-2 text-slate-300">
-          Vite migration branch is ready. Original monolith was backed up to legacy/.
-        </p>
-      </header>
+  <div :data-theme="theme" style="background:var(--bg);color:var(--text);min-height:100vh">
 
-      <section class="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
-        <h2 class="mb-3 text-xl font-semibold">Next step</h2>
-        <p class="text-slate-300">
-          Port the original app logic from legacy/index.pre-vite.*.html into Vue components and composables.
-        </p>
-      </section>
-    </div>
-  </main>
+    <!-- portované sekcie prídu sem cez komponenty -->
+    <p style="padding:2rem;font-size:1.2rem">
+      🚧 Scaffold OK — komponenty sa portujú…
+    </p>
+
+  </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
+import { useI18n }   from './composables/useI18n.js'
+import { useTheme }  from './composables/useTheme.js'
+
+const { lang, t, setLang }             = useI18n()
+const { theme, setTheme, toggleTheme } = useTheme()
 </script>

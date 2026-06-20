@@ -1864,7 +1864,13 @@ createApp({
 
     /* ── Helpers ── */
     function persist() {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value)) } catch {}
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value))
+        return true
+      } catch {
+        showToast('Unable to save data. Check available storage or export the playlist.')
+        return false
+      }
     }
 
     function showToast(msg) {
@@ -1936,11 +1942,59 @@ createApp({
     }
 
     const ALLOWED_SCHEMES = new Set(['http', 'https', 'rtmp', 'rtmps', 'rtsp', 'udp', 'rtp'])
+    const FETCHABLE_SCHEMES = new Set(['http', 'https'])
     function validUrl(url) {
       try {
         const scheme = (url || '').split('://')[0].toLowerCase()
         return ALLOWED_SCHEMES.has(scheme)
       } catch { return false }
+    }
+
+    function validFetchUrl(url) {
+      try {
+        const parsed = new URL(url)
+        return FETCHABLE_SCHEMES.has(parsed.protocol.replace(':', '').toLowerCase())
+      } catch { return false }
+    }
+
+    async function fetchTextWithLimit(url, { timeout = 15000, maxBytes = MAX_FILE_SIZE } = {}) {
+      if (!validFetchUrl(url)) throw new Error(t('invalidUrl'))
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), timeout)
+      try {
+        const res = await fetch(url, { signal: ctrl.signal })
+        if (!res.ok) throw new Error('HTTP ' + res.status)
+
+        const len = Number(res.headers.get('content-length') || 0)
+        if (len && len > maxBytes) throw new Error(t('fileTooLarge'))
+
+        if (!res.body) {
+          const text = await res.text()
+          if (new Blob([text]).size > maxBytes) throw new Error(t('fileTooLarge'))
+          return text
+        }
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let bytes = 0
+        let text = ''
+
+        while (true) {
+          const { value, done } = await reader.read()
+          if (done) break
+          bytes += value.byteLength
+          if (bytes > maxBytes) {
+            ctrl.abort()
+            throw new Error(t('fileTooLarge'))
+          }
+          text += decoder.decode(value, { stream: true })
+        }
+
+        text += decoder.decode()
+        return text
+      } finally {
+        clearTimeout(timer)
+      }
     }
 
     function saveEdit() {
@@ -2000,12 +2054,8 @@ createApp({
     async function importFromUrl() {
       if (!importUrl.value) return
       importLoading.value = true
-      const ctrl = new AbortController()
-      const timer = setTimeout(() => ctrl.abort(), 15000)
       try {
-        const r = await fetch(importUrl.value, { signal: ctrl.signal })
-        if (!r.ok) throw new Error('HTTP ' + r.status)
-        const text = await r.text()
+        const text = await fetchTextWithLimit(importUrl.value, { timeout: 15000 })
         const fmt = importUrl.value.toLowerCase().endsWith('.xspf') ? 'xspf' : 'm3u'
         processImport(text, fmt)
         modal.import = false
@@ -2013,16 +2063,16 @@ createApp({
       } catch (e) {
         showToast(t('importError') + ': ' + (e.name === 'AbortError' ? t('fetchTimeout') : e.message))
       } finally {
-        clearTimeout(timer)
         importLoading.value = false
       }
     }
 
     function processImport(text, fmt) {
       const fresh = fmt === 'm3u' ? parseM3U(text) : parseXSPF(text)
+      const validFresh = fresh.filter(c => validUrl(c.url))
       const existingUrls = new Set(channels.value.map(c => c.url))
       const existingIds  = new Set(channels.value.map(c => c.tvg_id).filter(Boolean))
-      const unique = fresh.filter(c =>
+      const unique = validFresh.filter(c =>
         !existingUrls.has(c.url) && !(c.tvg_id && existingIds.has(c.tvg_id))
       )
       const skipped = fresh.length - unique.length
@@ -2042,7 +2092,9 @@ createApp({
         if (line.startsWith('#EXTINF:')) {
           meta = parseExtinf(line)
         } else if (line && !line.startsWith('#')) {
-          result.push({ id: newId(), ...(meta || {}), url: line, is_active: true })
+          if (validUrl(line)) {
+            result.push({ id: newId(), ...(meta || {}), url: line, is_active: true })
+          }
           meta = null
         }
       }
@@ -2057,7 +2109,7 @@ createApp({
       tracks.forEach(tr => {
         const g = (tag) => tr.querySelector(tag)?.textContent?.trim() || ''
         const url = g('location')
-        if (url) result.push({
+        if (url && validUrl(url)) result.push({
           id: newId(), name: g('title'), url,
           tvg_id: '', tvg_name: g('title'), tvg_logo: g('image'),
           tvg_country: '', group_title: g('annotation'),
@@ -2368,16 +2420,8 @@ createApp({
         const all = []
         await Promise.all([
           urls.length > 0 ? Promise.all(urls.map(async url => {
-            const ctrl = new AbortController()
-            const timer = setTimeout(() => ctrl.abort(), 20000)
-            try {
-              const res = await fetch(url, { signal: ctrl.signal })
-              if (!res.ok) throw new Error(`HTTP ${res.status}`)
-              const text = await res.text()
-              all.push(...parseM3UforAutoDetect(text))
-            } finally {
-              clearTimeout(timer)
-            }
+            const text = await fetchTextWithLimit(url, { timeout: 20000 })
+            all.push(...parseM3UforAutoDetect(text))
           })) : Promise.resolve(),
           fetchEnrichmentIndexes(),
         ])
@@ -2556,7 +2600,7 @@ createApp({
       autoDetectPrefilter.value = selectedRows.size > 0 ? new Set(selectedRows) : null
       expandedRows.clear()
       modal.autoDetect = true
-      if (sourceLoaded.value || apiNormMap.value.size > 0) runAutoDetect()
+      if ((sourceLoaded.value || apiNormMap.value.size > 0) && enrichmentLoaded.value) runAutoDetect()
       else if (!sourceLoading.value) fetchAndRunAutoDetect()
     }
 
@@ -2566,10 +2610,10 @@ createApp({
         if (!r.selected) return
         const ch = channels.value.find(c => c.id === r.ch.id)
         if (!ch) return
-        if (r.editId)     ch.tvg_id   = r.editId
-        if (r.editName)   ch.tvg_name = r.editName
-        if (r.editLogo)   ch.tvg_logo = r.editLogo
-        if (r.editTvgUrl) ch.tvg_url  = r.editTvgUrl
+        ch.tvg_id   = r.editId || ''
+        ch.tvg_name = r.editName || ''
+        ch.tvg_logo = r.editLogo || ''
+        ch.tvg_url  = r.editTvgUrl || ''
         logoErrors.delete(ch.id)
         applied++
       })

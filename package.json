@@ -1,11 +1,14 @@
 {
   "name": "iptv-playlist-generator",
-  "version": "2.0.0",
+  "version": "2.6.0",
   "private": true,
   "description": "Simple Apple style IPTV playlist generator with Netlify, Electron and Capacitor support.",
   "main": "electron/main.js",
   "scripts": {
     "build": "echo 'Static site — no build step'",
+    "sync:www": "node scripts/sync-www.js",
+    "verify": "node scripts/verify-static.js",
+    "test": "npm run verify",
     "start": "npx serve .",
     "android:add": "npx cap add android",
     "android:sync": "npx cap sync android",
@@ -14,7 +17,7 @@
     "win:build": "electron-builder --win portable nsis"
   },
   "devDependencies": {
-    "electron": "^31.7.0",
+    "electron": "^42.4.1",
     "electron-builder": "^24.13.3",
     "serve": "^14.2.3",
     "sharp": "^0.35.1"

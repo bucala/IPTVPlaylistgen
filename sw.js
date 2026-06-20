@@ -5,6 +5,13 @@ const APP_SHELL = [
   './manifest.json',
   './icons/icon.svg'
 ];
+const CACHEABLE_PATHS = new Set([
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icons/icon.svg',
+  '/icons/icon.png'
+]);
 
 // URLs which must NEVER be served from cache (live playlist/EPG data)
 function isNetworkOnly(url) {
@@ -13,6 +20,12 @@ function isNetworkOnly(url) {
          url.includes('raw.githubusercontent.com') ||
          url.includes('iptv-org') ||
          url.includes('/epg');
+}
+
+function isCacheableAppAsset(requestUrl) {
+  const url = new URL(requestUrl);
+  if (url.origin !== self.location.origin) return false;
+  return CACHEABLE_PATHS.has(url.pathname);
 }
 
 self.addEventListener('install', (event) => {
@@ -36,13 +49,13 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  // Network-only: playlist/EPG data must always be fresh
-  if (isNetworkOnly(event.request.url)) {
+  // Network-only: playlist/EPG data, external resources and user URLs must always be fresh
+  if (isNetworkOnly(event.request.url) || !isCacheableAppAsset(event.request.url)) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Cache-first for app shell and static assets
+  // Cache-first only for app shell and explicitly listed local static assets
   event.respondWith(
     caches.match(event.request).then(async (cached) => {
       if (cached) return cached;

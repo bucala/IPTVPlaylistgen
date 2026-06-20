@@ -1,31 +1,76 @@
-const CACHE_NAME = 'iptv-playlistgen-v2-cache';
+const CACHE_NAME = 'iptv-playlistgen-v3-cache';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './icons/icon.svg'
 ];
+const CACHEABLE_PATHS = new Set([
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icons/icon.svg',
+  '/icons/icon.png'
+]);
+
+// URLs which must NEVER be served from cache (live playlist/EPG data)
+function isNetworkOnly(url) {
+  return /\.m3u8?$/i.test(url) ||
+         /\.xml(tv)?$/i.test(url) ||
+         url.includes('raw.githubusercontent.com') ||
+         url.includes('iptv-org') ||
+         url.includes('/epg');
+}
+
+function isCacheableAppAsset(requestUrl) {
+  const url = new URL(requestUrl);
+  if (url.origin !== self.location.origin) return false;
+  return CACHEABLE_PATHS.has(url.pathname);
+}
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // Network-only: playlist/EPG data, external resources and user URLs must always be fresh
+  if (isNetworkOnly(event.request.url) || !isCacheableAppAsset(event.request.url)) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Cache-first only for app shell and explicitly listed local static assets
   event.respondWith(
-    caches.match(event.request).then((cached) => {
+    caches.match(event.request).then(async (cached) => {
       if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+      try {
+        const response = await fetch(event.request);
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(event.request, response.clone()); // fix: properly awaited
+        }
         return response;
-      }).catch(() => caches.match('./index.html'));
+      } catch {
+        // Offline fallback: return app shell
+        const fallback = await caches.match('./index.html');
+        return fallback || new Response('Offline', { status: 503 });
+      }
     })
   );
 });

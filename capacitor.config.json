@@ -1,6 +1,6 @@
 {
-  "appId": "com.bucala.qrcodenator",
-  "appName": "QRcodenator",
+  "appId": "com.bucala.iptvplaylistgen",
+  "appName": "IPTV Playlist Generator",
   "webDir": "www",
   "server": { "androidScheme": "https" }
 }

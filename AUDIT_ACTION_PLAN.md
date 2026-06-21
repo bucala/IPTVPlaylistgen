@@ -115,3 +115,12 @@ Statusy su zamerne ponechane ako checklist, aby sa dali priebezne doplnat, rozde
 
 - [x] Opravit EPG URL doplnanie
   - EPG URL sa beru z aktualneho `api/guides.json` formatu cez `sources[].url` a viazu sa na normalizovane SK/CZ TVG-ID.
+
+## Free EPG/logo source remediation - 2026-06-21
+
+- [x] Doplnit legalne free EPG zdroje pre CZ/SK autodetekciu
+  - Autodetekcia teraz vie indexovat XMLTV kanaly aj display-name hodnoty z GitHub EPG XML zdrojov (`globetvapp/epg`, `radoslavv/epg`).
+  - EPG URL fallback hlada najprv TVG-ID a potom normalizovany nazov kanala, aby sa zvysilo pokrytie pri zdrojoch bez identickeho TVG-ID.
+
+- [x] Doplnit robustne logo mapovanie z free API
+  - Logo index sa sklada z `iptv-org/api/channels.json` aj `iptv-org/api/logos.json` a podporuje `channel`, `id` aj `channels[]` format.

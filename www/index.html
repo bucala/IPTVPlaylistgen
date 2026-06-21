@@ -1328,6 +1328,9 @@ const IPTV_SOURCES = [
 const ENRICHMENT_SOURCES = [
   { id: 'epg-index',   label: 'EPG index',    detail: 'iptv-org/api guides (CC0)',       type: 'epg',     url: 'https://iptv-org.github.io/api/guides.json' },
   { id: 'logo-api',    label: 'Logá (API)',    detail: 'iptv-org/api channels (CC0)',     type: 'logo',    url: 'https://iptv-org.github.io/api/channels.json' },
+  { id: 'epg-globe-cz',label: 'Globe CZ',      detail: 'globetvapp/epg Czech XMLTV',      type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Czech/czech1.xml' },
+  { id: 'epg-globe-sk',label: 'Globe SK',      detail: 'globetvapp/epg Slovakia XMLTV',   type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Slovakia/slovakia1.xml' },
+  { id: 'epg-radoslavv',label:'CZ/SK EPG',     detail: 'radoslavv/epg guide.xml',         type: 'epg-xml', url: 'https://raw.githubusercontent.com/radoslavv/epg/master/guide.xml' },
 ]
 
 createApp({
@@ -1702,13 +1705,14 @@ createApp({
     const autoDetectSelectedSources = reactive(new Set(['iptv-sk', 'iptv-cz']))
     const expandedRows              = reactive(new Set())
     const epgChannelIndex           = ref({})   // id.toLowerCase() → guide URL
+    const epgNameIndex              = ref({})   // normName/display-name → guide URL
     const epgXmlIndex               = ref({})   // id.toLowerCase() → source XML URL
     const logoChannelIndex          = ref({})      // normName → logo URL
     const logoChannelIndexById      = ref({})      // id.toLowerCase() → logo URL
     const apiNormMap                = ref(new Map()) // normName/collapsed → {id, name, logo}
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
-    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api']))
+    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api', 'epg-globe-cz', 'epg-globe-sk', 'epg-radoslavv']))
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
@@ -2372,6 +2376,18 @@ createApp({
             while ((m = re.exec(text)) !== null) {
               epgXmlIndex.value[m[1].toLowerCase()] = src.url
             }
+            const blockRe = /<channel\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/channel>/g
+            while ((m = blockRe.exec(text)) !== null) {
+              const id = m[1]
+              epgXmlIndex.value[id.toLowerCase()] = src.url
+              let dm
+              const displayRe = /<display-name[^>]*>([\s\S]*?)<\/display-name>/g
+              while ((dm = displayRe.exec(m[2])) !== null) {
+                const displayName = dm[1].replace(/<[^>]*>/g, '').trim()
+                const key = normName(displayName)
+                if (key && !epgNameIndex.value[key]) epgNameIndex.value[key] = src.url
+              }
+            }
             return
           }
           const jsonCtrl = new AbortController()
@@ -2380,7 +2396,7 @@ createApp({
           if (!res.ok) return
           const data = await res.json()
           if (src.type === 'epg') {
-            const idx = {}
+            const idx = {}, byName = {}
             for (const guide of data) {
               const channelId = guide.channel || guide.id || ''
               const sourceUrl = guide.sources?.find(s => s.format === 'XML')?.url
@@ -2388,8 +2404,13 @@ createApp({
                 || guide.guides?.[0]
                 || ''
               if (channelId && sourceUrl) idx[channelId.toLowerCase()] = sourceUrl
+              for (const label of [guide.name, ...(guide.alt_names || [])]) {
+                const key = normName(label)
+                if (key && sourceUrl && !byName[key]) byName[key] = sourceUrl
+              }
             }
             epgChannelIndex.value = idx
+            epgNameIndex.value = { ...epgNameIndex.value, ...byName }
           } else if (src.type === 'logo') {
             // iptv-org/api channels.json + logos.json. Keep SK/CZ IDs first to avoid global false positives.
             const byName = {}, byId = {}, nMap = new Map()
@@ -2464,6 +2485,7 @@ createApp({
       sourceLoaded.value  = false
       sourceIndex.value   = []
       epgChannelIndex.value      = {}
+      epgNameIndex.value         = {}
       epgXmlIndex.value          = {}
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
@@ -2637,10 +2659,12 @@ createApp({
         if (!editTvgUrl) {
           const lookupId    = (editId || ch.tvg_id || '').toLowerCase()
           const lookupClean = lookupId.replace(/@[^@]*$/, '')
+          const nameKey     = normName(editName || ch.tvg_name || ch.name)
           editTvgUrl = epgXmlIndex.value[lookupId]
             || epgXmlIndex.value[lookupClean]
             || (origTvgIdLow ? epgChannelIndex.value[origTvgIdLow] : '')
             || (origTvgIdLow ? epgXmlIndex.value[origTvgIdLow] : '')
+            || epgNameIndex.value[nameKey]
             || ''
         }
 

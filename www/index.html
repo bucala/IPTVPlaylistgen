@@ -480,6 +480,7 @@
             <button class="btn btn-primary"    @click="triggerImport">{{ t('importPlaylist') }}</button>
             <button class="btn btn-secondary"  @click="exportPlaylist('m3u')"  :disabled="stats.total === 0">{{ t('exportM3U') }}</button>
             <button class="btn btn-secondary"  @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
+            <button class="btn btn-secondary"  @click="undoLastChange" :disabled="undoStack.length === 0">{{ t('undo') }}</button>
             <button class="btn btn-secondary"  @click="epgLoaded ? clearEpg() : triggerEpgImport()" :style="epgLoaded ? 'color:var(--success)' : ''"><span v-html="icon('antenna', 15)"></span>{{ epgLoaded ? t('clearEpg') : t('epgImport') }}</button>
             <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" class="sr-only" @change="importEpgFromFile" />
             <button class="btn btn-secondary"  @click="openAutoDetect" :disabled="stats.total === 0"><span v-html="icon('search', 15)"></span>{{ t('autoDetectBtn') }}</button>
@@ -727,6 +728,9 @@
                   <td>
                     <img v-if="ch.tvg_logo && !logoErrors.has(ch.id)" :src="ch.tvg_logo" class="ch-logo logo-fade" loading="lazy" :alt="ch.name + ' logo'" @error="logoErrors.add(ch.id)" />
                     <div v-else class="ch-logo logo-initials" :title="ch.name" aria-hidden="true">{{ (ch.name||'?').slice(0,2).toUpperCase() }}</div>
+                    <div class="text-[0.7rem] mt-1 text-center font-bold" :style="{ color: metadataScore(ch) >= 80 ? 'var(--success)' : metadataScore(ch) >= 50 ? 'var(--warning)' : 'var(--danger)' }" :title="metadataTooltip(ch)">
+                      {{ metadataScore(ch) }}%
+                    </div>
                   </td>
                   <td>
                     <div class="font-semibold">{{ ch.name || t('untitled') }}</div>
@@ -1051,6 +1055,15 @@
 
         <!-- ── Compact source bar ── -->
         <div class="mb-3 p-2.5 rounded-xl flex flex-wrap items-center gap-2" style="background:var(--surface);border:1px solid var(--sep);flex-shrink:0">
+          <span class="label" style="margin:0">{{ t('autoDetectMode') }}</span>
+          <div class="seg" style="padding:2px">
+            <button v-for="mode in ['safe','balanced','aggressive']" :key="mode"
+                    class="seg-btn" :class="{ active: autoDetectMode === mode }"
+                    style="font-size:12px;padding:5px 9px"
+                    @click="autoDetectMode = mode; runAutoDetect()">
+              {{ t('autoDetectMode_' + mode) }}
+            </button>
+          </div>
           <!-- Pills -->
           <label v-for="src in IPTV_SOURCES" :key="src.id" class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
             <input type="checkbox" :checked="autoDetectSelectedSources.has(src.id)"
@@ -1206,7 +1219,7 @@
                           </div>
                         </div>
                       </template>
-                      <span v-else class="text-xs" style="color:var(--text4)">{{ t('autoDetectNoMatch') }}</span>
+                      <span v-else class="text-xs" style="color:var(--text4)">{{ r.reason || t('autoDetectNoMatch') }}</span>
                     </td>
                     <td class="text-center">
                       <span v-if="r.score > 0" class="text-sm font-bold"
@@ -1361,6 +1374,15 @@ createApp({
         importPlaylist:   'Import Playlist',
         exportM3U:        'Export M3U',
         exportXSPF:       'Export XSPF',
+        undo:             'Späť',
+        undoDone:         'Zmena vrátená späť',
+        exportSelected:   'Exportujem vybrané kanály',
+        exportFiltered:   'Exportujem filtrované kanály',
+        metaScore:        'Kvalita metadát',
+        autoDetectMode:   'Režim',
+        autoDetectMode_safe: 'Bezpečný',
+        autoDetectMode_balanced: 'Vyvážený',
+        autoDetectMode_aggressive: 'Agresívny',
         addChannel:       'Pridať kanál',
         clearAll:         'Vymazať všetko',
         total:            'kanálov',
@@ -1528,6 +1550,15 @@ createApp({
         importPlaylist:   'Import Playlist',
         exportM3U:        'Export M3U',
         exportXSPF:       'Export XSPF',
+        undo:             'Undo',
+        undoDone:         'Change undone',
+        exportSelected:   'Exporting selected channels',
+        exportFiltered:   'Exporting filtered channels',
+        metaScore:        'Metadata quality',
+        autoDetectMode:   'Mode',
+        autoDetectMode_safe: 'Safe',
+        autoDetectMode_balanced: 'Balanced',
+        autoDetectMode_aggressive: 'Aggressive',
         addChannel:       'Add Channel',
         clearAll:         'Clear All',
         total:            'channels',
@@ -1702,6 +1733,7 @@ createApp({
     const importUrl     = ref('')
     const importLoading = ref(false)
     const importFileRef = ref(null)
+    const undoStack     = ref([])
 
     const mobFilterOpen = ref(false)
     const epgRef        = ref(null)
@@ -1712,6 +1744,7 @@ createApp({
 
     const autoDetectResults    = ref([])
     const autoDetectFilter     = ref('all')
+    const autoDetectMode       = ref('balanced')
     const autoDetectPrefilter  = ref(null)  // Set of channel IDs to process, null = all
     const autoDetectCustomUrl  = ref('')
     const sourceIndex          = ref([])    // { name, tvg_id, tvg_name, tvg_logo, tvg_url }
@@ -1912,6 +1945,46 @@ createApp({
       }
     }
 
+    function snapshot(label = 'change') {
+      undoStack.value.push({ label, channels: JSON.stringify(channels.value) })
+      if (undoStack.value.length > 20) undoStack.value.shift()
+    }
+
+    function undoLastChange() {
+      const last = undoStack.value.pop()
+      if (!last) return
+      try {
+        channels.value = JSON.parse(last.channels)
+        persist()
+        showToast(t('undoDone'))
+      } catch {}
+    }
+
+    function metadataScore(ch) {
+      const checks = [
+        !!ch.name,
+        !!ch.url,
+        !!ch.tvg_id,
+        !!ch.tvg_name,
+        !!ch.tvg_logo,
+        !!ch.tvg_url,
+        !!ch.group_title,
+        !!ch.quality,
+      ]
+      return Math.round(checks.filter(Boolean).length / checks.length * 100)
+    }
+
+    function metadataTooltip(ch) {
+      const missing = []
+      if (!ch.tvg_id) missing.push('TVG-ID')
+      if (!ch.tvg_name) missing.push('TVG-Name')
+      if (!ch.tvg_logo) missing.push('Logo')
+      if (!ch.tvg_url) missing.push('TVG URL')
+      if (!ch.group_title) missing.push(t('group'))
+      if (!ch.quality) missing.push(t('quality'))
+      return `${t('metaScore')}: ${metadataScore(ch)}%${missing.length ? ' · ' + missing.join(', ') : ''}`
+    }
+
     function showToast(msg) {
       clearTimeout(toastTimer)
       toast.message = msg
@@ -2043,6 +2116,7 @@ createApp({
       if (!validUrl(editCh.value.url)) {
         return showToast(t('invalidUrl'))
       }
+      snapshot('saveEdit')
       const idx = channels.value.findIndex(c => c.id === editCh.value.id)
       if (idx >= 0) {
         channels.value.splice(idx, 1, { ...editCh.value })
@@ -2057,6 +2131,7 @@ createApp({
     function removeChannel(id) { deleteTarget.value = id; modal.deleteConfirm = true }
 
     function confirmDelete() {
+      snapshot('delete')
       channels.value = channels.value.filter(c => c.id !== deleteTarget.value)
       persist(); modal.deleteConfirm = false
       showToast(t('channelDeleted'))
@@ -2064,6 +2139,7 @@ createApp({
 
     function clearAll() {
       if (!confirm(t('confirmClearAll'))) return
+      snapshot('clearAll')
       channels.value = []; persist()
       showToast(t('allCleared'))
     }
@@ -2115,6 +2191,7 @@ createApp({
         !existingUrls.has(c.url) && !(c.tvg_id && existingIds.has(c.tvg_id))
       )
       const skipped = fresh.length - unique.length
+      if (unique.length) snapshot('import')
       channels.value = [...channels.value, ...unique]
       persist()
       let msg = t('imported') + ' ' + unique.length + ' ' + t('channels')
@@ -2189,7 +2266,9 @@ createApp({
 
     /* ── Export ── */
     function exportPlaylist(fmt) {
-      const active = channels.value.filter(c => c.is_active)
+      const selected = channels.value.filter(c => selectedRows.has(c.id) && c.is_active)
+      const visible = filteredChannels.value.filter(c => c.is_active)
+      const active = selected.length ? selected : (isFiltered.value ? visible : channels.value.filter(c => c.is_active))
       if (!active.length) return
 
       let content, filename, type
@@ -2205,7 +2284,7 @@ createApp({
           if (c.tvg_country) content += ` tvg-country="${xmlEsc(c.tvg_country)}"`
           content += `,${c.name}\n${c.url}\n`
         })
-        filename = 'playlist.m3u'; type = 'audio/x-mpegurl'
+        filename = selected.length ? 'playlist-selected.m3u' : (isFiltered.value ? 'playlist-filtered.m3u' : 'playlist.m3u'); type = 'audio/x-mpegurl'
       } else {
         content  = '<?xml version="1.0" encoding="UTF-8"?>\n'
         content += '<playlist version="1" xmlns="http://xspf.org/ns/0/">\n  <trackList>\n'
@@ -2218,7 +2297,7 @@ createApp({
           content += '    </track>\n'
         })
         content += '  </trackList>\n</playlist>'
-        filename = 'playlist.xspf'; type = 'application/xspf+xml'
+        filename = selected.length ? 'playlist-selected.xspf' : (isFiltered.value ? 'playlist-filtered.xspf' : 'playlist.xspf'); type = 'application/xspf+xml'
       }
 
       const blob = new Blob([content], { type })
@@ -2226,7 +2305,7 @@ createApp({
       const a    = document.createElement('a')
       a.href = url; a.download = filename; a.click()
       URL.revokeObjectURL(url)
-      showToast(t('exported'))
+      showToast(`${selected.length ? t('exportSelected') : isFiltered.value ? t('exportFiltered') : t('exported')} (${active.length})`)
     }
 
     function xmlEsc(s) {
@@ -2653,6 +2732,11 @@ createApp({
       const hasApiData = apiNormMap.value.size > 0
       const hasSrcData = sourceLoaded.value && sourceIndex.value.length > 0
       if (!hasApiData && !hasSrcData) { autoDetectResults.value = []; return }
+      const modeCfg = {
+        safe:       { min: 0.95, auto: 0.95, epg: 0.8 },
+        balanced:   { min: 0.65, auto: 0.65, epg: 0.66 },
+        aggressive: { min: 0.35, auto: 0.70, epg: 0.5 },
+      }[autoDetectMode.value] || { min: 0.65, auto: 0.65, epg: 0.66 }
       const channelsToProcess = autoDetectPrefilter.value
         ? channels.value.filter(ch => autoDetectPrefilter.value.has(ch.id))
         : channels.value
@@ -2681,7 +2765,7 @@ createApp({
           )
           if (sc > bestScore) { bestScore = sc; best = s }
         })
-        const matched = best && bestScore >= 0.65 && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
+        const matched = best && bestScore >= modeCfg.min && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
         let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
         let editName   = matched ? (best.tvg_name  || best.name) : (ch.tvg_name || '')
         let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
@@ -2720,7 +2804,7 @@ createApp({
             || ''
         }
         const epgFallbackMatched = !!editTvgUrl && !matched
-        const resultScore = matched ? bestScore : (epgFallbackMatched ? 0.66 : 0)
+        const resultScore = matched ? bestScore : (epgFallbackMatched ? modeCfg.epg : 0)
         if (epgFallbackMatched && !editName) editName = ch.tvg_name || ch.name
 
         // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
@@ -2745,7 +2829,8 @@ createApp({
           suggestedTvgUrl: editTvgUrl,
           score:         resultScore,
           // Auto-select: M3U match ≥ 50%, OR EPG XML confirmed existing tvg-id
-          selected:      resultScore >= 0.65 || xmlConfirmed,
+          selected:      resultScore >= modeCfg.auto || xmlConfirmed,
+          reason:        resultScore > 0 ? '' : t('autoDetectNoMatch'),
           editId, editName, editLogo, editTvgUrl,
         }
       }).sort((a, b) => b.score - a.score)
@@ -2767,6 +2852,7 @@ createApp({
 
     function applyAutoDetect() {
       let applied = 0
+      snapshot('autoDetect')
       autoDetectResults.value.forEach(r => {
         if (!r.selected) return
         const ch = channels.value.find(c => c.id === r.ch.id)
@@ -2810,6 +2896,7 @@ createApp({
       const n = selectedRows.size
       if (n === 0) return
       if (!confirm(t('confirmDeleteSel').replace('{n}', n))) return
+      snapshot('deleteSelected')
       channels.value = channels.value.filter(c => !selectedRows.has(c.id))
       selectedRows.clear()
       persist()
@@ -2821,10 +2908,11 @@ createApp({
       channels, lang, theme, activeTab, selectedId,
       importMode, importUrl, importLoading, importFileRef,
       filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,
-      mobFilterOpen, hasActiveFilters,
+      mobFilterOpen, hasActiveFilters, undoStack,
       stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs,
       selectedRows, selectedRowsCount, allPageSelected,
       t, setTheme, toggleTheme, setLang, setSort, prevPage, nextPage, resetFilters,
+      undoLastChange, metadataScore, metadataTooltip,
       toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,
       removeChannel, confirmDelete, clearAll, triggerImport, importFromFile, importFromUrl,
       toggleRowSelect, toggleSelectAll, deleteSelected,
@@ -2834,7 +2922,7 @@ createApp({
       getCurrentProgram, getNextProgram, getTodayPrograms, formatEpgTime,
       selectRow,
       IPTV_SOURCES, ENRICHMENT_SOURCES,
-      autoDetectResults, autoDetectFilter, autoDetectPrefilter,
+      autoDetectResults, autoDetectFilter, autoDetectPrefilter, autoDetectMode,
       autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
       epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,

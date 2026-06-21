@@ -146,3 +146,12 @@ Statusy su zamerne ponechane ako checklist, aby sa dali priebezne doplnat, rozde
 
 - [x] Doladit problematicke stanice z CZ/SK balikov
   - Pridane su aliasy pre AXN, AMC, Canal+ Action, HBO/HBO2/HBO3, Cinemax/Cinemax2 a FilmBox varianty, aby sa z `.pl/.br` alebo prazdnych ID skusili najprv legalne SK/CZ EPG kandidati.
+
+## Product proposal implementation - 2026-06-21
+
+- [x] Implementovat rychle UX vyhry z navrhu
+  - Pridany je metadata completeness badge v tabulke kanalov.
+  - Autodetekcia ma rezimy Bezpecny / Vyvazeny / Agresivny s rozdielnymi prahmi zhody a auto-vyberu.
+  - Export pouziva vybrane kanaly, pri aktivnych filtroch exportuje filtrovany pohlad a inak exportuje aktivne kanaly.
+  - Pridany je jednoduchy undo stack pre import, edit, mazanie, vymazanie vsetkeho a aplikovanie autodetekcie.
+  - Riadky bez zhody v autodetekcii zobrazuju explicitny dovod namiesto generickeho prazdneho stavu.

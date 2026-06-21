@@ -1333,6 +1333,21 @@ const ENRICHMENT_SOURCES = [
   { id: 'epg-radoslavv',label:'CZ/SK EPG',     detail: 'radoslavv/epg guide.xml',         type: 'epg-xml', url: 'https://raw.githubusercontent.com/radoslavv/epg/master/guide.xml' },
 ]
 
+const CHANNEL_TVG_ALIASES = [
+  { re: /\baxn\b/i, ids: ['AXN.cz', 'AXN.sk'] },
+  { re: /\bamc\b/i, ids: ['AMC.cz', 'AMC.sk'] },
+  { re: /\bcanal\s*\+\s*action\b|\bcanal\s*plus\s*action\b/i, ids: ['CanalPlusAction.cz', 'CanalPlusAction.sk'] },
+  { re: /\bhbo\s*3\b/i, ids: ['HBO3.cz', 'HBO3.sk'] },
+  { re: /\bhbo\s*2\b/i, ids: ['HBO2.cz', 'HBO2.sk'] },
+  { re: /\bhbo\b/i, ids: ['HBO.cz', 'HBO.sk'] },
+  { re: /\bcinemax\s*2\b/i, ids: ['Cinemax2.cz', 'Cinemax2.sk'] },
+  { re: /\bcinemax\b/i, ids: ['Cinemax.cz', 'Cinemax.sk'] },
+  { re: /\bfilmbox\s*extra\b/i, ids: ['FilmBoxExtra.cz', 'FilmBoxExtra.sk'] },
+  { re: /\bfilmbox\s*premium\b/i, ids: ['FilmBoxPremium.cz', 'FilmBoxPremium.sk'] },
+  { re: /\bfilmbox\s*family\b/i, ids: ['FilmBoxFamily.cz', 'FilmBoxFamily.sk'] },
+  { re: /\bfilmbox\b/i, ids: ['FilmBox.cz', 'FilmBox.sk'] },
+]
+
 createApp({
   setup() {
     const STORAGE_KEY = 'iptv-channels'
@@ -2597,6 +2612,12 @@ createApp({
       return [`${compact}.sk`, `${compact}.cz`]
     }
 
+    function aliasTvgIdVariants(ch) {
+      const text = [ch?.name, ch?.tvg_name, ch?.tvg_id].filter(Boolean).join(' ')
+      const hit = CHANNEL_TVG_ALIASES.find(a => a.re.test(text))
+      return hit ? hit.ids : []
+    }
+
     function strSimilarity(na, nb) {
       if (!na || !nb) return 0
       if (na === nb) return 1
@@ -2670,6 +2691,7 @@ createApp({
         const epgCandidateIds = [
           ...tvgIdVariants(editId),
           ...tvgIdVariants(ch.tvg_id),
+          ...aliasTvgIdVariants(ch),
           ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
         ].map(id => id.toLowerCase())
 

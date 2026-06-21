@@ -134,3 +134,15 @@ Statusy su zamerne ponechane ako checklist, aby sa dali priebezne doplnat, rozde
 - [x] Opravit zobrazenie `Ziadna zhoda v EPG` pri existujucom EPG fallbacku
   - Pricina: riadok mal `score=0`, aj ked sa EPG URL dala najst podla existujuceho alebo odvodeného TVG-ID.
   - Oprava: EPG-only fallback dostane bezpecne skore a automaticky sa vyberie na aplikovanie.
+
+## Licensed source review - 2026-06-21
+
+- [x] Pridat iba zdroje s pouzitelne overitelnym legalnym/free statusom
+  - `iptv-org.github.io` a `Free-TV/IPTV` ostavaju aktivne zdroje playlistov/metadat.
+  - `4gray/iptvnator` je MIT aplikacia/prehravac, nie verejny katalog log/EPG pre import; preto nebol pridany ako datovy zdroj.
+  - `BKPepe/czech-channels-icons` neobsahuje jasnu redistribucnu licenciu k samotnym logam, preto nebol automaticky pridany.
+  - `tv-logo/tv-logos` obsahuje CC BY-SA / CC BY-NC-SA podmienky a trademark upozornenia, preto nebol automaticky pridany bez explicitneho suhlasu s NC/SA podmienkami.
+  - `m3u8-xtream/m3u8-xtream-playlist` ma permissive licenciu pre strukturu, ale zatial nebol pridany bez stabilneho overeneho raw playlist endpointu.
+
+- [x] Doladit problematicke stanice z CZ/SK balikov
+  - Pridane su aliasy pre AXN, AMC, Canal+ Action, HBO/HBO2/HBO3, Cinemax/Cinemax2 a FilmBox varianty, aby sa z `.pl/.br` alebo prazdnych ID skusili najprv legalne SK/CZ EPG kandidati.

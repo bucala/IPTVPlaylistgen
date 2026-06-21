@@ -397,7 +397,7 @@
 
     /* ── Mobile tab bar ── */
     .mob-tabs {
-      display: none; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
       scrollbar-width: none; gap: 6px;
     }
     .mob-tabs::-webkit-scrollbar { display: none; }
@@ -412,11 +412,13 @@
     .mob-tab.active { background: var(--primary); color: #fff; }
     .mob-badge { font-size: 11px; opacity: .7; margin-left: 2px; }
 
-    /* ── Responsive ── */
-    @media (max-width: 1024px) {
-      .app-grid { grid-template-columns: 1fr !important; }
-      .app-sidebar { display: none !important; }
-      .mob-tabs { display: flex; }
+    /* ── Responsive (mobile-first) ── */
+    .app-grid { grid-template-columns: 1fr; align-items: start; }
+    .app-sidebar { display: none; }
+    @media (min-width: 1025px) {
+      .app-grid { grid-template-columns: 280px 1fr; }
+      .app-sidebar { display: block; }
+      .mob-tabs { display: none; }
     }
     @media (max-width: 640px) {
       .hdr-actions { flex-direction: column; width: 100%; }
@@ -496,7 +498,7 @@
     </div>
 
     <!-- ══════════════════════ GRID ══════════════════════ -->
-    <div class="grid gap-4 app-grid" style="grid-template-columns: 280px 1fr; align-items: start;">
+    <div class="grid gap-4 app-grid">
 
       <!-- ──────────── SIDEBAR ──────────── -->
       <aside class="app-sidebar space-y-3" style="position:sticky; top:16px;">
@@ -2504,30 +2506,35 @@ createApp({
         let editName   = matched ? (best.tvg_name  || best.name) : (ch.tvg_name || '')
         let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
 
-        // Enrich TVG-URL: try exact id, then id without @quality suffix, then EPG XML index
+        // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
+        const origTvgIdLow = (ch.tvg_id || '').toLowerCase().replace(/@[^@]*$/, '')
+
+        // Enrich TVG-URL: matched id → stripped id → original ch.tvg_id
         if (!editTvgUrl && editId) {
           const idLow   = editId.toLowerCase()
-          const idClean = idLow.replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '')
+          const idClean = idLow.replace(/@[^@]*$/, '')
           editTvgUrl = epgChannelIndex.value[idLow] || epgChannelIndex.value[idClean] || ''
         }
         if (!editTvgUrl) {
-          const lookupId = (editId || ch.tvg_id || '').toLowerCase()
-          const lookupClean = lookupId.replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '')
+          const lookupId    = (editId || ch.tvg_id || '').toLowerCase()
+          const lookupClean = lookupId.replace(/@[^@]*$/, '')
           editTvgUrl = epgXmlIndex.value[lookupId]
             || epgXmlIndex.value[lookupClean]
-            || (ch.tvg_id ? epgXmlIndex.value[ch.tvg_id.toLowerCase()] : '')
+            || (origTvgIdLow ? epgChannelIndex.value[origTvgIdLow] : '')
+            || (origTvgIdLow ? epgXmlIndex.value[origTvgIdLow] : '')
             || ''
         }
 
         // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
         const xmlConfirmed = !!ch.tvg_id && !!epgXmlIndex.value[ch.tvg_id.toLowerCase()] && !ch.tvg_url
 
-        // Enrich logo: iptv-org CDN takes priority over M3U/local URLs
-        // 1) exact editId, 2) editId without @quality suffix, 3) channel name, 4) M3U source logo
+        // Enrich logo: iptv-org CDN priority; fall back to original ch.tvg_id if match gave wrong id
+        // 1) matched editId, 2) editId w/o @quality, 3) original ch.tvg_id w/o @quality, 4) name, 5) M3U logo
         const fullIdLow  = (editId || ch.tvg_id || '').toLowerCase()
-        const cleanIdLow = fullIdLow.replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '')
+        const cleanIdLow = fullIdLow.replace(/@[^@]*$/, '')
         let editLogo = logoChannelIndexById.value[fullIdLow]
           || logoChannelIndexById.value[cleanIdLow]
+          || logoChannelIndexById.value[origTvgIdLow]
           || logoChannelIndex.value[normName(editName || ch.name)]
           || (matched ? (best.tvg_logo || '') : (ch.tvg_logo || ''))
           || ''

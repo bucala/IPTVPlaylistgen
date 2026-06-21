@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f2f7" />
   <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#000000" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="IPTV Playlist" />
@@ -18,7 +19,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <!-- Anti-FOUC: apply persisted theme + lang before any paint -->
   <script>(function(){try{var t=localStorage.getItem('iptv-theme')||'dark';document.documentElement.setAttribute('data-theme',t);var l=localStorage.getItem('iptv-lang')||'sk';document.documentElement.lang=l;}catch(e){}})()</script>
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <style>
     /* ───────────────────────────────────────────────
@@ -397,7 +397,7 @@
 
     /* ── Mobile tab bar ── */
     .mob-tabs {
-      display: none; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
       scrollbar-width: none; gap: 6px;
     }
     .mob-tabs::-webkit-scrollbar { display: none; }
@@ -412,16 +412,39 @@
     .mob-tab.active { background: var(--primary); color: #fff; }
     .mob-badge { font-size: 11px; opacity: .7; margin-left: 2px; }
 
-    /* ── Responsive ── */
-    @media (max-width: 1024px) {
-      .app-grid { grid-template-columns: 1fr !important; }
-      .app-sidebar { display: none !important; }
-      .mob-tabs { display: flex; }
+    /* ── Responsive (mobile-first) ── */
+    .app-grid { grid-template-columns: 1fr; align-items: start; }
+    .app-sidebar { display: none; }
+    @media (min-width: 1025px) {
+      .app-grid { grid-template-columns: 280px 1fr; }
+      .app-sidebar { display: block; }
+      .mob-tabs { display: none; }
     }
     @media (max-width: 640px) {
       .hdr-actions { flex-direction: column; width: 100%; }
       .hdr-btns { flex-wrap: wrap; }
     }
+
+
+    /* ── Local utility subset (replaces Tailwind CDN in production) ── */
+    .mx-auto{margin-left:auto;margin-right:auto}.ml-auto{margin-left:auto}.ml-1{margin-left:.25rem}.mr-1{margin-right:.25rem}
+    .mt-0\.5{margin-top:.125rem}.mt-1{margin-top:.25rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}
+    .mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}
+    .block{display:block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}
+    .flex-1{flex:1 1 0%}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.flex-shrink-0{flex-shrink:0}
+    .items-center{align-items:center}.items-start{align-items:flex-start}.items-stretch{align-items:stretch}
+    .justify-start{justify-content:flex-start}.justify-end{justify-content:flex-end}.justify-between{justify-content:space-between}.justify-center{justify-content:center}
+    .gap-1{gap:.25rem}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-2\.5{gap:.625rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}
+    .space-y-1>*+*{margin-top:.25rem}.space-y-2>*+*{margin-top:.5rem}.space-y-3>*+*{margin-top:.75rem}.space-y-4>*+*{margin-top:1rem}
+    .min-h-screen{min-height:100vh}.min-w-0{min-width:0}.w-full{width:100%}.w-9{width:2.25rem}.w-10{width:2.5rem}.w-14{width:3.5rem}
+    .w-\[80px\]{width:80px}.w-\[100px\]{width:100px}.w-\[110px\]{width:110px}.w-\[150px\]{width:150px}.w-\[160px\]{width:160px}.max-w-\[1720px\]{max-width:1720px}
+    .p-2\.5{padding:.625rem}.p-3{padding:.75rem}.p-4{padding:1rem}.px-1{padding-left:.25rem;padding-right:.25rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}
+    .py-1{padding-top:.25rem;padding-bottom:.25rem}.py-3{padding-top:.75rem;padding-bottom:.75rem}.py-4{padding-top:1rem;padding-bottom:1rem}.pt-1{padding-top:.25rem}.pt-2{padding-top:.5rem}.pt-3{padding-top:.75rem}.pt-4{padding-top:1rem}.pb-8{padding-bottom:2rem}
+    .grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .rounded-lg{border-radius:.5rem}.rounded-xl{border-radius:.75rem}.rounded-\[16px\]{border-radius:16px}.rounded-\[18px\]{border-radius:18px}.rounded-\[22px\]{border-radius:22px}.rounded-\[24px\]{border-radius:24px}.rounded-\[28px\]{border-radius:28px}.rounded-\[var\(--radius-md\)\]{border-radius:var(--radius-md)}
+    .text-center{text-align:center}.text-right{text-align:right}.text-xs{font-size:.75rem;line-height:1rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-\[11px\]{font-size:11px}.text-\[0\.7rem\]{font-size:.7rem}.text-\[1\.3rem\]{font-size:1.3rem}.text-\[1\.9rem\]{font-size:1.9rem}
+    .font-medium{font-weight:500}.font-semibold{font-weight:600}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.uppercase{text-transform:uppercase}.leading-tight{line-height:1.25}.tracking-\[-0\.03em\]{letter-spacing:-.03em}.tracking-\[-0\.04em\]{letter-spacing:-.04em}.tracking-\[\.16em\]{letter-spacing:.16em}
+    .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cursor-pointer{cursor:pointer}.select-none{user-select:none;-webkit-user-select:none}
   </style>
 </head>
 <body>
@@ -496,7 +519,7 @@
     </div>
 
     <!-- ══════════════════════ GRID ══════════════════════ -->
-    <div class="grid gap-4 app-grid" style="grid-template-columns: 280px 1fr; align-items: start;">
+    <div class="grid gap-4 app-grid">
 
       <!-- ──────────── SIDEBAR ──────────── -->
       <aside class="app-sidebar space-y-3" style="position:sticky; top:16px;">
@@ -1293,21 +1316,21 @@
 const { createApp, ref, computed, reactive, watch, onMounted, onUnmounted } = Vue
 
 const IPTV_SOURCES = [
-  { id: 'iptv-sk',  label: 'SK',      detail: 'iptv-org',        url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/sk.m3u' },
-  { id: 'iptv-cz',  label: 'CZ',      detail: 'iptv-org',        url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/cz.m3u' },
-  { id: 'iptv-hu',  label: 'HU',      detail: 'iptv-org',        url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/hu.m3u' },
-  { id: 'iptv-pl',  label: 'PL',      detail: 'iptv-org',        url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/pl.m3u' },
-  { id: 'iptv-de',  label: 'DE',      detail: 'iptv-org',        url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/de.m3u' },
-  { id: 'iptv-all', label: 'Všetky',  detail: 'iptv-org (veľký)',url: 'https://raw.githubusercontent.com/iptv-org/iptv/master/index.m3u' },
+  { id: 'iptv-sk',  label: 'SK',      detail: 'iptv-org',        url: 'https://iptv-org.github.io/iptv/countries/sk.m3u' },
+  { id: 'iptv-cz',  label: 'CZ',      detail: 'iptv-org',        url: 'https://iptv-org.github.io/iptv/countries/cz.m3u' },
+  { id: 'iptv-hu',  label: 'HU',      detail: 'iptv-org',        url: 'https://iptv-org.github.io/iptv/countries/hu.m3u' },
+  { id: 'iptv-pl',  label: 'PL',      detail: 'iptv-org',        url: 'https://iptv-org.github.io/iptv/countries/pl.m3u' },
+  { id: 'iptv-de',  label: 'DE',      detail: 'iptv-org',        url: 'https://iptv-org.github.io/iptv/countries/de.m3u' },
+  { id: 'iptv-all', label: 'Všetky',  detail: 'iptv-org (veľký)',url: 'https://iptv-org.github.io/iptv/index.m3u' },
   { id: 'freetv',   label: 'Free-TV', detail: 'Free-TV/IPTV',    url: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8' },
 ]
 
 const ENRICHMENT_SOURCES = [
-  { id: 'epg-index',   label: 'EPG index',    detail: 'iptv-org/epg (CC0)',              type: 'epg',     url: 'https://iptv-org.github.io/epg/channels.json' },
-  { id: 'logo-api',    label: 'Logá (API)',    detail: 'iptv-org/api (CC0)',              type: 'logo',    url: 'https://iptv-org.github.io/api/channels.json' },
-  { id: 'epg-sk',      label: 'SK EPG',        detail: 'open-epg.com/slovakia1 (SK)',    type: 'epg-xml', url: 'https://www.open-epg.com/files/slovakia1.xml' },
-  { id: 'epg-cz',      label: 'CZ EPG',        detail: 'open-epg.com/czech1 (CZ)',       type: 'epg-xml', url: 'https://www.open-epg.com/files/czech1.xml' },
-  { id: 'epg-glcz',    label: 'Globe CZ',      detail: 'globetvapp/epg Czech1 (GitHub)', type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Czech/czech1.xml' },
+  { id: 'epg-index',   label: 'EPG index',    detail: 'iptv-org/api guides (CC0)',       type: 'epg',     url: 'https://iptv-org.github.io/api/guides.json' },
+  { id: 'logo-api',    label: 'Logá (API)',    detail: 'iptv-org/api channels (CC0)',     type: 'logo',    url: 'https://iptv-org.github.io/api/channels.json' },
+  { id: 'epg-globe-cz',label: 'Globe CZ',      detail: 'globetvapp/epg Czech XMLTV',      type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Czech/czech1.xml' },
+  { id: 'epg-globe-sk',label: 'Globe SK',      detail: 'globetvapp/epg Slovakia XMLTV',   type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Slovakia/slovakia1.xml' },
+  { id: 'epg-radoslavv',label:'CZ/SK EPG',     detail: 'radoslavv/epg guide.xml',         type: 'epg-xml', url: 'https://raw.githubusercontent.com/radoslavv/epg/master/guide.xml' },
 ]
 
 createApp({
@@ -1682,13 +1705,14 @@ createApp({
     const autoDetectSelectedSources = reactive(new Set(['iptv-sk', 'iptv-cz']))
     const expandedRows              = reactive(new Set())
     const epgChannelIndex           = ref({})   // id.toLowerCase() → guide URL
+    const epgNameIndex              = ref({})   // normName/display-name → guide URL
     const epgXmlIndex               = ref({})   // id.toLowerCase() → source XML URL
     const logoChannelIndex          = ref({})      // normName → logo URL
     const logoChannelIndexById      = ref({})      // id.toLowerCase() → logo URL
     const apiNormMap                = ref(new Map()) // normName/collapsed → {id, name, logo}
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
-    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api']))
+    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api', 'epg-globe-cz', 'epg-globe-sk', 'epg-radoslavv']))
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
@@ -2352,6 +2376,18 @@ createApp({
             while ((m = re.exec(text)) !== null) {
               epgXmlIndex.value[m[1].toLowerCase()] = src.url
             }
+            const blockRe = /<channel\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/channel>/g
+            while ((m = blockRe.exec(text)) !== null) {
+              const id = m[1]
+              epgXmlIndex.value[id.toLowerCase()] = src.url
+              let dm
+              const displayRe = /<display-name[^>]*>([\s\S]*?)<\/display-name>/g
+              while ((dm = displayRe.exec(m[2])) !== null) {
+                const displayName = dm[1].replace(/<[^>]*>/g, '').trim()
+                const key = normName(displayName)
+                if (key && !epgNameIndex.value[key]) epgNameIndex.value[key] = src.url
+              }
+            }
             return
           }
           const jsonCtrl = new AbortController()
@@ -2360,32 +2396,70 @@ createApp({
           if (!res.ok) return
           const data = await res.json()
           if (src.type === 'epg') {
-            const idx = {}
-            for (const ch of data) {
-              if (ch.id && ch.guides?.length > 0) idx[ch.id.toLowerCase()] = ch.guides[0]
+            const idx = {}, byName = {}
+            for (const guide of data) {
+              const channelId = guide.channel || guide.id || ''
+              const sourceUrl = guide.sources?.find(s => s.format === 'XML')?.url
+                || guide.sources?.[0]?.url
+                || guide.guides?.[0]
+                || ''
+              if (channelId && sourceUrl) idx[channelId.toLowerCase()] = sourceUrl
+              for (const label of [guide.name, ...(guide.alt_names || [])]) {
+                const key = normName(label)
+                if (key && sourceUrl && !byName[key]) byName[key] = sourceUrl
+              }
             }
             epgChannelIndex.value = idx
+            epgNameIndex.value = { ...epgNameIndex.value, ...byName }
           } else if (src.type === 'logo') {
-            // iptv-org/api channels.json: [{id, name, alt_names, logo, ...}]
+            // iptv-org/api channels.json + logos.json. Keep SK/CZ IDs first to avoid global false positives.
             const byName = {}, byId = {}, nMap = new Map()
-            const addToNMap = (key, entry) => {
-              if (!nMap.has(key)) nMap.set(key, entry)
-              const kc = key.replace(/\s+/g, '')
-              if (kc !== key && !nMap.has(kc)) nMap.set(kc, entry)
+            const byNameCountry = {}
+            const putLogoName = (key, id, logo) => {
+              if (!key || !logo) return
+              const preferred = isPreferredTvgId(id)
+              if (!byName[key] || (preferred && !byNameCountry[key])) {
+                byName[key] = logo
+                byNameCountry[key] = preferred
+              }
             }
+            const addToNMap = (key, entry) => {
+              if (!nMap.has(key)) nMap.set(key, [])
+              nMap.get(key).push(entry)
+              const kc = key.replace(/\s+/g, '')
+              if (kc !== key) {
+                if (!nMap.has(kc)) nMap.set(kc, [])
+                nMap.get(kc).push(entry)
+              }
+            }
+            const logoById = {}
+            try {
+              const logoRes = await fetch('https://iptv-org.github.io/api/logos.json', { signal: jsonCtrl.signal })
+              if (logoRes.ok) {
+                for (const item of await logoRes.json()) {
+                  const url = item.url || item.logo || ''
+                  const ids = Array.isArray(item.channels) ? item.channels : [item.channel || item.id]
+                  for (const rawId of ids) {
+                    const id = (rawId || '').toLowerCase()
+                    if (id && url && !logoById[id]) logoById[id] = url
+                  }
+                }
+              }
+            } catch {}
             for (const ch of data) {
-              const logo = ch.logo || ''
-              if (ch.id) byId[ch.id.toLowerCase()] = logo
+              const idLow = (ch.id || '').toLowerCase()
+              const logo = ch.logo || logoById[idLow] || ''
+              if (ch.id && logo) byId[idLow] = logo
               const entry = { id: ch.id || '', name: ch.name, logo }
               const key = normName(ch.name)
               if (key) {
-                if (logo) byName[key] = logo
+                putLogoName(key, ch.id, logo)
                 addToNMap(key, entry)
               }
               for (const alt of (ch.alt_names || [])) {
                 const akey = normName(alt)
                 if (akey) {
-                  if (logo && !byName[akey]) byName[akey] = logo
+                  putLogoName(akey, ch.id, logo)
                   addToNMap(akey, entry)
                 }
               }
@@ -2402,8 +2476,8 @@ createApp({
 
     async function fetchAndRunAutoDetect() {
       const urls = [
-        ...IPTV_SOURCES.filter(s => autoDetectSelectedSources.has(s.id)).map(s => s.url),
-        ...(autoDetectCustomUrl.value.trim() ? [autoDetectCustomUrl.value.trim()] : [])
+        ...IPTV_SOURCES.filter(s => autoDetectSelectedSources.has(s.id)),
+        ...(autoDetectCustomUrl.value.trim() ? [{ id: 'custom', url: autoDetectCustomUrl.value.trim() }] : [])
       ]
       const hasEnrichment = ENRICHMENT_SOURCES.some(s => enrichmentSelectedSources.has(s.id))
       if (urls.length === 0 && !hasEnrichment) { showToast(t('autoDetectNoSources')); return }
@@ -2411,6 +2485,7 @@ createApp({
       sourceLoaded.value  = false
       sourceIndex.value   = []
       epgChannelIndex.value      = {}
+      epgNameIndex.value         = {}
       epgXmlIndex.value          = {}
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
@@ -2419,9 +2494,10 @@ createApp({
       try {
         const all = []
         await Promise.all([
-          urls.length > 0 ? Promise.all(urls.map(async url => {
+          urls.length > 0 ? Promise.all(urls.map(async source => {
+            const url = typeof source === 'string' ? source : source.url
             const text = await fetchTextWithLimit(url, { timeout: 20000 })
-            all.push(...parseM3UforAutoDetect(text))
+            all.push(...parseM3UforAutoDetect(text).map(item => ({ ...item, sourceId: source.id || 'custom' })))
           })) : Promise.resolve(),
           fetchEnrichmentIndexes(),
         ])
@@ -2475,10 +2551,50 @@ createApp({
         .toLowerCase()
         .normalize('NFD').replace(/[̀-ͯ]/g, '')
         .replace(/\[[^\]]*\]|\([^)]*\)/g, '')
+        .replace(/(fhd|uhd|hd|sd|4k)(?=\.|\s|$)/g, '')
         .replace(/\b(hd|fhd|4k|uhd|sd|tv|sk|cz|cs|en|pl|de|at|hu|it|fr|uk|us|ro|hr|rs|si|bg|mk)\b/g, '')
         .replace(/\b\d{3,4}[pi]\b/g, '')
         .replace(/[^a-z0-9]+/g, ' ')
         .trim()
+    }
+
+    function cleanTvgId(id) {
+      return (id || '').trim().replace(/@[^@]*$/, '')
+    }
+
+    function tvgCountry(id) {
+      const m = cleanTvgId(id).toLowerCase().match(/\.([a-z]{2})$/)
+      return m ? m[1] : ''
+    }
+
+    function isPreferredTvgId(id) {
+      const c = tvgCountry(id)
+      return c === 'cz' || c === 'sk'
+    }
+
+    function pickPreferredEntry(entries) {
+      if (!entries?.length) return null
+      return entries.find(e => tvgCountry(e.id) === 'sk')
+        || entries.find(e => tvgCountry(e.id) === 'cz')
+        || entries.find(e => !tvgCountry(e.id))
+        || null
+    }
+
+    function tvgIdVariants(id) {
+      const raw = cleanTvgId(id)
+      if (!raw) return []
+      const c = tvgCountry(raw)
+      const base = raw.replace(/\.[a-z]{2}$/i, '').replace(/(FHD|UHD|HD|SD|4K)$/i, '')
+      const variants = new Set([raw])
+      if (c) variants.add(`${base}.${c}`)
+      for (const cc of ['sk', 'cz']) variants.add(`${base}.${cc}`)
+      return [...variants].filter(isPreferredTvgId)
+    }
+
+    function nameTvgIdVariants(name) {
+      const compact = normName(name).replace(/\s+/g, '')
+      if (!compact) return []
+      return [`${compact}.sk`, `${compact}.cz`]
     }
 
     function strSimilarity(na, nb) {
@@ -2522,14 +2638,15 @@ createApp({
       const srcNorm = sourceIndex.value.map(s => ({
         ...s,
         nName: normName(s.tvg_name || s.name),
-        nId:   normName(s.tvg_id),
-      }))
+        nId:   normName(cleanTvgId(s.tvg_id)),
+      })).filter(s => !s.tvg_id || isPreferredTvgId(s.tvg_id) || ['iptv-sk', 'iptv-cz', 'custom'].includes(s.sourceId))
       autoDetectResults.value = channelsToProcess.map(ch => {
         const chNorm = normName(ch.name)
         let best = null, bestScore = 0
 
         // Fast O(1) lookup against iptv-org/api channel database (exact normName or space-collapsed)
-        const apiHit = apiNormMap.value.get(chNorm) || apiNormMap.value.get(chNorm.replace(/\s+/g, ''))
+        const apiHit = pickPreferredEntry(apiNormMap.value.get(chNorm))
+          || pickPreferredEntry(apiNormMap.value.get(chNorm.replace(/\s+/g, '')))
         if (apiHit) {
           bestScore = 0.95
           best = { tvg_id: apiHit.id, tvg_name: apiHit.name, tvg_logo: apiHit.logo, tvg_url: '', name: apiHit.name }
@@ -2543,48 +2660,70 @@ createApp({
           )
           if (sc > bestScore) { bestScore = sc; best = s }
         })
-        const matched = best && bestScore >= 0.2
-        let editId     = matched ? (best.tvg_id   || '')         : (ch.tvg_id   || '')
+        const matched = best && bestScore >= 0.65 && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
+        let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
         let editName   = matched ? (best.tvg_name  || best.name) : (ch.tvg_name || '')
         let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
 
-        // Enrich TVG-URL: try exact id, then id without @quality suffix, then EPG XML index
+        // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
+        const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()
+        const epgCandidateIds = [
+          ...tvgIdVariants(editId),
+          ...tvgIdVariants(ch.tvg_id),
+          ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
+        ].map(id => id.toLowerCase())
+
+        // Enrich TVG-URL: matched id → stripped id → original ch.tvg_id
         if (!editTvgUrl && editId) {
           const idLow   = editId.toLowerCase()
-          const idClean = idLow.replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '')
+          const idClean = idLow.replace(/@[^@]*$/, '')
           editTvgUrl = epgChannelIndex.value[idLow] || epgChannelIndex.value[idClean] || ''
         }
         if (!editTvgUrl) {
-          const lookupId = (editId || ch.tvg_id || '').toLowerCase()
-          const lookupClean = lookupId.replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '')
+          const hitId = epgCandidateIds.find(id => epgChannelIndex.value[id] || epgXmlIndex.value[id])
+          if (hitId) {
+            editId = editId || hitId
+            editTvgUrl = epgChannelIndex.value[hitId] || epgXmlIndex.value[hitId] || ''
+          }
+        }
+        if (!editTvgUrl) {
+          const lookupId    = (editId || ch.tvg_id || '').toLowerCase()
+          const lookupClean = lookupId.replace(/@[^@]*$/, '')
+          const nameKey     = normName(editName || ch.tvg_name || ch.name)
           editTvgUrl = epgXmlIndex.value[lookupId]
             || epgXmlIndex.value[lookupClean]
-            || (ch.tvg_id ? epgXmlIndex.value[ch.tvg_id.toLowerCase()] : '')
+            || (origTvgIdLow ? epgChannelIndex.value[origTvgIdLow] : '')
+            || (origTvgIdLow ? epgXmlIndex.value[origTvgIdLow] : '')
+            || epgNameIndex.value[nameKey]
             || ''
         }
+        const epgFallbackMatched = !!editTvgUrl && !matched
+        const resultScore = matched ? bestScore : (epgFallbackMatched ? 0.66 : 0)
+        if (epgFallbackMatched && !editName) editName = ch.tvg_name || ch.name
 
         // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
         const xmlConfirmed = !!ch.tvg_id && !!epgXmlIndex.value[ch.tvg_id.toLowerCase()] && !ch.tvg_url
 
-        // Enrich logo: iptv-org CDN takes priority over M3U/local URLs
-        // 1) exact editId, 2) editId without @quality suffix, 3) channel name, 4) M3U source logo
-        const fullIdLow  = (editId || ch.tvg_id || '').toLowerCase()
-        const cleanIdLow = fullIdLow.replace(/@(SD|HD|FHD|4K|UHD|720p|1080p)$/i, '')
+        // Enrich logo: iptv-org CDN priority; fall back to original ch.tvg_id if match gave wrong id
+        // 1) matched editId, 2) editId w/o @quality, 3) original ch.tvg_id w/o @quality, 4) name, 5) M3U logo
+        const fullIdLow  = cleanTvgId(editId || ch.tvg_id || '').toLowerCase()
+        const cleanIdLow = cleanTvgId(fullIdLow).toLowerCase()
         let editLogo = logoChannelIndexById.value[fullIdLow]
           || logoChannelIndexById.value[cleanIdLow]
+          || logoChannelIndexById.value[origTvgIdLow]
           || logoChannelIndex.value[normName(editName || ch.name)]
           || (matched ? (best.tvg_logo || '') : (ch.tvg_logo || ''))
           || ''
 
         return {
           ch,
-          suggestedId:     matched ? (best.tvg_id   || '') : '',
-          suggestedName:   matched ? (best.tvg_name  || best.name) : '',
+          suggestedId:     matched ? (best.tvg_id   || '') : (epgFallbackMatched ? editId : ''),
+          suggestedName:   matched ? (best.tvg_name  || best.name) : (epgFallbackMatched ? editName : ''),
           suggestedLogo:   editLogo,
           suggestedTvgUrl: editTvgUrl,
-          score:         matched ? bestScore : 0,
+          score:         resultScore,
           // Auto-select: M3U match ≥ 50%, OR EPG XML confirmed existing tvg-id
-          selected:      (matched && bestScore >= 0.65) || xmlConfirmed,
+          selected:      resultScore >= 0.65 || xmlConfirmed,
           editId, editName, editLogo, editTvgUrl,
         }
       }).sort((a, b) => b.score - a.score)

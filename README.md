@@ -244,23 +244,21 @@ Každý kanál je uložený v `localStorage` (kľúč `iptv-channels`) ako JSON 
 
 ```
 default-src     'self'
-script-src      'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'
-                https://cdn.tailwindcss.com https://unpkg.com
+script-src      'self' 'unsafe-inline' 'unsafe-eval'
+                https://unpkg.com
 style-src       'self' 'unsafe-inline'
-                https://fonts.googleapis.com https://cdn.tailwindcss.com
+                https://fonts.googleapis.com
 font-src        https://fonts.gstatic.com data:
 img-src         * data: blob:
 connect-src     * blob: https:
-worker-src      'self' blob: https://cdn.tailwindcss.com
+worker-src      'self'
 manifest-src    'self'
 ```
 
 | Direktíva | Dôvod |
 |-----------|-------|
 | `'unsafe-eval'` | Vue 3 runtime template compiler (`new Function()`) |
-| `'wasm-unsafe-eval'` | Tailwind v4 Oxide engine (Rust/WASM) |
-| `data:` v `font-src` | Tailwind v4 CDN embeduje fonty ako base64 `data:` URI |
-| `blob:` v `worker-src` | Tailwind v4 kompiluje CSS cez blob Web Workers |
+| `data:` v `font-src` | Kompatibilita s lokálnymi/inline font assetmi |
 
 ### HTTP Security Headers
 

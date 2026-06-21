@@ -85,3 +85,33 @@ Statusy su zamerne ponechane ako checklist, aby sa dali priebezne doplnat, rozde
   - Problem: web, PWA, Electron a Android maju rozdielne artefakty a rizika.
   - Akcia: vytvorit checklist: sync `www`, update verzie, audit deps, smoke test web, Electron start/build, Android build, PWA cache test.
   - Vystup: opakovatelny release proces.
+
+## Console remediation - 2026-06-21
+
+- [x] P0: Odstranit rozbite autodetect URL z produkcie
+  - `iptv-org` playlisty pouzivaju GitHub Pages endpointy namiesto zaniknutych `raw.githubusercontent.com/.../master/index.m3u` odkazov.
+  - EPG index pouziva aktualny `iptv-org/api/guides.json` namiesto 404 `iptv-org.github.io/epg/channels.json`.
+  - CORS-blokovane `open-epg.com` XML zdroje boli odstranene z predvolenych enrichment zdrojov.
+
+- [x] P1: Odstranit Tailwind browser CDN warning
+  - Runtime `https://cdn.tailwindcss.com` bol odstraneny z HTML aj CSP.
+  - Pouzivane utility triedy su nahradene lokalnym CSS subsetom v aplikacnom stylesheet-e.
+
+- [x] P2: Osetrit Service Worker network-only chyby
+  - Network-only fetch poziadavky teraz vracaju kontrolovanu 504 odpoved namiesto nezachytenej promise rejection v `sw.js`.
+
+- [x] P3: Odstranit deprecation warning pre PWA meta tag
+  - Doplneny je standardny `mobile-web-app-capable` meta tag popri Apple kompatibilnom tagu.
+
+## TVG-ID/logo remediation - 2026-06-21
+
+- [x] Preferovat iba SK/CZ TVG-ID pri autodetekcii
+  - Globalne `iptv-org` zhody s koncovkami ako `.br`, `.pl`, `.ru` alebo `.et` sa uz automaticky neaplikuju.
+  - Pri rovnakej normalizovanej zhode sa preferuje `.sk`, potom `.cz`, potom iba ID bez krajiny.
+
+- [x] Opravit logo fallbacky
+  - Logo mapovanie kombinuje `api/channels.json` s `api/logos.json`.
+  - Logo podla nazvu sa neprepise globalnym zdrojom, ak existuje SK/CZ kandidat.
+
+- [x] Opravit EPG URL doplnanie
+  - EPG URL sa beru z aktualneho `api/guides.json` formatu cez `sources[].url` a viazu sa na normalizovane SK/CZ TVG-ID.

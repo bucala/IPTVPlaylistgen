@@ -29,6 +29,23 @@ for (const rel of ['index.html', 'www/index.html']) {
   if (!/<\/html>\s*$/i.test(html)) fail(`${rel} is missing closing </html>`);
   else ok(`${rel} has closing </html>`);
 
+  if (/cdn\.tailwindcss\.com/i.test(html)) fail(`${rel} loads Tailwind from the browser CDN`);
+  else ok(`${rel} does not load Tailwind from the browser CDN`);
+
+  if (!/<meta\s+name=["']mobile-web-app-capable["']\s+content=["']yes["']/i.test(html)) {
+    fail(`${rel} is missing mobile-web-app-capable meta`);
+  } else ok(`${rel} has mobile-web-app-capable meta`);
+
+  for (const brokenUrl of [
+    'https://iptv-org.github.io/epg/channels.json',
+    'https://raw.githubusercontent.com/iptv-org/iptv/master/index.m3u',
+    'https://www.open-epg.com/files/slovakia1.xml',
+    'https://www.open-epg.com/files/czech1.xml',
+  ]) {
+    if (html.includes(brokenUrl)) fail(`${rel} still references ${brokenUrl}`);
+    else ok(`${rel} does not reference ${brokenUrl}`);
+  }
+
   const inlineScripts = html
     .split(/<script(?![^>]*src=)[^>]*>/i)
     .slice(1)

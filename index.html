@@ -2391,26 +2391,54 @@ createApp({
             }
             epgChannelIndex.value = idx
           } else if (src.type === 'logo') {
-            // iptv-org/api channels.json: [{id, name, alt_names, logo, ...}]
+            // iptv-org/api channels.json + logos.json. Keep SK/CZ IDs first to avoid global false positives.
             const byName = {}, byId = {}, nMap = new Map()
-            const addToNMap = (key, entry) => {
-              if (!nMap.has(key)) nMap.set(key, entry)
-              const kc = key.replace(/\s+/g, '')
-              if (kc !== key && !nMap.has(kc)) nMap.set(kc, entry)
+            const byNameCountry = {}
+            const putLogoName = (key, id, logo) => {
+              if (!key || !logo) return
+              const preferred = isPreferredTvgId(id)
+              if (!byName[key] || (preferred && !byNameCountry[key])) {
+                byName[key] = logo
+                byNameCountry[key] = preferred
+              }
             }
+            const addToNMap = (key, entry) => {
+              if (!nMap.has(key)) nMap.set(key, [])
+              nMap.get(key).push(entry)
+              const kc = key.replace(/\s+/g, '')
+              if (kc !== key) {
+                if (!nMap.has(kc)) nMap.set(kc, [])
+                nMap.get(kc).push(entry)
+              }
+            }
+            const logoById = {}
+            try {
+              const logoRes = await fetch('https://iptv-org.github.io/api/logos.json', { signal: jsonCtrl.signal })
+              if (logoRes.ok) {
+                for (const item of await logoRes.json()) {
+                  const url = item.url || item.logo || ''
+                  const ids = Array.isArray(item.channels) ? item.channels : [item.channel || item.id]
+                  for (const rawId of ids) {
+                    const id = (rawId || '').toLowerCase()
+                    if (id && url && !logoById[id]) logoById[id] = url
+                  }
+                }
+              }
+            } catch {}
             for (const ch of data) {
-              const logo = ch.logo || ''
-              if (ch.id) byId[ch.id.toLowerCase()] = logo
+              const idLow = (ch.id || '').toLowerCase()
+              const logo = ch.logo || logoById[idLow] || ''
+              if (ch.id && logo) byId[idLow] = logo
               const entry = { id: ch.id || '', name: ch.name, logo }
               const key = normName(ch.name)
               if (key) {
-                if (logo) byName[key] = logo
+                putLogoName(key, ch.id, logo)
                 addToNMap(key, entry)
               }
               for (const alt of (ch.alt_names || [])) {
                 const akey = normName(alt)
                 if (akey) {
-                  if (logo && !byName[akey]) byName[akey] = logo
+                  putLogoName(akey, ch.id, logo)
                   addToNMap(akey, entry)
                 }
               }
@@ -2427,8 +2455,8 @@ createApp({
 
     async function fetchAndRunAutoDetect() {
       const urls = [
-        ...IPTV_SOURCES.filter(s => autoDetectSelectedSources.has(s.id)).map(s => s.url),
-        ...(autoDetectCustomUrl.value.trim() ? [autoDetectCustomUrl.value.trim()] : [])
+        ...IPTV_SOURCES.filter(s => autoDetectSelectedSources.has(s.id)),
+        ...(autoDetectCustomUrl.value.trim() ? [{ id: 'custom', url: autoDetectCustomUrl.value.trim() }] : [])
       ]
       const hasEnrichment = ENRICHMENT_SOURCES.some(s => enrichmentSelectedSources.has(s.id))
       if (urls.length === 0 && !hasEnrichment) { showToast(t('autoDetectNoSources')); return }
@@ -2444,9 +2472,10 @@ createApp({
       try {
         const all = []
         await Promise.all([
-          urls.length > 0 ? Promise.all(urls.map(async url => {
+          urls.length > 0 ? Promise.all(urls.map(async source => {
+            const url = typeof source === 'string' ? source : source.url
             const text = await fetchTextWithLimit(url, { timeout: 20000 })
-            all.push(...parseM3UforAutoDetect(text))
+            all.push(...parseM3UforAutoDetect(text).map(item => ({ ...item, sourceId: source.id || 'custom' })))
           })) : Promise.resolve(),
           fetchEnrichmentIndexes(),
         ])
@@ -2506,6 +2535,28 @@ createApp({
         .trim()
     }
 
+    function cleanTvgId(id) {
+      return (id || '').trim().replace(/@[^@]*$/, '')
+    }
+
+    function tvgCountry(id) {
+      const m = cleanTvgId(id).toLowerCase().match(/\.([a-z]{2})$/)
+      return m ? m[1] : ''
+    }
+
+    function isPreferredTvgId(id) {
+      const c = tvgCountry(id)
+      return c === 'cz' || c === 'sk'
+    }
+
+    function pickPreferredEntry(entries) {
+      if (!entries?.length) return null
+      return entries.find(e => tvgCountry(e.id) === 'sk')
+        || entries.find(e => tvgCountry(e.id) === 'cz')
+        || entries.find(e => !tvgCountry(e.id))
+        || null
+    }
+
     function strSimilarity(na, nb) {
       if (!na || !nb) return 0
       if (na === nb) return 1
@@ -2547,14 +2598,15 @@ createApp({
       const srcNorm = sourceIndex.value.map(s => ({
         ...s,
         nName: normName(s.tvg_name || s.name),
-        nId:   normName(s.tvg_id),
-      }))
+        nId:   normName(cleanTvgId(s.tvg_id)),
+      })).filter(s => !s.tvg_id || isPreferredTvgId(s.tvg_id) || ['iptv-sk', 'iptv-cz', 'custom'].includes(s.sourceId))
       autoDetectResults.value = channelsToProcess.map(ch => {
         const chNorm = normName(ch.name)
         let best = null, bestScore = 0
 
         // Fast O(1) lookup against iptv-org/api channel database (exact normName or space-collapsed)
-        const apiHit = apiNormMap.value.get(chNorm) || apiNormMap.value.get(chNorm.replace(/\s+/g, ''))
+        const apiHit = pickPreferredEntry(apiNormMap.value.get(chNorm))
+          || pickPreferredEntry(apiNormMap.value.get(chNorm.replace(/\s+/g, '')))
         if (apiHit) {
           bestScore = 0.95
           best = { tvg_id: apiHit.id, tvg_name: apiHit.name, tvg_logo: apiHit.logo, tvg_url: '', name: apiHit.name }
@@ -2568,13 +2620,13 @@ createApp({
           )
           if (sc > bestScore) { bestScore = sc; best = s }
         })
-        const matched = best && bestScore >= 0.2
-        let editId     = matched ? (best.tvg_id   || '')         : (ch.tvg_id   || '')
+        const matched = best && bestScore >= 0.65 && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
+        let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
         let editName   = matched ? (best.tvg_name  || best.name) : (ch.tvg_name || '')
         let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
 
         // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
-        const origTvgIdLow = (ch.tvg_id || '').toLowerCase().replace(/@[^@]*$/, '')
+        const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()
 
         // Enrich TVG-URL: matched id → stripped id → original ch.tvg_id
         if (!editTvgUrl && editId) {
@@ -2597,8 +2649,8 @@ createApp({
 
         // Enrich logo: iptv-org CDN priority; fall back to original ch.tvg_id if match gave wrong id
         // 1) matched editId, 2) editId w/o @quality, 3) original ch.tvg_id w/o @quality, 4) name, 5) M3U logo
-        const fullIdLow  = (editId || ch.tvg_id || '').toLowerCase()
-        const cleanIdLow = fullIdLow.replace(/@[^@]*$/, '')
+        const fullIdLow  = cleanTvgId(editId || ch.tvg_id || '').toLowerCase()
+        const cleanIdLow = cleanTvgId(fullIdLow).toLowerCase()
         let editLogo = logoChannelIndexById.value[fullIdLow]
           || logoChannelIndexById.value[cleanIdLow]
           || logoChannelIndexById.value[origTvgIdLow]

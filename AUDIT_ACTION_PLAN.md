@@ -102,3 +102,16 @@ Statusy su zamerne ponechane ako checklist, aby sa dali priebezne doplnat, rozde
 
 - [x] P3: Odstranit deprecation warning pre PWA meta tag
   - Doplneny je standardny `mobile-web-app-capable` meta tag popri Apple kompatibilnom tagu.
+
+## TVG-ID/logo remediation - 2026-06-21
+
+- [x] Preferovat iba SK/CZ TVG-ID pri autodetekcii
+  - Globalne `iptv-org` zhody s koncovkami ako `.br`, `.pl`, `.ru` alebo `.et` sa uz automaticky neaplikuju.
+  - Pri rovnakej normalizovanej zhode sa preferuje `.sk`, potom `.cz`, potom iba ID bez krajiny.
+
+- [x] Opravit logo fallbacky
+  - Logo mapovanie kombinuje `api/channels.json` s `api/logos.json`.
+  - Logo podla nazvu sa neprepise globalnym zdrojom, ak existuje SK/CZ kandidat.
+
+- [x] Opravit EPG URL doplnanie
+  - EPG URL sa beru z aktualneho `api/guides.json` formatu cez `sources[].url` a viazu sa na normalizovane SK/CZ TVG-ID.

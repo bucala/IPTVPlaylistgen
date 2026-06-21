@@ -2551,6 +2551,7 @@ createApp({
         .toLowerCase()
         .normalize('NFD').replace(/[̀-ͯ]/g, '')
         .replace(/\[[^\]]*\]|\([^)]*\)/g, '')
+        .replace(/(fhd|uhd|hd|sd|4k)(?=\.|\s|$)/g, '')
         .replace(/\b(hd|fhd|4k|uhd|sd|tv|sk|cz|cs|en|pl|de|at|hu|it|fr|uk|us|ro|hr|rs|si|bg|mk)\b/g, '')
         .replace(/\b\d{3,4}[pi]\b/g, '')
         .replace(/[^a-z0-9]+/g, ' ')
@@ -2577,6 +2578,23 @@ createApp({
         || entries.find(e => tvgCountry(e.id) === 'cz')
         || entries.find(e => !tvgCountry(e.id))
         || null
+    }
+
+    function tvgIdVariants(id) {
+      const raw = cleanTvgId(id)
+      if (!raw) return []
+      const c = tvgCountry(raw)
+      const base = raw.replace(/\.[a-z]{2}$/i, '').replace(/(FHD|UHD|HD|SD|4K)$/i, '')
+      const variants = new Set([raw])
+      if (c) variants.add(`${base}.${c}`)
+      for (const cc of ['sk', 'cz']) variants.add(`${base}.${cc}`)
+      return [...variants].filter(isPreferredTvgId)
+    }
+
+    function nameTvgIdVariants(name) {
+      const compact = normName(name).replace(/\s+/g, '')
+      if (!compact) return []
+      return [`${compact}.sk`, `${compact}.cz`]
     }
 
     function strSimilarity(na, nb) {
@@ -2649,12 +2667,24 @@ createApp({
 
         // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
         const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()
+        const epgCandidateIds = [
+          ...tvgIdVariants(editId),
+          ...tvgIdVariants(ch.tvg_id),
+          ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
+        ].map(id => id.toLowerCase())
 
         // Enrich TVG-URL: matched id → stripped id → original ch.tvg_id
         if (!editTvgUrl && editId) {
           const idLow   = editId.toLowerCase()
           const idClean = idLow.replace(/@[^@]*$/, '')
           editTvgUrl = epgChannelIndex.value[idLow] || epgChannelIndex.value[idClean] || ''
+        }
+        if (!editTvgUrl) {
+          const hitId = epgCandidateIds.find(id => epgChannelIndex.value[id] || epgXmlIndex.value[id])
+          if (hitId) {
+            editId = editId || hitId
+            editTvgUrl = epgChannelIndex.value[hitId] || epgXmlIndex.value[hitId] || ''
+          }
         }
         if (!editTvgUrl) {
           const lookupId    = (editId || ch.tvg_id || '').toLowerCase()
@@ -2667,6 +2697,9 @@ createApp({
             || epgNameIndex.value[nameKey]
             || ''
         }
+        const epgFallbackMatched = !!editTvgUrl && !matched
+        const resultScore = matched ? bestScore : (epgFallbackMatched ? 0.66 : 0)
+        if (epgFallbackMatched && !editName) editName = ch.tvg_name || ch.name
 
         // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
         const xmlConfirmed = !!ch.tvg_id && !!epgXmlIndex.value[ch.tvg_id.toLowerCase()] && !ch.tvg_url
@@ -2684,13 +2717,13 @@ createApp({
 
         return {
           ch,
-          suggestedId:     matched ? (best.tvg_id   || '') : '',
-          suggestedName:   matched ? (best.tvg_name  || best.name) : '',
+          suggestedId:     matched ? (best.tvg_id   || '') : (epgFallbackMatched ? editId : ''),
+          suggestedName:   matched ? (best.tvg_name  || best.name) : (epgFallbackMatched ? editName : ''),
           suggestedLogo:   editLogo,
           suggestedTvgUrl: editTvgUrl,
-          score:         matched ? bestScore : 0,
+          score:         resultScore,
           // Auto-select: M3U match ≥ 50%, OR EPG XML confirmed existing tvg-id
-          selected:      (matched && bestScore >= 0.65) || xmlConfirmed,
+          selected:      resultScore >= 0.65 || xmlConfirmed,
           editId, editName, editLogo, editTvgUrl,
         }
       }).sort((a, b) => b.score - a.score)

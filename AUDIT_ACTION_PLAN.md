@@ -124,3 +124,13 @@ Statusy su zamerne ponechane ako checklist, aby sa dali priebezne doplnat, rozde
 
 - [x] Doplnit robustne logo mapovanie z free API
   - Logo index sa sklada z `iptv-org/api/channels.json` aj `iptv-org/api/logos.json` a podporuje `channel`, `id` aj `channels[]` format.
+
+## Autodetect miss analysis - 2026-06-21
+
+- [x] Opravit stanice s TVG-ID typu `DomaHD.sk`, `DAJTO HD.sk`, `HBO2 HD.sk`
+  - Pricina: povodna normalizacia nevedela odstranit quality suffix prilepeny k nazvu pred `.sk/.cz`, preto `DomaHD.sk` nepadol na `Doma.sk`.
+  - Oprava: generuju sa SK/CZ varianty TVG-ID bez `HD/FHD/UHD/SD/4K` suffixov a EPG fallback sa oznaci ako platna zhoda.
+
+- [x] Opravit zobrazenie `Ziadna zhoda v EPG` pri existujucom EPG fallbacku
+  - Pricina: riadok mal `score=0`, aj ked sa EPG URL dala najst podla existujuceho alebo odvodeného TVG-ID.
+  - Oprava: EPG-only fallback dostane bezpecne skore a automaticky sa vyberie na aplikovanie.

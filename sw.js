@@ -51,7 +51,12 @@ self.addEventListener('fetch', (event) => {
 
   // Network-only: playlist/EPG data, external resources and user URLs must always be fresh
   if (isNetworkOnly(event.request.url) || !isCacheableAppAsset(event.request.url)) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(
+      fetch(event.request).catch(() => new Response('', {
+        status: 504,
+        statusText: 'Network request failed'
+      }))
+    );
     return;
   }
 

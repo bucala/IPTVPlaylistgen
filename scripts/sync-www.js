@@ -6,6 +6,8 @@ const copies = [
   ['index.html', 'www/index.html'],
   ['manifest.json', 'www/manifest.json'],
   ['sw.js', 'www/sw.js'],
+  ['_headers', 'www/_headers'],
+  ['_redirects', 'www/_redirects'],
   ['icons/icon.svg', 'www/icons/icon.svg'],
   ['icons/icon.png', 'www/icons/icon.png'],
 ];

@@ -14,7 +14,7 @@
 **Fix:** Pri logo fallback skúsiť aj `suggestedId` (bez suffix).
 
 ### 🐛 Bug 2: TVG URL prázdne v autodetect paneli  
-**Príčina:** `epgChannelIndex` (z `iptv-org/epg/channels.json`) pokrýva väčšinu globálnych
+**Príčina:** `epgChannelIndex` (z `iptv-org/api/guides.json`) pokrýva väčšinu globálnych
 kanálov, ale SK/CZ lokálne kanály (Folklorika.sk, KinoBarrandov.cz@SD, atď.) v ňom nie sú.
 `epgXmlIndex` sa plní zo SK/CZ EPG XML zdrojov — má ich, ale lookup používal len `editId`
 a `ch.tvg_id`, nie `suggestedId` z M3U zdrojov.

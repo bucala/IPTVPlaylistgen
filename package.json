@@ -7,7 +7,7 @@
   "scripts": {
     "build": "echo 'Static site — no build step'",
     "sync:www": "node scripts/sync-www.js",
-    "verify": "node scripts/verify-static.js",
+    "verify": "node scripts/verify-static.js && node scripts/verify-autodetect.js",
     "test": "npm run verify",
     "start": "npx serve .",
     "android:add": "npx cap add android",
@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "electron": "^42.4.1",
-    "electron-builder": "^24.13.3",
+    "electron-builder": "^26.15.3",
     "serve": "^14.2.3",
     "sharp": "^0.35.1"
   },

@@ -36,6 +36,17 @@ for (const rel of ['index.html', 'www/index.html']) {
     fail(`${rel} is missing mobile-web-app-capable meta`);
   } else ok(`${rel} has mobile-web-app-capable meta`);
 
+  for (const mobileGuard of [
+    ['safe-area mobile padding', /env\(safe-area-inset-(left|right|top|bottom)/],
+    ['mobile modal sheet rules', /\.modal-card\.mobile-sheet/],
+    ['mobile auto-detect card rules', /\.auto-detect-card/],
+    ['mobile auto-detect edit grid rules', /\.auto-detect-edit-grid\s*\{\s*grid-template-columns:\s*1fr\s*!important/],
+    ['horizontal overflow guard', /body\s*\{\s*overflow-x:\s*hidden/],
+  ]) {
+    if (mobileGuard[1].test(html)) ok(`${rel} has ${mobileGuard[0]}`);
+    else fail(`${rel} is missing ${mobileGuard[0]}`);
+  }
+
   for (const brokenUrl of [
     'https://iptv-org.github.io/epg/channels.json',
     'https://raw.githubusercontent.com/iptv-org/iptv/master/index.m3u',
@@ -65,6 +76,10 @@ for (const [left, right] of [
   ['index.html', 'www/index.html'],
   ['manifest.json', 'www/manifest.json'],
   ['sw.js', 'www/sw.js'],
+  ['_headers', 'www/_headers'],
+  ['_redirects', 'www/_redirects'],
+  ['icons/icon.svg', 'www/icons/icon.svg'],
+  ['icons/icon.png', 'www/icons/icon.png'],
 ]) {
   if (sameFile(left, right)) ok(`${right} matches ${left}`);
   else fail(`${right} differs from ${left}; run npm run sync:www`);

@@ -1373,9 +1373,9 @@ const CHANNEL_TVG_ALIASES = [
   { re: /\bdaj\s*to\b|\bdajto\b/i, ids: ['Dajto.sk', 'Dajto.cz'] },
   { re: /\bjoj\s*svet\b/i, ids: ['JOJSvet.sk', 'JOJSvet.cz'] },
   { re: /\bwau\b/i, ids: ['Wau.sk', 'Wau.cz'] },
-  { re: /\bmarkiza\s*krimi\b/i, ids: ['MarkizaKrimi.sk'] },
-  { re: /\bmarkiza\s*klasik\b/i, ids: ['MarkizaKlasik.sk'] },
-  { re: /\bmarkiza\b/i, ids: ['Markiza.sk'] },
+  { re: /\bmark[ií]za\s*krimi\b/i, ids: ['MarkizaKrimi.sk'] },
+  { re: /\bmark[ií]za\s*klasik\b/i, ids: ['MarkizaKlasik.sk'] },
+  { re: /\bmark[ií]za\b/i, ids: ['Markiza.sk'] },
   { re: /\bjoj\s*plus\b|\bplus\s*joj\b/i, ids: ['JOJPlus.sk', 'JOJPlus.cz'] },
   { re: /\bjoj\b/i, ids: ['JOJ.sk', 'JOJ.cz'] },
   { re: /\bta3\b|\bta\s*3\b/i, ids: ['TA3.sk'] },
@@ -2260,9 +2260,10 @@ createApp({
       tracks.forEach(tr => {
         const g = (tag) => tr.querySelector(tag)?.textContent?.trim() || ''
         const url = g('location')
+        const title = stripChannelDecorations(g('title'))
         if (url && validUrl(url)) result.push({
-          id: newId(), name: g('title'), url,
-          tvg_id: '', tvg_name: g('title'), tvg_logo: g('image'),
+          id: newId(), name: title, url,
+          tvg_id: '', tvg_name: title, tvg_logo: g('image'),
           tvg_country: '', group_title: g('annotation'),
           quality: detectQuality(g('title')), is_active: true
         })
@@ -2272,16 +2273,19 @@ createApp({
 
     function parseExtinf(line) {
       const nameM = line.match(/,(.+)$/)
-      const name  = stripChannelDecorations(nameM ? nameM[1].trim() : '')
+      const rawName = nameM ? nameM[1].trim() : ''
+      const name  = stripChannelDecorations(rawName)
+      const rawTvgName = extractAttr(line, 'tvg-name')
+      const tvgName = stripChannelDecorations(rawTvgName || name)
       return {
         name,
         tvg_id:      extractAttr(line, 'tvg-id'),
-        tvg_name:    extractAttr(line, 'tvg-name') || name,
+        tvg_name:    tvgName || name,
         tvg_logo:    extractAttr(line, 'tvg-logo'),
         tvg_url:     extractAttr(line, 'tvg-url'),
         tvg_country: extractAttr(line, 'tvg-country'),
         group_title: extractAttr(line, 'group-title'),
-        quality:     detectQuality(name),
+        quality:     detectQuality(`${rawName} ${rawTvgName}`.trim() || name),
       }
     }
 
@@ -2465,7 +2469,7 @@ createApp({
           result.push({
             name:     stripChannelDecorations(nameM ? nameM[1].trim() : ''),
             tvg_id:   extractAttr(extinf, 'tvg-id'),
-            tvg_name: extractAttr(extinf, 'tvg-name'),
+            tvg_name: stripChannelDecorations(extractAttr(extinf, 'tvg-name')),
             tvg_logo: extractAttr(extinf, 'tvg-logo'),
             tvg_url:  extractAttr(extinf, 'tvg-url'),
           })
@@ -2697,7 +2701,12 @@ createApp({
     }
 
     function cleanTvgId(id) {
-      return stripChannelDecorations(id).trim().replace(/@[^@]*$/, '').replace(/\s+(?=\.[a-z]{2}$)/i, '')
+      return stripChannelDecorations(id)
+        .trim()
+        .replace(/@[^@]*$/, '')
+        .replace(/\s*(?:FHD|UHD|HD|SD|4K)(?=\.[a-z]{2}$)/i, '')
+        .replace(/\s+(?=\.[a-z]{2}$)/i, '')
+        .replace(/\s+/g, '')
     }
 
     function tvgCountry(id) {
@@ -2856,6 +2865,13 @@ createApp({
           if (hit) {
             editId = hit.id
             editTvgUrl = hit.url
+          }
+        }
+        if (!editTvgUrl) {
+          const hitId = epgCandidateIds.find(id => epgChannelIndex.value[id] || epgXmlIndex.value[id])
+          if (hitId) {
+            editId = editId || hitId
+            editTvgUrl = epgChannelIndex.value[hitId] || epgXmlIndex.value[hitId] || ''
           }
         }
         if (!editTvgUrl) {

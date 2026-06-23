@@ -863,6 +863,10 @@
           <div class="glass rounded-[24px] p-4 md:p-5">
             <div class="sec-label">{{ t('tabContent') }}</div>
             <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-4">{{ t('contentHeading') }}</h2>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <button class="btn btn-secondary" @click="applyBulkMetadataRules" :disabled="stats.total === 0">{{ t('bulkMetadataRules') }}</button>
+              <button class="btn btn-secondary" @click="exportMetadataHealthReport" :disabled="stats.total === 0">{{ t('metadataHealthReport') }}</button>
+            </div>
 
             <!-- Quality stat cards -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
@@ -1442,6 +1446,7 @@ const CHANNEL_TVG_ALIASES = [
 createApp({
   setup() {
     const STORAGE_KEY = 'iptv-channels'
+    const MAPPING_KEY = 'iptv-confirmed-mappings'
     const LANG_KEY    = 'iptv-lang'
     const THEME_KEY   = 'iptv-theme'
 
@@ -1519,6 +1524,10 @@ createApp({
         emptyLibraryTitle:'Playlist je prázdny',
         emptyLibraryDesc: 'Importuj M3U alebo XSPF súbor pre začatie',
         contentHeading:   'Skupiny kanálov',
+        bulkMetadataRules:'Použiť pravidlá metadát',
+        metadataHealthReport:'Exportovať report kvality',
+        metadataReportExported:'Report kvality metadát exportovaný',
+        bulkMetadataApplied:'Pravidlá metadát upravili {n} kanálov',
         noGroups:         'Žiadne skupiny',
         noGroupsDesc:     'Importuj playlist pre zobrazenie skupín',
         noGroup:          'Bez skupiny',
@@ -1554,6 +1563,20 @@ createApp({
         roadmapBuildDesc:'Prechod na prekompilované šablóny a prísnejšiu CSP politiku.',
         roadmapEngineTitle:'Testovateľný autodetect engine',
         roadmapEngineDesc:'Samostatný modul s fixtures, snapshot testami a benchmarkom veľkých playlistov.',
+        roadmapEpgCoverageTitle:'EPG Coverage Dashboard',
+        roadmapEpgCoverageDesc:'Prehľad kanálov s TVG-ID, TVG URL, dnešným programom a rizikovou krajinou EPG.',
+        roadmapEpgTimelineTitle:'EPG timeline náhľad',
+        roadmapEpgTimelineDesc:'Aktuálny a nasledujúce programy s detekciou časového posunu a porovnaním kandidátov.',
+        roadmapTvgDictionaryTitle:'TVG-ID kanonický slovník',
+        roadmapTvgDictionaryDesc:'Lokálny slovník CZ/SK aliasov, kanonických ID, log a preferovaných EPG URL.',
+        roadmapLogoQualityTitle:'Logo Quality Checker',
+        roadmapLogoQualityDesc:'Kontrola neplatných, malých, nečitateľných alebo duplicitných log.',
+        roadmapLogoPreviewTitle:'Logo background preview',
+        roadmapLogoPreviewDesc:'Náhľad loga na tmavom, svetlom a transparentnom pozadí aj v malej ikone.',
+        roadmapBulkRulesTitle:'Bulk metadata rules',
+        roadmapBulkRulesDesc:'Hromadné pravidlá pre opravu TVG-ID, TVG-Name, Logo URL a TVG URL.',
+        roadmapHealthReportTitle:'Metadata health report',
+        roadmapHealthReportDesc:'Export CSV/JSON reportu kvality metadát, chýbajúcich log a rizikových EPG krajín.',
         theme:            'Téma',
         language:         'Jazyk',
         importMode:       'Spôsob importu',
@@ -1725,6 +1748,10 @@ createApp({
         emptyLibraryTitle:'Playlist is empty',
         emptyLibraryDesc: 'Import an M3U or XSPF file to get started',
         contentHeading:   'Channel Groups',
+        bulkMetadataRules:'Apply metadata rules',
+        metadataHealthReport:'Export health report',
+        metadataReportExported:'Metadata health report exported',
+        bulkMetadataApplied:'Metadata rules updated {n} channels',
         noGroups:         'No groups',
         noGroupsDesc:     'Import a playlist to see groups',
         noGroup:          'No group',
@@ -1760,6 +1787,20 @@ createApp({
         roadmapBuildDesc:'Move to precompiled templates and stricter CSP.',
         roadmapEngineTitle:'Testable autodetect engine',
         roadmapEngineDesc:'Separate module with fixtures, snapshot tests and large-playlist benchmarks.',
+        roadmapEpgCoverageTitle:'EPG Coverage Dashboard',
+        roadmapEpgCoverageDesc:'Overview of channels with TVG-ID, TVG URL, today schedule and risky EPG country.',
+        roadmapEpgTimelineTitle:'EPG timeline preview',
+        roadmapEpgTimelineDesc:'Current and next programmes with time-shift detection and candidate comparison.',
+        roadmapTvgDictionaryTitle:'Canonical TVG-ID dictionary',
+        roadmapTvgDictionaryDesc:'Local CZ/SK alias dictionary with canonical IDs, logos and preferred EPG URLs.',
+        roadmapLogoQualityTitle:'Logo Quality Checker',
+        roadmapLogoQualityDesc:'Detect invalid, tiny, unreadable or duplicated logos.',
+        roadmapLogoPreviewTitle:'Logo background preview',
+        roadmapLogoPreviewDesc:'Preview logos on dark, light and transparent backgrounds plus small table icons.',
+        roadmapBulkRulesTitle:'Bulk metadata rules',
+        roadmapBulkRulesDesc:'Batch rules for fixing TVG-ID, TVG-Name, Logo URL and TVG URL.',
+        roadmapHealthReportTitle:'Metadata health report',
+        roadmapHealthReportDesc:'Export CSV/JSON metadata quality report with missing logos and risky EPG countries.',
         theme:            'Theme',
         language:         'Language',
         importMode:       'Import mode',
@@ -1972,6 +2013,13 @@ createApp({
       { priority: 'TECH', key: 'metadataCache', titleKey: 'roadmapCacheTitle', descKey: 'roadmapCacheDesc' },
       { priority: 'TECH', key: 'buildStep', titleKey: 'roadmapBuildTitle', descKey: 'roadmapBuildDesc' },
       { priority: 'TECH', key: 'testableEngine', titleKey: 'roadmapEngineTitle', descKey: 'roadmapEngineDesc' },
+      { priority: 'EPG', key: 'epgCoverage', titleKey: 'roadmapEpgCoverageTitle', descKey: 'roadmapEpgCoverageDesc' },
+      { priority: 'EPG', key: 'epgTimeline', titleKey: 'roadmapEpgTimelineTitle', descKey: 'roadmapEpgTimelineDesc' },
+      { priority: 'TVG', key: 'tvgDictionary', titleKey: 'roadmapTvgDictionaryTitle', descKey: 'roadmapTvgDictionaryDesc' },
+      { priority: 'LOGO', key: 'logoQuality', titleKey: 'roadmapLogoQualityTitle', descKey: 'roadmapLogoQualityDesc' },
+      { priority: 'LOGO', key: 'logoPreview', titleKey: 'roadmapLogoPreviewTitle', descKey: 'roadmapLogoPreviewDesc' },
+      { priority: 'META', key: 'bulkRules', titleKey: 'roadmapBulkRulesTitle', descKey: 'roadmapBulkRulesDesc' },
+      { priority: 'META', key: 'healthReport', titleKey: 'roadmapHealthReportTitle', descKey: 'roadmapHealthReportDesc' },
     ]
 
     const groupOptions = computed(() =>
@@ -2032,6 +2080,26 @@ createApp({
         if (c.quality && qualities[c.quality] !== undefined) qualities[c.quality]++
       })
       return { total, active, groups, qualities }
+    })
+
+    const metadataHealth = computed(() => {
+      const total = channels.value.length || 1
+      const withTvgId = channels.value.filter(c => !!c.tvg_id).length
+      const withTvgName = channels.value.filter(c => !!c.tvg_name).length
+      const withLogo = channels.value.filter(c => !!c.tvg_logo).length
+      const withTvgUrl = channels.value.filter(c => !!c.tvg_url).length
+      const riskyEpgCountry = channels.value.filter(c => {
+        const idCountry = tvgCountry(c.tvg_id)
+        const urlCountry = (c.tvg_url || '').match(/(?:Slovakia|slovakia|Czech|czech|\b(sk|cz|pl|uk|us)\b)/i)?.[1]?.toLowerCase() || ''
+        return urlCountry && !['sk', 'cz'].includes(urlCountry) && ['sk', 'cz', ''].includes(idCountry)
+      }).length
+      return {
+        tvgIdPct: Math.round(withTvgId / total * 100),
+        tvgNamePct: Math.round(withTvgName / total * 100),
+        logoPct: Math.round(withLogo / total * 100),
+        tvgUrlPct: Math.round(withTvgUrl / total * 100),
+        riskyEpgCountry,
+      }
     })
 
     const groupList = computed(() => {
@@ -2470,6 +2538,57 @@ createApp({
       showToast(`${selected.length ? t('exportSelected') : isFiltered.value ? t('exportFiltered') : t('exported')} (${active.length})`)
     }
 
+    function downloadText(filename, content, type = 'application/json') {
+      const blob = new Blob([content], { type })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = filename; a.click()
+      URL.revokeObjectURL(url)
+    }
+
+    function saveConfirmedMappings() {
+      try { localStorage.setItem(MAPPING_KEY, JSON.stringify(confirmedMappings.value)) } catch {}
+    }
+
+    function exportMetadataHealthReport() {
+      const report = {
+        generatedAt: new Date().toISOString(),
+        totals: { channels: channels.value.length, ...metadataHealth.value },
+        missingLogo: channels.value.filter(c => !c.tvg_logo).map(c => c.name),
+        missingEpg: channels.value.filter(c => !c.tvg_url).map(c => ({ name: c.name, tvg_id: c.tvg_id || '' })),
+        riskyCountry: channels.value.filter(c => c.tvg_url && !/slovakia|czech|\b(sk|cz)\b/i.test(c.tvg_url)).map(c => ({ name: c.name, tvg_id: c.tvg_id || '', tvg_url: c.tvg_url })),
+      }
+      downloadText('metadata-health-report.json', JSON.stringify(report, null, 2))
+      showToast(t('metadataReportExported'))
+    }
+
+    function applyBulkMetadataRules() {
+      if (!channels.value.length) return
+      snapshot('bulkMetadataRules')
+      let changed = 0
+      channels.value.forEach(ch => {
+        const before = JSON.stringify([ch.tvg_id, ch.tvg_name, ch.tvg_logo, ch.tvg_url])
+        ch.tvg_id = cleanTvgId(ch.tvg_id || '')
+        ch.tvg_name = cleanChannelLabel(ch.tvg_name || ch.name || '')
+        if (!isPreferredTvgId(ch.tvg_id)) {
+          const preferred = preferredCandidateHit([
+            ...tvgIdVariants(ch.tvg_id),
+            ...aliasTvgIdVariants(ch),
+            ...nameTvgIdVariants(ch.tvg_name || ch.name),
+          ], [epgChannelIndex.value, epgXmlIndex.value])
+          if (preferred) { ch.tvg_id = preferred.id; ch.tvg_url = ch.tvg_url || preferred.url }
+        }
+        if (!ch.tvg_logo) {
+          const logoId = [...tvgIdVariants(ch.tvg_id), ...nameTvgIdVariants(ch.tvg_name || ch.name)]
+            .map(id => id.toLowerCase()).find(id => logoChannelIndexById.value[id])
+          ch.tvg_logo = (logoId ? logoChannelIndexById.value[logoId] : '') || logoChannelIndex.value[normName(ch.tvg_name || ch.name)] || ''
+        }
+        if (before !== JSON.stringify([ch.tvg_id, ch.tvg_name, ch.tvg_logo, ch.tvg_url])) changed++
+      })
+      persist()
+      showToast(t('bulkMetadataApplied').replace('{n}', changed))
+    }
+
     function xmlEsc(s) {
       return (s || '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -2491,6 +2610,10 @@ createApp({
       try {
         const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) channels.value = JSON.parse(saved)
+      } catch {}
+      try {
+        const savedMappings = localStorage.getItem(MAPPING_KEY)
+        if (savedMappings) confirmedMappings.value = JSON.parse(savedMappings)
       } catch {}
 
       const savedTheme = localStorage.getItem(THEME_KEY) || 'dark'
@@ -2974,10 +3097,17 @@ createApp({
         const chNorm = normName(ch.tvg_name || ch.name) || normName(ch.name)
         let best = null, bestScore = 0
 
+        const mapKey = chNorm || normName(ch.name)
+        const confirmed = confirmedMappings.value[mapKey]
+        if (confirmed) {
+          bestScore = 1
+          best = { ...confirmed, sourceId: 'confirmed' }
+        }
+
         // Fast O(1) lookup against iptv-org/api channel database (exact normName or space-collapsed)
         const apiHit = pickPreferredEntry(apiNormMap.value.get(chNorm))
           || pickPreferredEntry(apiNormMap.value.get(chNorm.replace(/\s+/g, '')))
-        if (apiHit) {
+        if (!best && apiHit) {
           bestScore = 0.95
           best = { tvg_id: apiHit.id, tvg_name: apiHit.name, tvg_logo: apiHit.logo, tvg_url: '', name: apiHit.name }
         }
@@ -3118,9 +3248,12 @@ createApp({
         ch.tvg_name = r.editName || ''
         ch.tvg_logo = r.editLogo || ''
         ch.tvg_url  = r.editTvgUrl || ''
+        const key = normName(ch.name || ch.tvg_name)
+        if (key) confirmedMappings.value[key] = { tvg_id: ch.tvg_id, tvg_name: ch.tvg_name, tvg_logo: ch.tvg_logo, tvg_url: ch.tvg_url, name: ch.tvg_name || ch.name }
         logoErrors.delete(ch.id)
         applied++
       })
+      saveConfirmedMappings()
       persist()
       modal.autoDetect = false
       showToast(t('autoDetectApplied').replace('{n}', applied))
@@ -3166,14 +3299,14 @@ createApp({
       importMode, importUrl, importLoading, importFileRef,
       filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,
       mobFilterOpen, hasActiveFilters, undoStack,
-      stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs, roadmapItems,
+      metadataHealth, confirmedMappings, stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs, roadmapItems,
       selectedRows, selectedRowsCount, allPageSelected,
       t, setTheme, toggleTheme, setLang, setSort, prevPage, nextPage, resetFilters,
       undoLastChange, metadataScore, metadataTooltip,
       toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,
       removeChannel, confirmDelete, clearAll, triggerImport, importFromFile, importFromUrl,
       toggleRowSelect, toggleSelectAll, deleteSelected,
-      exportPlaylist,
+      exportPlaylist, exportMetadataHealthReport, applyBulkMetadataRules,
       epgData, epgLoaded, epgRef, logoErrors,
       triggerEpgImport, importEpgFromFile, clearEpg,
       getCurrentProgram, getNextProgram, getTodayPrograms, formatEpgTime,

@@ -428,17 +428,39 @@
       .hdr-btns .btn { flex: 1 1 calc(50% - .5rem); min-width: 0; padding-left: 10px; padding-right: 10px; }
       header .app-icon { width: 40px; height: 40px; }
       header h1 { font-size: 1.65rem !important; }
-      .modal-overlay { align-items: flex-end; justify-content: center; padding: max(.75rem, env(safe-area-inset-top)) .75rem max(.75rem, env(safe-area-inset-bottom)); }
-      .modal-card { width: 100%; max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1.5rem)); padding: 1rem; border-radius: 20px; }
-      .modal-card.mobile-sheet { border-bottom-left-radius: 0; border-bottom-right-radius: 0; max-height: 88dvh; }
-      .auto-detect-card { width: 100% !important; max-height: 90dvh !important; padding: .9rem !important; }
-      .auto-detect-bar { max-height: 30dvh; overflow-y: auto; align-items: stretch; }
+      .table-shell:not(.auto-detect-table) { max-height: none; overflow-x: visible; }
+      .table-shell:not(.auto-detect-table) table { min-width: 0; border-collapse: separate; border-spacing: 0 .65rem; }
+      .table-shell:not(.auto-detect-table) thead { display: none; }
+      .table-shell:not(.auto-detect-table) tbody tr { display: grid; grid-template-columns: auto 1fr auto; gap: .25rem .7rem; align-items: center; margin: 0 .6rem; padding: .85rem; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-s); cursor: default; }
+      .table-shell:not(.auto-detect-table) tbody tr:hover { background: var(--surface-s); }
+      .table-shell:not(.auto-detect-table) tbody tr.selected { background: var(--primary-l); }
+      .table-shell:not(.auto-detect-table) tbody td { display: block; padding: 0; min-width: 0; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(1) { grid-column: 1; grid-row: 1; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(2),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(5),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(7),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(8),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(9) { display: none; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(3) { grid-column: 3; grid-row: 1 / span 2; justify-self: end; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(4) { grid-column: 2; grid-row: 1; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(6) { grid-column: 2; grid-row: 2; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(10) { grid-column: 1 / span 2; grid-row: 3; text-align: left; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(11) { grid-column: 1 / -1; grid-row: 4; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(11) .flex { justify-content: stretch; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(11) .btn { flex: 1; }
+      .table-shell:not(.auto-detect-table) .empty-state { padding: 42px 18px; }
+      .modal-overlay { align-items: center; padding: max(1rem, env(safe-area-inset-top)) .75rem max(1rem, env(safe-area-inset-bottom)); }
+      .modal-card { width: min(100%, 560px); max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem)); padding: 1rem; border-radius: 22px; }
+      .modal-card.mobile-sheet { border-radius: 22px; max-height: 88dvh; }
+      .auto-detect-card { width: min(100%, 560px) !important; max-height: 88dvh !important; padding: .85rem !important; }
+      .auto-detect-bar { max-height: 24dvh; overflow-y: auto; align-items: stretch; }
+      .auto-detect-card h2 { font-size: 1.12rem; line-height: 1.25; }
+      .auto-detect-table { max-height: 40dvh; }
+      .auto-detect-table table { min-width: 560px; }
       .auto-detect-bar .seg { width: 100%; }
       .auto-detect-stats { flex-wrap: wrap; }
       .auto-detect-stats > .seg { order: 2; flex-basis: 100%; }
       .auto-detect-stat-pills { flex: 1 1 auto; overflow-x: auto; }
-      .auto-detect-table { max-height: 42dvh; }
-      .auto-detect-table table { min-width: 620px; }
       .auto-detect-edit-grid { grid-template-columns: 1fr !important; }
       .auto-detect-footer { gap: .75rem; }
       .auto-detect-footer .ml-auto { margin-left: 0; width: 100%; justify-content: stretch; }
@@ -1792,6 +1814,7 @@ createApp({
     const epgXmlIndex               = ref({})   // id.toLowerCase() → source XML URL
     const logoChannelIndex          = ref({})      // normName → logo URL
     const logoChannelIndexById      = ref({})      // id.toLowerCase() → logo URL
+    const apiChannelMetaById        = ref({})      // id.toLowerCase() → { id, name, logo }
     const apiNormMap                = ref(new Map()) // normName/collapsed → {id, name, logo}
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
@@ -2465,18 +2488,29 @@ createApp({
         if (l.startsWith('#EXTINF:')) {
           extinf = l
         } else if (extinf && l && !l.startsWith('#')) {
-          const nameM = extinf.match(/,(.+)$/)
-          result.push({
-            name:     stripChannelDecorations(nameM ? nameM[1].trim() : ''),
-            tvg_id:   extractAttr(extinf, 'tvg-id'),
-            tvg_name: stripChannelDecorations(extractAttr(extinf, 'tvg-name')),
-            tvg_logo: extractAttr(extinf, 'tvg-logo'),
-            tvg_url:  extractAttr(extinf, 'tvg-url'),
-          })
+          if (!isLikelyStreamUrl(l)) continue
+          const parsed = parseExtinf(extinf)
+          if (!isBadChannelLabel(parsed.name) && !isBadChannelLabel(parsed.tvg_name)) {
+            result.push({
+              name:     cleanChannelLabel(parsed.name),
+              tvg_id:   cleanTvgId(parsed.tvg_id),
+              tvg_name: cleanChannelLabel(parsed.tvg_name),
+              tvg_logo: parsed.tvg_logo,
+              tvg_url:  parsed.tvg_url,
+            })
+          }
           extinf = null
         }
       }
       return result
+    }
+
+    function isLikelyStreamUrl(value) {
+      return /^(?:https?|rtmps?|rtsp|udp|rtp|mms):\/\//i.test(value) || /^(?:plugin|pipe):/i.test(value)
+    }
+
+    function isBadChannelLabel(value) {
+      return /(?:mozilla\/|chrome\/|safari\/|gecko\)|group-title=|http-user-agent)/i.test(value || '')
     }
 
     async function fetchEnrichmentIndexes() {
@@ -2546,7 +2580,7 @@ createApp({
             epgNameIndex.value = { ...epgNameIndex.value, ...byName }
           } else if (src.type === 'logo') {
             // iptv-org/api channels.json + logos.json. Keep SK/CZ IDs first to avoid global false positives.
-            const byName = {}, byId = {}, nMap = new Map()
+            const byName = {}, byId = {}, byMetaId = {}, nMap = new Map()
             const byNameCountry = {}
             const putLogoName = (key, id, logo) => {
               if (!key || !logo) return
@@ -2583,6 +2617,7 @@ createApp({
               const idLow = (ch.id || '').toLowerCase()
               const logo = ch.logo || logoById[idLow] || ''
               if (ch.id && logo) byId[idLow] = logo
+              if (ch.id) byMetaId[idLow] = { id: ch.id, name: ch.name || '', logo }
               const entry = { id: ch.id || '', name: ch.name, logo }
               const key = normName(ch.name)
               if (key) {
@@ -2599,6 +2634,7 @@ createApp({
             }
             logoChannelIndex.value   = byName
             logoChannelIndexById.value = byId
+            apiChannelMetaById.value = byMetaId
             apiNormMap.value         = nMap
           }
         } catch {}
@@ -2622,6 +2658,7 @@ createApp({
       epgXmlIndex.value          = {}
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
+      apiChannelMetaById.value     = {}
       apiNormMap.value           = new Map()
       enrichmentLoaded.value     = false
       try {
@@ -2682,9 +2719,21 @@ createApp({
     function stripChannelDecorations(s) {
       return (s || '')
         .replace(/^\s*(?:\[[^\]]*\]|\([^)]*\))\s*/g, '')
-        .replace(/\s*(?:\[[^\]]*not\s*24\s*\/?\s*7[^\]]*\]|\([^)]*not\s*24\s*\/?\s*7[^)]*\))\s*/ig, ' ')
+        .replace(/\s*(?:\[[^\]]*(?:not\s*24\s*\/?\s*7|geo\s*-?\s*blocked|backup|offline)[^\]]*\]|\([^)]*(?:not\s*24\s*\/?\s*7|geo\s*-?\s*blocked|backup|offline)[^)]*\))\s*/ig, ' ')
         .replace(/\s*(?:\[[^\]]*(?:\d{3,4}p|fhd|uhd|hd|sd|4k)[^\]]*\]|\([^)]*(?:\d{3,4}p|fhd|uhd|hd|sd|4k)[^)]*\))\s*/ig, ' ')
         .replace(/^\s*(?:sk|cz|czech|slovak(?:ia)?|cesk[eé]?|slovensk[eé]?)\s*[:|\-–—]+\s*/ig, '')
+        .replace(/[©®™℠ⓈⓇⓒ]/g, '')
+        .replace(/[\u24B6-\u24FF]/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+    }
+
+    function cleanChannelLabel(s) {
+      return stripChannelDecorations(s)
+        .replace(/\s*(?:\[[^\]]*(?:geo\s*-?\s*blocked|not\s*24\s*\/?\s*7|backup|offline)[^\]]*\]|\([^)]*(?:geo\s*-?\s*blocked|not\s*24\s*\/?\s*7|backup|offline)[^)]*\))\s*/ig, ' ')
+        .replace(/[©®™℠ⓈⓇⓒ]/g, '')
+        .replace(/[\u24B6-\u24FF]/g, '')
+        .replace(/\s{2,}/g, ' ')
         .trim()
     }
 
@@ -2826,16 +2875,21 @@ createApp({
         }
 
         // Fuzzy matching against M3U sources (may override if score > 0.95)
+        const sourceRank = s => ({ 'iptv-sk': 4, 'iptv-cz': 4, custom: 3, freetv: 2, 'iptv-all': 1 }[s.sourceId] || 1)
+        const candidateRank = s => sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
         srcNorm.forEach(s => {
+          if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
           const sc = Math.max(
             strSimilarity(chNorm, s.nName),
             s.nId ? strSimilarity(chNorm, s.nId) : 0
           )
-          if (sc > bestScore) { bestScore = sc; best = s }
+          if (sc > bestScore || (Math.abs(sc - bestScore) < 0.001 && best && candidateRank(s) > candidateRank(best))) {
+            bestScore = sc; best = s
+          }
         })
         const matched = best && bestScore >= modeCfg.min && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
         let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
-        let editName   = matched ? (best.tvg_name  || best.name) : (ch.tvg_name || '')
+        let editName   = cleanChannelLabel(matched ? (best.tvg_name  || best.name) : (ch.tvg_name || ''))
         let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
 
         // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
@@ -2887,7 +2941,10 @@ createApp({
         }
         const epgFallbackMatched = !!editTvgUrl && !matched
         const resultScore = matched ? bestScore : (epgFallbackMatched ? modeCfg.epg : 0)
-        if (epgFallbackMatched && !editName) editName = ch.tvg_name || ch.name
+        if (epgFallbackMatched && !editName) editName = cleanChannelLabel(ch.tvg_name || ch.name)
+
+        const canonicalMeta = apiChannelMetaById.value[(editId || '').toLowerCase()]
+        if (canonicalMeta?.name) editName = cleanChannelLabel(canonicalMeta.name) || editName
 
         // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
         const xmlConfirmed = !!ch.tvg_id && !!epgXmlIndex.value[ch.tvg_id.toLowerCase()] && !ch.tvg_url
@@ -2896,7 +2953,16 @@ createApp({
         // 1) matched editId, 2) editId w/o @quality, 3) original ch.tvg_id w/o @quality, 4) name, 5) M3U logo
         const fullIdLow  = cleanTvgId(editId || ch.tvg_id || '').toLowerCase()
         const cleanIdLow = cleanTvgId(fullIdLow).toLowerCase()
-        let editLogo = logoChannelIndexById.value[fullIdLow]
+        const logoCandidateIds = [
+          ...tvgIdVariants(editId),
+          ...tvgIdVariants(ch.tvg_id),
+          ...aliasTvgIdVariants(ch),
+          ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
+        ].map(id => id.toLowerCase())
+        const logoFromCandidateId = logoCandidateIds.find(id => logoChannelIndexById.value[id])
+        let editLogo = (canonicalMeta?.logo || '')
+          || (logoFromCandidateId ? logoChannelIndexById.value[logoFromCandidateId] : '')
+          || logoChannelIndexById.value[fullIdLow]
           || logoChannelIndexById.value[cleanIdLow]
           || logoChannelIndexById.value[origTvgIdLow]
           || logoChannelIndex.value[normName(editName || ch.name)]
@@ -2906,7 +2972,7 @@ createApp({
         return {
           ch,
           suggestedId:     matched ? (best.tvg_id   || '') : (epgFallbackMatched ? editId : ''),
-          suggestedName:   matched ? (best.tvg_name  || best.name) : (epgFallbackMatched ? editName : ''),
+          suggestedName:   matched ? cleanChannelLabel(best.tvg_name  || best.name) : (epgFallbackMatched ? editName : ''),
           suggestedLogo:   editLogo,
           suggestedTvgUrl: editTvgUrl,
           score:         resultScore,
@@ -3006,7 +3072,7 @@ createApp({
       IPTV_SOURCES, ENRICHMENT_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter, autoDetectMode,
       autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
-      epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
+      epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, apiChannelMetaById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
       fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, toggleExpand,

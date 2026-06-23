@@ -391,6 +391,11 @@
     }
     .stat-card .num { font-size: 2rem; font-weight: 800; }
     .stat-card .lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .roadmap-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:.75rem; }
+    .roadmap-card { background:var(--surface-s); border:1px solid var(--border); border-radius:var(--radius-md); padding:1rem; }
+    .roadmap-card h3 { font-size:1rem; font-weight:700; margin:.35rem 0; }
+    .roadmap-card p { color:var(--text3); font-size:.875rem; }
+    .roadmap-priority { display:inline-flex; align-items:center; border-radius:999px; padding:2px 8px; font-size:11px; font-weight:800; letter-spacing:.06em; background:var(--primary-l); color:var(--primary); }
 
     /* ── Vue transitions ── */
     .fade-enter-active, .fade-leave-active { transition: opacity .2s ease, margin-bottom .2s ease; }
@@ -934,6 +939,20 @@
           </div>
         </section>
 
+        <!-- ══ ROADMAP TAB ══ -->
+        <section v-if="activeTab === 'roadmap'" class="glass rounded-[24px] p-4 md:p-5" aria-label="Product roadmap">
+          <div class="sec-label">{{ t('tabRoadmap') }}</div>
+          <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-2">{{ t('roadmapHeading') }}</h2>
+          <p class="text-sm mb-4" style="color:var(--text3);max-width:760px">{{ t('roadmapIntro') }}</p>
+          <div class="roadmap-grid">
+            <article v-for="item in roadmapItems" :key="item.key" class="roadmap-card">
+              <span class="roadmap-priority">{{ item.priority }}</span>
+              <h3>{{ t(item.titleKey) }}</h3>
+              <p>{{ t(item.descKey) }}</p>
+            </article>
+          </div>
+        </section>
+
       </main>
     </div><!-- /grid -->
 
@@ -1454,6 +1473,8 @@ createApp({
         tabContentDesc:   'Skupiny a štatistiky',
         tabDesign:        'Dizajn',
         tabDesignDesc:    'Vzhľad aplikácie',
+        tabRoadmap:       'Plán',
+        tabRoadmapDesc:   'Nové funkcie',
         filterSet:        'Filter',
         search:           'Hľadať',
         searchPlaceholder:'Názov kanálu alebo URL…',
@@ -1505,6 +1526,34 @@ createApp({
         filterByGroup:    'Filtrovať skupinu',
         groupsOverview:   'Prehľad skupín',
         designHeading:    'Nastavenia dizajnu',
+        roadmapHeading:   'Plán nových funkcií',
+        roadmapIntro:     'Prehľad navrhovaných funkcií a technických vylepšení priamo v aplikácii.',
+        roadmapMappingTitle:'Inteligentné mapovania kanálov',
+        roadmapMappingDesc:'Zapamätanie ručne potvrdených väzieb medzi názvom z playlistu a TVG-ID.',
+        roadmapPreviewTitle:'Náhľad zmien autodetekcie',
+        roadmapPreviewDesc:'Diff pôvodné vs. navrhnuté s možnosťou aplikovať iba vybrané polia.',
+        roadmapEpgCountryTitle:'Kontrola EPG krajiny',
+        roadmapEpgCountryDesc:'Preferencia SK/CZ EPG a varovanie pri .pl/.uk/.us fallbackoch.',
+        roadmapImportTitle:'Import wizard',
+        roadmapImportDesc:'Krokový import s náhľadom, duplicitami, čistením názvov a autodetekciou.',
+        roadmapStreamTitle:'Validátor streamov',
+        roadmapStreamDesc:'Kontrola URL, timeoutov, CORS stavu a export reportu nefunkčných streamov.',
+        roadmapProfilesTitle:'Profily playlistov',
+        roadmapProfilesDesc:'Samostatné knižnice pre TV, mobil, deti, šport alebo testovanie.',
+        roadmapExportTitle:'Export presety',
+        roadmapExportDesc:'Predvoľby pre VLC, Kodi, TiviMate, IPTV Smarters, Enigma2 a vlastné formáty.',
+        roadmapPanelTitle:'Detail kanála v paneli',
+        roadmapPanelDesc:'Bočný panel na desktope a spodný sheet na mobile namiesto veľkých modalov.',
+        roadmapMobileTitle:'Mobilný action bar',
+        roadmapMobileDesc:'Spodná lišta pre hromadné akcie nad označenými kanálmi.',
+        roadmapAndroidTitle:'Android offline-first',
+        roadmapAndroidDesc:'Capacitor Storage, zálohy, share intent a Android share sheet export.',
+        roadmapCacheTitle:'Cache metadát s TTL',
+        roadmapCacheDesc:'Rýchlejšia autodetekcia vďaka cache EPG, logo a M3U indexov.',
+        roadmapBuildTitle:'Build krok bez unsafe-eval',
+        roadmapBuildDesc:'Prechod na prekompilované šablóny a prísnejšiu CSP politiku.',
+        roadmapEngineTitle:'Testovateľný autodetect engine',
+        roadmapEngineDesc:'Samostatný modul s fixtures, snapshot testami a benchmarkom veľkých playlistov.',
         theme:            'Téma',
         language:         'Jazyk',
         importMode:       'Spôsob importu',
@@ -1630,6 +1679,8 @@ createApp({
         tabContentDesc:   'Groups & statistics',
         tabDesign:        'Design',
         tabDesignDesc:    'App appearance',
+        tabRoadmap:       'Roadmap',
+        tabRoadmapDesc:   'New features',
         filterSet:        'Filters',
         search:           'Search',
         searchPlaceholder:'Channel name or URL…',
@@ -1681,6 +1732,34 @@ createApp({
         filterByGroup:    'Filter by group',
         groupsOverview:   'Groups overview',
         designHeading:    'Design Settings',
+        roadmapHeading:   'New feature roadmap',
+        roadmapIntro:     'Overview of proposed product and technical improvements directly inside the app.',
+        roadmapMappingTitle:'Smart channel mappings',
+        roadmapMappingDesc:'Remember manually confirmed links between playlist names and canonical TVG IDs.',
+        roadmapPreviewTitle:'Autodetect change preview',
+        roadmapPreviewDesc:'Original vs suggested diff with per-field apply controls.',
+        roadmapEpgCountryTitle:'EPG country guard',
+        roadmapEpgCountryDesc:'Prefer SK/CZ EPG and warn on .pl/.uk/.us fallbacks.',
+        roadmapImportTitle:'Import wizard',
+        roadmapImportDesc:'Step-by-step import with preview, duplicates, name cleanup and autodetect.',
+        roadmapStreamTitle:'Stream validator',
+        roadmapStreamDesc:'Check URL availability, timeouts, CORS state and export broken stream reports.',
+        roadmapProfilesTitle:'Playlist profiles',
+        roadmapProfilesDesc:'Separate libraries for TV, mobile, kids, sport or testing.',
+        roadmapExportTitle:'Export presets',
+        roadmapExportDesc:'Presets for VLC, Kodi, TiviMate, IPTV Smarters, Enigma2 and custom formats.',
+        roadmapPanelTitle:'Channel detail panel',
+        roadmapPanelDesc:'Desktop side panel and mobile bottom sheet instead of large modals.',
+        roadmapMobileTitle:'Mobile action bar',
+        roadmapMobileDesc:'Bottom bar for bulk actions on selected channels.',
+        roadmapAndroidTitle:'Android offline-first',
+        roadmapAndroidDesc:'Capacitor Storage, backups, share intent and Android share sheet export.',
+        roadmapCacheTitle:'Metadata cache with TTL',
+        roadmapCacheDesc:'Faster autodetect using cached EPG, logo and M3U indexes.',
+        roadmapBuildTitle:'Build step without unsafe-eval',
+        roadmapBuildDesc:'Move to precompiled templates and stricter CSP.',
+        roadmapEngineTitle:'Testable autodetect engine',
+        roadmapEngineDesc:'Separate module with fixtures, snapshot tests and large-playlist benchmarks.',
         theme:            'Theme',
         language:         'Language',
         importMode:       'Import mode',
@@ -1839,6 +1918,7 @@ createApp({
     const ICONS = {
       tv:        '<rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/>',
       barChart:  '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
+      sparkles:  '<path d="M12 3l1.6 4.8L18 10l-4.4 2.2L12 17l-1.6-4.8L6 10l4.4-2.2L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/><path d="M5 14l.8 2.2L8 17l-2.2.8L5 20l-.8-2.2L2 17l2.2-.8L5 14z"/>',
       sliders:   '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
       globe:     '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
       sun:       '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
@@ -1874,7 +1954,25 @@ createApp({
       { id: 'library', svgKey: 'tv',       labelKey: 'tabLibrary', descKey: 'tabLibraryDesc' },
       { id: 'content', svgKey: 'barChart', labelKey: 'tabContent', descKey: 'tabContentDesc' },
       { id: 'design',  svgKey: 'sliders',  labelKey: 'tabDesign',  descKey: 'tabDesignDesc'  },
+      { id: 'roadmap', svgKey: 'sparkles', labelKey: 'tabRoadmap', descKey: 'tabRoadmapDesc' },
     ])
+
+
+    const roadmapItems = [
+      { priority: 'P0', key: 'mapping', titleKey: 'roadmapMappingTitle', descKey: 'roadmapMappingDesc' },
+      { priority: 'P0', key: 'preview', titleKey: 'roadmapPreviewTitle', descKey: 'roadmapPreviewDesc' },
+      { priority: 'P0', key: 'epgCountry', titleKey: 'roadmapEpgCountryTitle', descKey: 'roadmapEpgCountryDesc' },
+      { priority: 'P1', key: 'importWizard', titleKey: 'roadmapImportTitle', descKey: 'roadmapImportDesc' },
+      { priority: 'P1', key: 'streamValidator', titleKey: 'roadmapStreamTitle', descKey: 'roadmapStreamDesc' },
+      { priority: 'P1', key: 'profiles', titleKey: 'roadmapProfilesTitle', descKey: 'roadmapProfilesDesc' },
+      { priority: 'P1', key: 'exportPresets', titleKey: 'roadmapExportTitle', descKey: 'roadmapExportDesc' },
+      { priority: 'P2', key: 'channelPanel', titleKey: 'roadmapPanelTitle', descKey: 'roadmapPanelDesc' },
+      { priority: 'P2', key: 'mobileActions', titleKey: 'roadmapMobileTitle', descKey: 'roadmapMobileDesc' },
+      { priority: 'P2', key: 'androidOffline', titleKey: 'roadmapAndroidTitle', descKey: 'roadmapAndroidDesc' },
+      { priority: 'TECH', key: 'metadataCache', titleKey: 'roadmapCacheTitle', descKey: 'roadmapCacheDesc' },
+      { priority: 'TECH', key: 'buildStep', titleKey: 'roadmapBuildTitle', descKey: 'roadmapBuildDesc' },
+      { priority: 'TECH', key: 'testableEngine', titleKey: 'roadmapEngineTitle', descKey: 'roadmapEngineDesc' },
+    ]
 
     const groupOptions = computed(() =>
       [...new Set(channels.value.map(c => c.group_title).filter(Boolean))].sort()
@@ -3068,7 +3166,7 @@ createApp({
       importMode, importUrl, importLoading, importFileRef,
       filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,
       mobFilterOpen, hasActiveFilters, undoStack,
-      stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs,
+      stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs, roadmapItems,
       selectedRows, selectedRowsCount, allPageSelected,
       t, setTheme, toggleTheme, setLang, setSort, prevPage, nextPage, resetFilters,
       undoLastChange, metadataScore, metadataTooltip,

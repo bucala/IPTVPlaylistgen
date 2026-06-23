@@ -85,6 +85,15 @@ for (const [left, right] of [
   else fail(`${right} differs from ${left}; run npm run sync:www`);
 }
 
+for (const rel of ['_headers', 'www/_headers']) {
+  const headers = read(rel);
+  if (/script-src[^\n]*'unsafe-eval'[^\n]*https:\/\/unpkg\.com/.test(headers)) {
+    ok(`${rel} allows Vue in-browser template compilation`);
+  } else {
+    fail(`${rel} CSP must allow unsafe-eval while using the browser Vue compiler from unpkg`);
+  }
+}
+
 const capacitor = JSON.parse(read('capacitor.config.json'));
 if (capacitor.appId === 'com.bucala.iptvplaylistgen' && capacitor.appName === 'IPTV Playlist Generator') {
   ok('Capacitor app identity is consistent');

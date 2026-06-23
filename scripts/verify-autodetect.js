@@ -79,6 +79,8 @@ const dirtyNames = [
   ['SK: Markiza HD', 'Markiza HD'],
   ['Slovenské - JOJ Svet [Backup]', 'JOJ Svet'],
   ['Prima LOVE [Geo-blocked]', 'Prima LOVE'],
+  ['Prima MAX ©', 'Prima MAX'],
+  ['TV Nova Ⓢ', 'TV Nova'],
 ];
 
 for (const [input, expected] of dirtyNames) {

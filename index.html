@@ -1814,6 +1814,7 @@ createApp({
     const epgXmlIndex               = ref({})   // id.toLowerCase() → source XML URL
     const logoChannelIndex          = ref({})      // normName → logo URL
     const logoChannelIndexById      = ref({})      // id.toLowerCase() → logo URL
+    const apiChannelMetaById        = ref({})      // id.toLowerCase() → { id, name, logo }
     const apiNormMap                = ref(new Map()) // normName/collapsed → {id, name, logo}
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
@@ -2487,18 +2488,29 @@ createApp({
         if (l.startsWith('#EXTINF:')) {
           extinf = l
         } else if (extinf && l && !l.startsWith('#')) {
-          const nameM = extinf.match(/,(.+)$/)
-          result.push({
-            name:     stripChannelDecorations(nameM ? nameM[1].trim() : ''),
-            tvg_id:   extractAttr(extinf, 'tvg-id'),
-            tvg_name: stripChannelDecorations(extractAttr(extinf, 'tvg-name')),
-            tvg_logo: extractAttr(extinf, 'tvg-logo'),
-            tvg_url:  extractAttr(extinf, 'tvg-url'),
-          })
+          if (!isLikelyStreamUrl(l)) continue
+          const parsed = parseExtinf(extinf)
+          if (!isBadChannelLabel(parsed.name) && !isBadChannelLabel(parsed.tvg_name)) {
+            result.push({
+              name:     cleanChannelLabel(parsed.name),
+              tvg_id:   cleanTvgId(parsed.tvg_id),
+              tvg_name: cleanChannelLabel(parsed.tvg_name),
+              tvg_logo: parsed.tvg_logo,
+              tvg_url:  parsed.tvg_url,
+            })
+          }
           extinf = null
         }
       }
       return result
+    }
+
+    function isLikelyStreamUrl(value) {
+      return /^(?:https?|rtmps?|rtsp|udp|rtp|mms):\/\//i.test(value) || /^(?:plugin|pipe):/i.test(value)
+    }
+
+    function isBadChannelLabel(value) {
+      return /(?:mozilla\/|chrome\/|safari\/|gecko\)|group-title=|http-user-agent)/i.test(value || '')
     }
 
     async function fetchEnrichmentIndexes() {
@@ -2568,7 +2580,7 @@ createApp({
             epgNameIndex.value = { ...epgNameIndex.value, ...byName }
           } else if (src.type === 'logo') {
             // iptv-org/api channels.json + logos.json. Keep SK/CZ IDs first to avoid global false positives.
-            const byName = {}, byId = {}, nMap = new Map()
+            const byName = {}, byId = {}, byMetaId = {}, nMap = new Map()
             const byNameCountry = {}
             const putLogoName = (key, id, logo) => {
               if (!key || !logo) return
@@ -2605,6 +2617,7 @@ createApp({
               const idLow = (ch.id || '').toLowerCase()
               const logo = ch.logo || logoById[idLow] || ''
               if (ch.id && logo) byId[idLow] = logo
+              if (ch.id) byMetaId[idLow] = { id: ch.id, name: ch.name || '', logo }
               const entry = { id: ch.id || '', name: ch.name, logo }
               const key = normName(ch.name)
               if (key) {
@@ -2621,6 +2634,7 @@ createApp({
             }
             logoChannelIndex.value   = byName
             logoChannelIndexById.value = byId
+            apiChannelMetaById.value = byMetaId
             apiNormMap.value         = nMap
           }
         } catch {}
@@ -2644,6 +2658,7 @@ createApp({
       epgXmlIndex.value          = {}
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
+      apiChannelMetaById.value     = {}
       apiNormMap.value           = new Map()
       enrichmentLoaded.value     = false
       try {
@@ -2707,6 +2722,8 @@ createApp({
         .replace(/\s*(?:\[[^\]]*(?:not\s*24\s*\/?\s*7|geo\s*-?\s*blocked|backup|offline)[^\]]*\]|\([^)]*(?:not\s*24\s*\/?\s*7|geo\s*-?\s*blocked|backup|offline)[^)]*\))\s*/ig, ' ')
         .replace(/\s*(?:\[[^\]]*(?:\d{3,4}p|fhd|uhd|hd|sd|4k)[^\]]*\]|\([^)]*(?:\d{3,4}p|fhd|uhd|hd|sd|4k)[^)]*\))\s*/ig, ' ')
         .replace(/^\s*(?:sk|cz|czech|slovak(?:ia)?|cesk[eé]?|slovensk[eé]?)\s*[:|\-–—]+\s*/ig, '')
+        .replace(/[©®™℠ⓈⓇⓒ]/g, '')
+        .replace(/[\u24B6-\u24FF]/g, '')
         .replace(/\s{2,}/g, ' ')
         .trim()
     }
@@ -2714,6 +2731,8 @@ createApp({
     function cleanChannelLabel(s) {
       return stripChannelDecorations(s)
         .replace(/\s*(?:\[[^\]]*(?:geo\s*-?\s*blocked|not\s*24\s*\/?\s*7|backup|offline)[^\]]*\]|\([^)]*(?:geo\s*-?\s*blocked|not\s*24\s*\/?\s*7|backup|offline)[^)]*\))\s*/ig, ' ')
+        .replace(/[©®™℠ⓈⓇⓒ]/g, '')
+        .replace(/[\u24B6-\u24FF]/g, '')
         .replace(/\s{2,}/g, ' ')
         .trim()
     }
@@ -2856,12 +2875,17 @@ createApp({
         }
 
         // Fuzzy matching against M3U sources (may override if score > 0.95)
+        const sourceRank = s => ({ 'iptv-sk': 4, 'iptv-cz': 4, custom: 3, freetv: 2, 'iptv-all': 1 }[s.sourceId] || 1)
+        const candidateRank = s => sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
         srcNorm.forEach(s => {
+          if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
           const sc = Math.max(
             strSimilarity(chNorm, s.nName),
             s.nId ? strSimilarity(chNorm, s.nId) : 0
           )
-          if (sc > bestScore) { bestScore = sc; best = s }
+          if (sc > bestScore || (Math.abs(sc - bestScore) < 0.001 && best && candidateRank(s) > candidateRank(best))) {
+            bestScore = sc; best = s
+          }
         })
         const matched = best && bestScore >= modeCfg.min && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
         let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
@@ -2919,6 +2943,9 @@ createApp({
         const resultScore = matched ? bestScore : (epgFallbackMatched ? modeCfg.epg : 0)
         if (epgFallbackMatched && !editName) editName = cleanChannelLabel(ch.tvg_name || ch.name)
 
+        const canonicalMeta = apiChannelMetaById.value[(editId || '').toLowerCase()]
+        if (canonicalMeta?.name) editName = cleanChannelLabel(canonicalMeta.name) || editName
+
         // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
         const xmlConfirmed = !!ch.tvg_id && !!epgXmlIndex.value[ch.tvg_id.toLowerCase()] && !ch.tvg_url
 
@@ -2926,7 +2953,16 @@ createApp({
         // 1) matched editId, 2) editId w/o @quality, 3) original ch.tvg_id w/o @quality, 4) name, 5) M3U logo
         const fullIdLow  = cleanTvgId(editId || ch.tvg_id || '').toLowerCase()
         const cleanIdLow = cleanTvgId(fullIdLow).toLowerCase()
-        let editLogo = logoChannelIndexById.value[fullIdLow]
+        const logoCandidateIds = [
+          ...tvgIdVariants(editId),
+          ...tvgIdVariants(ch.tvg_id),
+          ...aliasTvgIdVariants(ch),
+          ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
+        ].map(id => id.toLowerCase())
+        const logoFromCandidateId = logoCandidateIds.find(id => logoChannelIndexById.value[id])
+        let editLogo = (canonicalMeta?.logo || '')
+          || (logoFromCandidateId ? logoChannelIndexById.value[logoFromCandidateId] : '')
+          || logoChannelIndexById.value[fullIdLow]
           || logoChannelIndexById.value[cleanIdLow]
           || logoChannelIndexById.value[origTvgIdLow]
           || logoChannelIndex.value[normName(editName || ch.name)]
@@ -3036,7 +3072,7 @@ createApp({
       IPTV_SOURCES, ENRICHMENT_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter, autoDetectMode,
       autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
-      epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
+      epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, apiChannelMetaById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
       fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, toggleExpand,

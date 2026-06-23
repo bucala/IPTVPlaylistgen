@@ -428,17 +428,39 @@
       .hdr-btns .btn { flex: 1 1 calc(50% - .5rem); min-width: 0; padding-left: 10px; padding-right: 10px; }
       header .app-icon { width: 40px; height: 40px; }
       header h1 { font-size: 1.65rem !important; }
-      .modal-overlay { align-items: flex-end; justify-content: center; padding: max(.75rem, env(safe-area-inset-top)) .75rem max(.75rem, env(safe-area-inset-bottom)); }
-      .modal-card { width: 100%; max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1.5rem)); padding: 1rem; border-radius: 20px; }
-      .modal-card.mobile-sheet { border-bottom-left-radius: 0; border-bottom-right-radius: 0; max-height: 88dvh; }
-      .auto-detect-card { width: 100% !important; max-height: 90dvh !important; padding: .9rem !important; }
-      .auto-detect-bar { max-height: 30dvh; overflow-y: auto; align-items: stretch; }
+      .table-shell:not(.auto-detect-table) { max-height: none; overflow-x: visible; }
+      .table-shell:not(.auto-detect-table) table { min-width: 0; border-collapse: separate; border-spacing: 0 .65rem; }
+      .table-shell:not(.auto-detect-table) thead { display: none; }
+      .table-shell:not(.auto-detect-table) tbody tr { display: grid; grid-template-columns: auto 1fr auto; gap: .25rem .7rem; align-items: center; margin: 0 .6rem; padding: .85rem; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-s); cursor: default; }
+      .table-shell:not(.auto-detect-table) tbody tr:hover { background: var(--surface-s); }
+      .table-shell:not(.auto-detect-table) tbody tr.selected { background: var(--primary-l); }
+      .table-shell:not(.auto-detect-table) tbody td { display: block; padding: 0; min-width: 0; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(1) { grid-column: 1; grid-row: 1; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(2),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(5),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(7),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(8),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(9) { display: none; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(3) { grid-column: 3; grid-row: 1 / span 2; justify-self: end; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(4) { grid-column: 2; grid-row: 1; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(6) { grid-column: 2; grid-row: 2; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(10) { grid-column: 1 / span 2; grid-row: 3; text-align: left; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(11) { grid-column: 1 / -1; grid-row: 4; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(11) .flex { justify-content: stretch; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(11) .btn { flex: 1; }
+      .table-shell:not(.auto-detect-table) .empty-state { padding: 42px 18px; }
+      .modal-overlay { align-items: center; padding: max(1rem, env(safe-area-inset-top)) .75rem max(1rem, env(safe-area-inset-bottom)); }
+      .modal-card { width: min(100%, 560px); max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem)); padding: 1rem; border-radius: 22px; }
+      .modal-card.mobile-sheet { border-radius: 22px; max-height: 88dvh; }
+      .auto-detect-card { width: min(100%, 560px) !important; max-height: 88dvh !important; padding: .85rem !important; }
+      .auto-detect-bar { max-height: 24dvh; overflow-y: auto; align-items: stretch; }
+      .auto-detect-card h2 { font-size: 1.12rem; line-height: 1.25; }
+      .auto-detect-table { max-height: 40dvh; }
+      .auto-detect-table table { min-width: 560px; }
       .auto-detect-bar .seg { width: 100%; }
       .auto-detect-stats { flex-wrap: wrap; }
       .auto-detect-stats > .seg { order: 2; flex-basis: 100%; }
       .auto-detect-stat-pills { flex: 1 1 auto; overflow-x: auto; }
-      .auto-detect-table { max-height: 42dvh; }
-      .auto-detect-table table { min-width: 620px; }
       .auto-detect-edit-grid { grid-template-columns: 1fr !important; }
       .auto-detect-footer { gap: .75rem; }
       .auto-detect-footer .ml-auto { margin-left: 0; width: 100%; justify-content: stretch; }
@@ -2682,9 +2704,17 @@ createApp({
     function stripChannelDecorations(s) {
       return (s || '')
         .replace(/^\s*(?:\[[^\]]*\]|\([^)]*\))\s*/g, '')
-        .replace(/\s*(?:\[[^\]]*not\s*24\s*\/?\s*7[^\]]*\]|\([^)]*not\s*24\s*\/?\s*7[^)]*\))\s*/ig, ' ')
+        .replace(/\s*(?:\[[^\]]*(?:not\s*24\s*\/?\s*7|geo\s*-?\s*blocked|backup|offline)[^\]]*\]|\([^)]*(?:not\s*24\s*\/?\s*7|geo\s*-?\s*blocked|backup|offline)[^)]*\))\s*/ig, ' ')
         .replace(/\s*(?:\[[^\]]*(?:\d{3,4}p|fhd|uhd|hd|sd|4k)[^\]]*\]|\([^)]*(?:\d{3,4}p|fhd|uhd|hd|sd|4k)[^)]*\))\s*/ig, ' ')
         .replace(/^\s*(?:sk|cz|czech|slovak(?:ia)?|cesk[eé]?|slovensk[eé]?)\s*[:|\-–—]+\s*/ig, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+    }
+
+    function cleanChannelLabel(s) {
+      return stripChannelDecorations(s)
+        .replace(/\s*(?:\[[^\]]*(?:geo\s*-?\s*blocked|not\s*24\s*\/?\s*7|backup|offline)[^\]]*\]|\([^)]*(?:geo\s*-?\s*blocked|not\s*24\s*\/?\s*7|backup|offline)[^)]*\))\s*/ig, ' ')
+        .replace(/\s{2,}/g, ' ')
         .trim()
     }
 
@@ -2835,7 +2865,7 @@ createApp({
         })
         const matched = best && bestScore >= modeCfg.min && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
         let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
-        let editName   = matched ? (best.tvg_name  || best.name) : (ch.tvg_name || '')
+        let editName   = cleanChannelLabel(matched ? (best.tvg_name  || best.name) : (ch.tvg_name || ''))
         let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
 
         // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
@@ -2887,7 +2917,7 @@ createApp({
         }
         const epgFallbackMatched = !!editTvgUrl && !matched
         const resultScore = matched ? bestScore : (epgFallbackMatched ? modeCfg.epg : 0)
-        if (epgFallbackMatched && !editName) editName = ch.tvg_name || ch.name
+        if (epgFallbackMatched && !editName) editName = cleanChannelLabel(ch.tvg_name || ch.name)
 
         // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
         const xmlConfirmed = !!ch.tvg_id && !!epgXmlIndex.value[ch.tvg_id.toLowerCase()] && !ch.tvg_url
@@ -2906,7 +2936,7 @@ createApp({
         return {
           ch,
           suggestedId:     matched ? (best.tvg_id   || '') : (epgFallbackMatched ? editId : ''),
-          suggestedName:   matched ? (best.tvg_name  || best.name) : (epgFallbackMatched ? editName : ''),
+          suggestedName:   matched ? cleanChannelLabel(best.tvg_name  || best.name) : (epgFallbackMatched ? editName : ''),
           suggestedLogo:   editLogo,
           suggestedTvgUrl: editTvgUrl,
           score:         resultScore,

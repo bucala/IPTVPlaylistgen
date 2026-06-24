@@ -260,10 +260,11 @@
     .table-shell {
       border-radius: var(--radius-md); border: 1px solid var(--border);
       background: var(--surface); box-shadow: var(--shadow-sm);
-      overflow-x: scroll; overflow-y: auto; max-height: 62vh;
+      overflow-x: auto; overflow-y: auto; max-height: min(62vh, calc(100dvh - 360px));
+      max-width: 100%; overscroll-behavior: contain;
       backdrop-filter: blur(20px);
     }
-    table { width: 100%; border-collapse: collapse; min-width: 860px; }
+    table { width: 100%; border-collapse: collapse; min-width: 820px; }
     thead th {
       position: sticky; top: 0; z-index: 5;
       background: var(--surface-s); color: var(--text3);
@@ -284,7 +285,7 @@
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--fill2); }
     tbody tr.selected { background: var(--primary-l); }
-    td { padding: 9px 12px; font-size: 13px; vertical-align: middle; user-select: text; -webkit-user-select: text; }
+    td { padding: 9px 12px; font-size: 13px; vertical-align: middle; user-select: none; -webkit-user-select: none; }
     td.muted { color: var(--text3); }
 
     /* ── Design row ── */
@@ -345,7 +346,7 @@
     /* ── Mini logo ── */
     .ch-logo {
       width: 32px; height: 32px; border-radius: var(--radius-xs);
-      object-fit: cover; background: var(--fill); border: 1px solid var(--border); flex-shrink: 0;
+      object-fit: contain; background: var(--fill); border: 1px solid var(--border); flex-shrink: 0; padding: 3px;
     }
     .logo-fade { animation: logo-in .2s ease both; }
     @keyframes logo-in { from { opacity:0; transform:scale(.88) } to { opacity:1; transform:scale(1) } }
@@ -390,6 +391,11 @@
     }
     .stat-card .num { font-size: 2rem; font-weight: 800; }
     .stat-card .lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .roadmap-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:.75rem; }
+    .roadmap-card { background:var(--surface-s); border:1px solid var(--border); border-radius:var(--radius-md); padding:1rem; }
+    .roadmap-card h3 { font-size:1rem; font-weight:700; margin:.35rem 0; }
+    .roadmap-card p { color:var(--text3); font-size:.875rem; }
+    .roadmap-priority { display:inline-flex; align-items:center; border-radius:999px; padding:2px 8px; font-size:11px; font-weight:800; letter-spacing:.06em; background:var(--primary-l); color:var(--primary); }
 
     /* ── Vue transitions ── */
     .fade-enter-active, .fade-leave-active { transition: opacity .2s ease, margin-bottom .2s ease; }
@@ -413,10 +419,11 @@
     .mob-badge { font-size: 11px; opacity: .7; margin-left: 2px; }
 
     /* ── Responsive (mobile-first) ── */
-    .app-grid { grid-template-columns: 1fr; align-items: start; }
+    .app-grid { grid-template-columns: 1fr; align-items: start; min-width: 0; }
+    .app-grid > *, main, section { min-width: 0; }
     .app-sidebar { display: none; }
     @media (min-width: 1025px) {
-      .app-grid { grid-template-columns: 280px 1fr; }
+      .app-grid { grid-template-columns: minmax(240px, 280px) minmax(0, 1fr); }
       .app-sidebar { display: block; }
       .mob-tabs { display: none; }
     }
@@ -428,17 +435,39 @@
       .hdr-btns .btn { flex: 1 1 calc(50% - .5rem); min-width: 0; padding-left: 10px; padding-right: 10px; }
       header .app-icon { width: 40px; height: 40px; }
       header h1 { font-size: 1.65rem !important; }
-      .modal-overlay { align-items: flex-end; justify-content: center; padding: max(.75rem, env(safe-area-inset-top)) .75rem max(.75rem, env(safe-area-inset-bottom)); }
-      .modal-card { width: 100%; max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1.5rem)); padding: 1rem; border-radius: 20px; }
-      .modal-card.mobile-sheet { border-bottom-left-radius: 0; border-bottom-right-radius: 0; max-height: 88dvh; }
-      .auto-detect-card { width: 100% !important; max-height: 90dvh !important; padding: .9rem !important; }
-      .auto-detect-bar { max-height: 30dvh; overflow-y: auto; align-items: stretch; }
+      .table-shell:not(.auto-detect-table) { max-height: none; overflow-x: visible; }
+      .table-shell:not(.auto-detect-table) table { min-width: 0; border-collapse: separate; border-spacing: 0 .65rem; }
+      .table-shell:not(.auto-detect-table) thead { display: none; }
+      .table-shell:not(.auto-detect-table) tbody tr { display: grid; grid-template-columns: auto 1fr auto; gap: .25rem .7rem; align-items: center; margin: 0 .6rem; padding: .85rem; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-s); cursor: default; }
+      .table-shell:not(.auto-detect-table) tbody tr:hover { background: var(--surface-s); }
+      .table-shell:not(.auto-detect-table) tbody tr.selected { background: var(--primary-l); }
+      .table-shell:not(.auto-detect-table) tbody td { display: block; padding: 0; min-width: 0; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(1) { grid-column: 1; grid-row: 1; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(2),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(5),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(7),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(8),
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(9) { display: none; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(3) { grid-column: 3; grid-row: 1 / span 2; justify-self: end; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(4) { grid-column: 2; grid-row: 1; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(6) { grid-column: 2; grid-row: 2; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(10) { grid-column: 1 / span 2; grid-row: 3; text-align: left; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(11) { grid-column: 1 / -1; grid-row: 4; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(11) .flex { justify-content: stretch; }
+      .table-shell:not(.auto-detect-table) tbody td:nth-child(11) .btn { flex: 1; }
+      .table-shell:not(.auto-detect-table) .empty-state { padding: 42px 18px; }
+      .modal-overlay { align-items: center; padding: max(1rem, env(safe-area-inset-top)) .75rem max(1rem, env(safe-area-inset-bottom)); }
+      .modal-card { width: min(100%, 560px); max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem)); padding: 1rem; border-radius: 22px; }
+      .modal-card.mobile-sheet { border-radius: 22px; max-height: 88dvh; }
+      .auto-detect-card { width: min(100%, 560px) !important; max-height: 88dvh !important; padding: .85rem !important; }
+      .auto-detect-bar { max-height: 24dvh; overflow-y: auto; align-items: stretch; }
+      .auto-detect-card h2 { font-size: 1.12rem; line-height: 1.25; }
+      .auto-detect-table { max-height: 40dvh; }
+      .auto-detect-table table { min-width: 560px; }
       .auto-detect-bar .seg { width: 100%; }
       .auto-detect-stats { flex-wrap: wrap; }
       .auto-detect-stats > .seg { order: 2; flex-basis: 100%; }
       .auto-detect-stat-pills { flex: 1 1 auto; overflow-x: auto; }
-      .auto-detect-table { max-height: 42dvh; }
-      .auto-detect-table table { min-width: 620px; }
       .auto-detect-edit-grid { grid-template-columns: 1fr !important; }
       .auto-detect-footer { gap: .75rem; }
       .auto-detect-footer .ml-auto { margin-left: 0; width: 100%; justify-content: stretch; }
@@ -834,6 +863,10 @@
           <div class="glass rounded-[24px] p-4 md:p-5">
             <div class="sec-label">{{ t('tabContent') }}</div>
             <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-4">{{ t('contentHeading') }}</h2>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <button class="btn btn-secondary" @click="applyBulkMetadataRules" :disabled="stats.total === 0">{{ t('bulkMetadataRules') }}</button>
+              <button class="btn btn-secondary" @click="exportMetadataHealthReport" :disabled="stats.total === 0">{{ t('metadataHealthReport') }}</button>
+            </div>
 
             <!-- Quality stat cards -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
@@ -907,6 +940,20 @@
           <!-- About -->
           <div class="mt-5 p-4 rounded-[var(--radius-md)]" style="background:var(--fill);border:1px solid var(--border)">
             <p class="text-sm" style="color:var(--text3)">{{ t('designInfoDesc') }}</p>
+          </div>
+        </section>
+
+        <!-- ══ ROADMAP TAB ══ -->
+        <section v-if="activeTab === 'roadmap'" class="glass rounded-[24px] p-4 md:p-5" aria-label="Product roadmap">
+          <div class="sec-label">{{ t('tabRoadmap') }}</div>
+          <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-2">{{ t('roadmapHeading') }}</h2>
+          <p class="text-sm mb-4" style="color:var(--text3);max-width:760px">{{ t('roadmapIntro') }}</p>
+          <div class="roadmap-grid">
+            <article v-for="item in roadmapItems" :key="item.key" class="roadmap-card">
+              <span class="roadmap-priority">{{ item.priority }}</span>
+              <h3>{{ t(item.titleKey) }}</h3>
+              <p>{{ t(item.descKey) }}</p>
+            </article>
           </div>
         </section>
 
@@ -1399,6 +1446,7 @@ const CHANNEL_TVG_ALIASES = [
 createApp({
   setup() {
     const STORAGE_KEY = 'iptv-channels'
+    const MAPPING_KEY = 'iptv-confirmed-mappings'
     const LANG_KEY    = 'iptv-lang'
     const THEME_KEY   = 'iptv-theme'
 
@@ -1430,6 +1478,8 @@ createApp({
         tabContentDesc:   'Skupiny a štatistiky',
         tabDesign:        'Dizajn',
         tabDesignDesc:    'Vzhľad aplikácie',
+        tabRoadmap:       'Plán',
+        tabRoadmapDesc:   'Nové funkcie',
         filterSet:        'Filter',
         search:           'Hľadať',
         searchPlaceholder:'Názov kanálu alebo URL…',
@@ -1474,6 +1524,10 @@ createApp({
         emptyLibraryTitle:'Playlist je prázdny',
         emptyLibraryDesc: 'Importuj M3U alebo XSPF súbor pre začatie',
         contentHeading:   'Skupiny kanálov',
+        bulkMetadataRules:'Použiť pravidlá metadát',
+        metadataHealthReport:'Exportovať report kvality',
+        metadataReportExported:'Report kvality metadát exportovaný',
+        bulkMetadataApplied:'Pravidlá metadát upravili {n} kanálov',
         noGroups:         'Žiadne skupiny',
         noGroupsDesc:     'Importuj playlist pre zobrazenie skupín',
         noGroup:          'Bez skupiny',
@@ -1481,6 +1535,48 @@ createApp({
         filterByGroup:    'Filtrovať skupinu',
         groupsOverview:   'Prehľad skupín',
         designHeading:    'Nastavenia dizajnu',
+        roadmapHeading:   'Plán nových funkcií',
+        roadmapIntro:     'Prehľad navrhovaných funkcií a technických vylepšení priamo v aplikácii.',
+        roadmapMappingTitle:'Inteligentné mapovania kanálov',
+        roadmapMappingDesc:'Zapamätanie ručne potvrdených väzieb medzi názvom z playlistu a TVG-ID.',
+        roadmapPreviewTitle:'Náhľad zmien autodetekcie',
+        roadmapPreviewDesc:'Diff pôvodné vs. navrhnuté s možnosťou aplikovať iba vybrané polia.',
+        roadmapEpgCountryTitle:'Kontrola EPG krajiny',
+        roadmapEpgCountryDesc:'Preferencia SK/CZ EPG a varovanie pri .pl/.uk/.us fallbackoch.',
+        roadmapImportTitle:'Import wizard',
+        roadmapImportDesc:'Krokový import s náhľadom, duplicitami, čistením názvov a autodetekciou.',
+        roadmapStreamTitle:'Validátor streamov',
+        roadmapStreamDesc:'Kontrola URL, timeoutov, CORS stavu a export reportu nefunkčných streamov.',
+        roadmapProfilesTitle:'Profily playlistov',
+        roadmapProfilesDesc:'Samostatné knižnice pre TV, mobil, deti, šport alebo testovanie.',
+        roadmapExportTitle:'Export presety',
+        roadmapExportDesc:'Predvoľby pre VLC, Kodi, TiviMate, IPTV Smarters, Enigma2 a vlastné formáty.',
+        roadmapPanelTitle:'Detail kanála v paneli',
+        roadmapPanelDesc:'Bočný panel na desktope a spodný sheet na mobile namiesto veľkých modalov.',
+        roadmapMobileTitle:'Mobilný action bar',
+        roadmapMobileDesc:'Spodná lišta pre hromadné akcie nad označenými kanálmi.',
+        roadmapAndroidTitle:'Android offline-first',
+        roadmapAndroidDesc:'Capacitor Storage, zálohy, share intent a Android share sheet export.',
+        roadmapCacheTitle:'Cache metadát s TTL',
+        roadmapCacheDesc:'Rýchlejšia autodetekcia vďaka cache EPG, logo a M3U indexov.',
+        roadmapBuildTitle:'Build krok bez unsafe-eval',
+        roadmapBuildDesc:'Prechod na prekompilované šablóny a prísnejšiu CSP politiku.',
+        roadmapEngineTitle:'Testovateľný autodetect engine',
+        roadmapEngineDesc:'Samostatný modul s fixtures, snapshot testami a benchmarkom veľkých playlistov.',
+        roadmapEpgCoverageTitle:'EPG Coverage Dashboard',
+        roadmapEpgCoverageDesc:'Prehľad kanálov s TVG-ID, TVG URL, dnešným programom a rizikovou krajinou EPG.',
+        roadmapEpgTimelineTitle:'EPG timeline náhľad',
+        roadmapEpgTimelineDesc:'Aktuálny a nasledujúce programy s detekciou časového posunu a porovnaním kandidátov.',
+        roadmapTvgDictionaryTitle:'TVG-ID kanonický slovník',
+        roadmapTvgDictionaryDesc:'Lokálny slovník CZ/SK aliasov, kanonických ID, log a preferovaných EPG URL.',
+        roadmapLogoQualityTitle:'Logo Quality Checker',
+        roadmapLogoQualityDesc:'Kontrola neplatných, malých, nečitateľných alebo duplicitných log.',
+        roadmapLogoPreviewTitle:'Logo background preview',
+        roadmapLogoPreviewDesc:'Náhľad loga na tmavom, svetlom a transparentnom pozadí aj v malej ikone.',
+        roadmapBulkRulesTitle:'Bulk metadata rules',
+        roadmapBulkRulesDesc:'Hromadné pravidlá pre opravu TVG-ID, TVG-Name, Logo URL a TVG URL.',
+        roadmapHealthReportTitle:'Metadata health report',
+        roadmapHealthReportDesc:'Export CSV/JSON reportu kvality metadát, chýbajúcich log a rizikových EPG krajín.',
         theme:            'Téma',
         language:         'Jazyk',
         importMode:       'Spôsob importu',
@@ -1606,6 +1702,8 @@ createApp({
         tabContentDesc:   'Groups & statistics',
         tabDesign:        'Design',
         tabDesignDesc:    'App appearance',
+        tabRoadmap:       'Roadmap',
+        tabRoadmapDesc:   'New features',
         filterSet:        'Filters',
         search:           'Search',
         searchPlaceholder:'Channel name or URL…',
@@ -1650,6 +1748,10 @@ createApp({
         emptyLibraryTitle:'Playlist is empty',
         emptyLibraryDesc: 'Import an M3U or XSPF file to get started',
         contentHeading:   'Channel Groups',
+        bulkMetadataRules:'Apply metadata rules',
+        metadataHealthReport:'Export health report',
+        metadataReportExported:'Metadata health report exported',
+        bulkMetadataApplied:'Metadata rules updated {n} channels',
         noGroups:         'No groups',
         noGroupsDesc:     'Import a playlist to see groups',
         noGroup:          'No group',
@@ -1657,6 +1759,48 @@ createApp({
         filterByGroup:    'Filter by group',
         groupsOverview:   'Groups overview',
         designHeading:    'Design Settings',
+        roadmapHeading:   'New feature roadmap',
+        roadmapIntro:     'Overview of proposed product and technical improvements directly inside the app.',
+        roadmapMappingTitle:'Smart channel mappings',
+        roadmapMappingDesc:'Remember manually confirmed links between playlist names and canonical TVG IDs.',
+        roadmapPreviewTitle:'Autodetect change preview',
+        roadmapPreviewDesc:'Original vs suggested diff with per-field apply controls.',
+        roadmapEpgCountryTitle:'EPG country guard',
+        roadmapEpgCountryDesc:'Prefer SK/CZ EPG and warn on .pl/.uk/.us fallbacks.',
+        roadmapImportTitle:'Import wizard',
+        roadmapImportDesc:'Step-by-step import with preview, duplicates, name cleanup and autodetect.',
+        roadmapStreamTitle:'Stream validator',
+        roadmapStreamDesc:'Check URL availability, timeouts, CORS state and export broken stream reports.',
+        roadmapProfilesTitle:'Playlist profiles',
+        roadmapProfilesDesc:'Separate libraries for TV, mobile, kids, sport or testing.',
+        roadmapExportTitle:'Export presets',
+        roadmapExportDesc:'Presets for VLC, Kodi, TiviMate, IPTV Smarters, Enigma2 and custom formats.',
+        roadmapPanelTitle:'Channel detail panel',
+        roadmapPanelDesc:'Desktop side panel and mobile bottom sheet instead of large modals.',
+        roadmapMobileTitle:'Mobile action bar',
+        roadmapMobileDesc:'Bottom bar for bulk actions on selected channels.',
+        roadmapAndroidTitle:'Android offline-first',
+        roadmapAndroidDesc:'Capacitor Storage, backups, share intent and Android share sheet export.',
+        roadmapCacheTitle:'Metadata cache with TTL',
+        roadmapCacheDesc:'Faster autodetect using cached EPG, logo and M3U indexes.',
+        roadmapBuildTitle:'Build step without unsafe-eval',
+        roadmapBuildDesc:'Move to precompiled templates and stricter CSP.',
+        roadmapEngineTitle:'Testable autodetect engine',
+        roadmapEngineDesc:'Separate module with fixtures, snapshot tests and large-playlist benchmarks.',
+        roadmapEpgCoverageTitle:'EPG Coverage Dashboard',
+        roadmapEpgCoverageDesc:'Overview of channels with TVG-ID, TVG URL, today schedule and risky EPG country.',
+        roadmapEpgTimelineTitle:'EPG timeline preview',
+        roadmapEpgTimelineDesc:'Current and next programmes with time-shift detection and candidate comparison.',
+        roadmapTvgDictionaryTitle:'Canonical TVG-ID dictionary',
+        roadmapTvgDictionaryDesc:'Local CZ/SK alias dictionary with canonical IDs, logos and preferred EPG URLs.',
+        roadmapLogoQualityTitle:'Logo Quality Checker',
+        roadmapLogoQualityDesc:'Detect invalid, tiny, unreadable or duplicated logos.',
+        roadmapLogoPreviewTitle:'Logo background preview',
+        roadmapLogoPreviewDesc:'Preview logos on dark, light and transparent backgrounds plus small table icons.',
+        roadmapBulkRulesTitle:'Bulk metadata rules',
+        roadmapBulkRulesDesc:'Batch rules for fixing TVG-ID, TVG-Name, Logo URL and TVG URL.',
+        roadmapHealthReportTitle:'Metadata health report',
+        roadmapHealthReportDesc:'Export CSV/JSON metadata quality report with missing logos and risky EPG countries.',
         theme:            'Theme',
         language:         'Language',
         importMode:       'Import mode',
@@ -1769,6 +1913,7 @@ createApp({
     const importLoading = ref(false)
     const importFileRef = ref(null)
     const undoStack     = ref([])
+    const confirmedMappings = ref({})
 
     const mobFilterOpen = ref(false)
     const epgRef        = ref(null)
@@ -1792,6 +1937,7 @@ createApp({
     const epgXmlIndex               = ref({})   // id.toLowerCase() → source XML URL
     const logoChannelIndex          = ref({})      // normName → logo URL
     const logoChannelIndexById      = ref({})      // id.toLowerCase() → logo URL
+    const apiChannelMetaById        = ref({})      // id.toLowerCase() → { id, name, logo }
     const apiNormMap                = ref(new Map()) // normName/collapsed → {id, name, logo}
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
@@ -1814,6 +1960,7 @@ createApp({
     const ICONS = {
       tv:        '<rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/>',
       barChart:  '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
+      sparkles:  '<path d="M12 3l1.6 4.8L18 10l-4.4 2.2L12 17l-1.6-4.8L6 10l4.4-2.2L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/><path d="M5 14l.8 2.2L8 17l-2.2.8L5 20l-.8-2.2L2 17l2.2-.8L5 14z"/>',
       sliders:   '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
       globe:     '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
       sun:       '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
@@ -1849,7 +1996,32 @@ createApp({
       { id: 'library', svgKey: 'tv',       labelKey: 'tabLibrary', descKey: 'tabLibraryDesc' },
       { id: 'content', svgKey: 'barChart', labelKey: 'tabContent', descKey: 'tabContentDesc' },
       { id: 'design',  svgKey: 'sliders',  labelKey: 'tabDesign',  descKey: 'tabDesignDesc'  },
+      { id: 'roadmap', svgKey: 'sparkles', labelKey: 'tabRoadmap', descKey: 'tabRoadmapDesc' },
     ])
+
+
+    const roadmapItems = [
+      { priority: 'P0', key: 'mapping', titleKey: 'roadmapMappingTitle', descKey: 'roadmapMappingDesc' },
+      { priority: 'P0', key: 'preview', titleKey: 'roadmapPreviewTitle', descKey: 'roadmapPreviewDesc' },
+      { priority: 'P0', key: 'epgCountry', titleKey: 'roadmapEpgCountryTitle', descKey: 'roadmapEpgCountryDesc' },
+      { priority: 'P1', key: 'importWizard', titleKey: 'roadmapImportTitle', descKey: 'roadmapImportDesc' },
+      { priority: 'P1', key: 'streamValidator', titleKey: 'roadmapStreamTitle', descKey: 'roadmapStreamDesc' },
+      { priority: 'P1', key: 'profiles', titleKey: 'roadmapProfilesTitle', descKey: 'roadmapProfilesDesc' },
+      { priority: 'P1', key: 'exportPresets', titleKey: 'roadmapExportTitle', descKey: 'roadmapExportDesc' },
+      { priority: 'P2', key: 'channelPanel', titleKey: 'roadmapPanelTitle', descKey: 'roadmapPanelDesc' },
+      { priority: 'P2', key: 'mobileActions', titleKey: 'roadmapMobileTitle', descKey: 'roadmapMobileDesc' },
+      { priority: 'P2', key: 'androidOffline', titleKey: 'roadmapAndroidTitle', descKey: 'roadmapAndroidDesc' },
+      { priority: 'TECH', key: 'metadataCache', titleKey: 'roadmapCacheTitle', descKey: 'roadmapCacheDesc' },
+      { priority: 'TECH', key: 'buildStep', titleKey: 'roadmapBuildTitle', descKey: 'roadmapBuildDesc' },
+      { priority: 'TECH', key: 'testableEngine', titleKey: 'roadmapEngineTitle', descKey: 'roadmapEngineDesc' },
+      { priority: 'EPG', key: 'epgCoverage', titleKey: 'roadmapEpgCoverageTitle', descKey: 'roadmapEpgCoverageDesc' },
+      { priority: 'EPG', key: 'epgTimeline', titleKey: 'roadmapEpgTimelineTitle', descKey: 'roadmapEpgTimelineDesc' },
+      { priority: 'TVG', key: 'tvgDictionary', titleKey: 'roadmapTvgDictionaryTitle', descKey: 'roadmapTvgDictionaryDesc' },
+      { priority: 'LOGO', key: 'logoQuality', titleKey: 'roadmapLogoQualityTitle', descKey: 'roadmapLogoQualityDesc' },
+      { priority: 'LOGO', key: 'logoPreview', titleKey: 'roadmapLogoPreviewTitle', descKey: 'roadmapLogoPreviewDesc' },
+      { priority: 'META', key: 'bulkRules', titleKey: 'roadmapBulkRulesTitle', descKey: 'roadmapBulkRulesDesc' },
+      { priority: 'META', key: 'healthReport', titleKey: 'roadmapHealthReportTitle', descKey: 'roadmapHealthReportDesc' },
+    ]
 
     const groupOptions = computed(() =>
       [...new Set(channels.value.map(c => c.group_title).filter(Boolean))].sort()
@@ -1909,6 +2081,26 @@ createApp({
         if (c.quality && qualities[c.quality] !== undefined) qualities[c.quality]++
       })
       return { total, active, groups, qualities }
+    })
+
+    const metadataHealth = computed(() => {
+      const total = channels.value.length || 1
+      const withTvgId = channels.value.filter(c => !!c.tvg_id).length
+      const withTvgName = channels.value.filter(c => !!c.tvg_name).length
+      const withLogo = channels.value.filter(c => !!c.tvg_logo).length
+      const withTvgUrl = channels.value.filter(c => !!c.tvg_url).length
+      const riskyEpgCountry = channels.value.filter(c => {
+        const idCountry = tvgCountry(c.tvg_id)
+        const urlCountry = (c.tvg_url || '').match(/(?:Slovakia|slovakia|Czech|czech|\b(sk|cz|pl|uk|us)\b)/i)?.[1]?.toLowerCase() || ''
+        return urlCountry && !['sk', 'cz'].includes(urlCountry) && ['sk', 'cz', ''].includes(idCountry)
+      }).length
+      return {
+        tvgIdPct: Math.round(withTvgId / total * 100),
+        tvgNamePct: Math.round(withTvgName / total * 100),
+        logoPct: Math.round(withLogo / total * 100),
+        tvgUrlPct: Math.round(withTvgUrl / total * 100),
+        riskyEpgCountry,
+      }
     })
 
     const groupList = computed(() => {
@@ -2347,6 +2539,57 @@ createApp({
       showToast(`${selected.length ? t('exportSelected') : isFiltered.value ? t('exportFiltered') : t('exported')} (${active.length})`)
     }
 
+    function downloadText(filename, content, type = 'application/json') {
+      const blob = new Blob([content], { type })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = filename; a.click()
+      URL.revokeObjectURL(url)
+    }
+
+    function saveConfirmedMappings() {
+      try { localStorage.setItem(MAPPING_KEY, JSON.stringify(confirmedMappings.value)) } catch {}
+    }
+
+    function exportMetadataHealthReport() {
+      const report = {
+        generatedAt: new Date().toISOString(),
+        totals: { channels: channels.value.length, ...metadataHealth.value },
+        missingLogo: channels.value.filter(c => !c.tvg_logo).map(c => c.name),
+        missingEpg: channels.value.filter(c => !c.tvg_url).map(c => ({ name: c.name, tvg_id: c.tvg_id || '' })),
+        riskyCountry: channels.value.filter(c => c.tvg_url && !/slovakia|czech|\b(sk|cz)\b/i.test(c.tvg_url)).map(c => ({ name: c.name, tvg_id: c.tvg_id || '', tvg_url: c.tvg_url })),
+      }
+      downloadText('metadata-health-report.json', JSON.stringify(report, null, 2))
+      showToast(t('metadataReportExported'))
+    }
+
+    function applyBulkMetadataRules() {
+      if (!channels.value.length) return
+      snapshot('bulkMetadataRules')
+      let changed = 0
+      channels.value.forEach(ch => {
+        const before = JSON.stringify([ch.tvg_id, ch.tvg_name, ch.tvg_logo, ch.tvg_url])
+        ch.tvg_id = cleanTvgId(ch.tvg_id || '')
+        ch.tvg_name = cleanChannelLabel(ch.tvg_name || ch.name || '')
+        if (!isPreferredTvgId(ch.tvg_id)) {
+          const preferred = preferredCandidateHit([
+            ...tvgIdVariants(ch.tvg_id),
+            ...aliasTvgIdVariants(ch),
+            ...nameTvgIdVariants(ch.tvg_name || ch.name),
+          ], [epgChannelIndex.value, epgXmlIndex.value])
+          if (preferred) { ch.tvg_id = preferred.id; ch.tvg_url = ch.tvg_url || preferred.url }
+        }
+        if (!ch.tvg_logo) {
+          const logoId = [...tvgIdVariants(ch.tvg_id), ...nameTvgIdVariants(ch.tvg_name || ch.name)]
+            .map(id => id.toLowerCase()).find(id => logoChannelIndexById.value[id])
+          ch.tvg_logo = (logoId ? logoChannelIndexById.value[logoId] : '') || logoChannelIndex.value[normName(ch.tvg_name || ch.name)] || ''
+        }
+        if (before !== JSON.stringify([ch.tvg_id, ch.tvg_name, ch.tvg_logo, ch.tvg_url])) changed++
+      })
+      persist()
+      showToast(t('bulkMetadataApplied').replace('{n}', changed))
+    }
+
     function xmlEsc(s) {
       return (s || '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -2368,6 +2611,10 @@ createApp({
       try {
         const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) channels.value = JSON.parse(saved)
+      } catch {}
+      try {
+        const savedMappings = localStorage.getItem(MAPPING_KEY)
+        if (savedMappings) confirmedMappings.value = JSON.parse(savedMappings)
       } catch {}
 
       const savedTheme = localStorage.getItem(THEME_KEY) || 'dark'
@@ -2465,18 +2712,29 @@ createApp({
         if (l.startsWith('#EXTINF:')) {
           extinf = l
         } else if (extinf && l && !l.startsWith('#')) {
-          const nameM = extinf.match(/,(.+)$/)
-          result.push({
-            name:     stripChannelDecorations(nameM ? nameM[1].trim() : ''),
-            tvg_id:   extractAttr(extinf, 'tvg-id'),
-            tvg_name: stripChannelDecorations(extractAttr(extinf, 'tvg-name')),
-            tvg_logo: extractAttr(extinf, 'tvg-logo'),
-            tvg_url:  extractAttr(extinf, 'tvg-url'),
-          })
+          if (!isLikelyStreamUrl(l)) continue
+          const parsed = parseExtinf(extinf)
+          if (!isBadChannelLabel(parsed.name) && !isBadChannelLabel(parsed.tvg_name)) {
+            result.push({
+              name:     cleanChannelLabel(parsed.name),
+              tvg_id:   cleanTvgId(parsed.tvg_id),
+              tvg_name: cleanChannelLabel(parsed.tvg_name),
+              tvg_logo: parsed.tvg_logo,
+              tvg_url:  parsed.tvg_url,
+            })
+          }
           extinf = null
         }
       }
       return result
+    }
+
+    function isLikelyStreamUrl(value) {
+      return /^(?:https?|rtmps?|rtsp|udp|rtp|mms):\/\//i.test(value) || /^(?:plugin|pipe):/i.test(value)
+    }
+
+    function isBadChannelLabel(value) {
+      return /(?:mozilla\/|chrome\/|safari\/|gecko\)|group-title=|http-user-agent)/i.test(value || '')
     }
 
     async function fetchEnrichmentIndexes() {
@@ -2529,7 +2787,16 @@ createApp({
           if (!res.ok) return
           const data = await res.json()
           if (src.type === 'epg') {
-            const idx = {}, byName = {}
+            const idx = {}, byName = {}, byNameCountry = {}
+            const putEpgName = (key, channelId, sourceUrl) => {
+              if (!key || !sourceUrl) return
+              const c = tvgCountry(channelId)
+              const preferred = c === 'sk' || c === 'cz'
+              if (!byName[key] || (preferred && !byNameCountry[key])) {
+                byName[key] = sourceUrl
+                byNameCountry[key] = preferred
+              }
+            }
             for (const guide of data) {
               const channelId = guide.channel || guide.id || ''
               const sourceUrl = guide.sources?.find(s => s.format === 'XML')?.url
@@ -2538,15 +2805,14 @@ createApp({
                 || ''
               if (channelId && sourceUrl) idx[channelId.toLowerCase()] = sourceUrl
               for (const label of [guide.name, ...(guide.alt_names || [])]) {
-                const key = normName(label)
-                if (key && sourceUrl && !byName[key]) byName[key] = sourceUrl
+                putEpgName(normName(label), channelId, sourceUrl)
               }
             }
             epgChannelIndex.value = idx
             epgNameIndex.value = { ...epgNameIndex.value, ...byName }
           } else if (src.type === 'logo') {
             // iptv-org/api channels.json + logos.json. Keep SK/CZ IDs first to avoid global false positives.
-            const byName = {}, byId = {}, nMap = new Map()
+            const byName = {}, byId = {}, byMetaId = {}, nMap = new Map()
             const byNameCountry = {}
             const putLogoName = (key, id, logo) => {
               if (!key || !logo) return
@@ -2583,6 +2849,7 @@ createApp({
               const idLow = (ch.id || '').toLowerCase()
               const logo = ch.logo || logoById[idLow] || ''
               if (ch.id && logo) byId[idLow] = logo
+              if (ch.id) byMetaId[idLow] = { id: ch.id, name: ch.name || '', logo }
               const entry = { id: ch.id || '', name: ch.name, logo }
               const key = normName(ch.name)
               if (key) {
@@ -2599,6 +2866,7 @@ createApp({
             }
             logoChannelIndex.value   = byName
             logoChannelIndexById.value = byId
+            apiChannelMetaById.value = byMetaId
             apiNormMap.value         = nMap
           }
         } catch {}
@@ -2622,6 +2890,7 @@ createApp({
       epgXmlIndex.value          = {}
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
+      apiChannelMetaById.value     = {}
       apiNormMap.value           = new Map()
       enrichmentLoaded.value     = false
       try {
@@ -2682,9 +2951,21 @@ createApp({
     function stripChannelDecorations(s) {
       return (s || '')
         .replace(/^\s*(?:\[[^\]]*\]|\([^)]*\))\s*/g, '')
-        .replace(/\s*(?:\[[^\]]*not\s*24\s*\/?\s*7[^\]]*\]|\([^)]*not\s*24\s*\/?\s*7[^)]*\))\s*/ig, ' ')
+        .replace(/\s*(?:\[[^\]]*(?:not\s*24\s*\/?\s*7|geo\s*-?\s*blocked|backup|offline)[^\]]*\]|\([^)]*(?:not\s*24\s*\/?\s*7|geo\s*-?\s*blocked|backup|offline)[^)]*\))\s*/ig, ' ')
         .replace(/\s*(?:\[[^\]]*(?:\d{3,4}p|fhd|uhd|hd|sd|4k)[^\]]*\]|\([^)]*(?:\d{3,4}p|fhd|uhd|hd|sd|4k)[^)]*\))\s*/ig, ' ')
         .replace(/^\s*(?:sk|cz|czech|slovak(?:ia)?|cesk[eé]?|slovensk[eé]?)\s*[:|\-–—]+\s*/ig, '')
+        .replace(/[©®™℠ⓈⓇⓒ]/g, '')
+        .replace(/[\u24B6-\u24FF]/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+    }
+
+    function cleanChannelLabel(s) {
+      return stripChannelDecorations(s)
+        .replace(/\s*(?:\[[^\]]*(?:geo\s*-?\s*blocked|not\s*24\s*\/?\s*7|backup|offline)[^\]]*\]|\([^)]*(?:geo\s*-?\s*blocked|not\s*24\s*\/?\s*7|backup|offline)[^)]*\))\s*/ig, ' ')
+        .replace(/[©®™℠ⓈⓇⓒ]/g, '')
+        .replace(/[\u24B6-\u24FF]/g, '')
+        .replace(/\s{2,}/g, ' ')
         .trim()
     }
 
@@ -2803,7 +3084,7 @@ createApp({
       const modeCfg = {
         safe:       { min: 0.95, auto: 0.95, epg: 0.8 },
         balanced:   { min: 0.65, auto: 0.65, epg: 0.66 },
-        aggressive: { min: 0.35, auto: 0.70, epg: 0.5 },
+        aggressive: { min: 0.25, auto: 0.35, epg: 0.35 },
       }[autoDetectMode.value] || { min: 0.65, auto: 0.65, epg: 0.66 }
       const channelsToProcess = autoDetectPrefilter.value
         ? channels.value.filter(ch => autoDetectPrefilter.value.has(ch.id))
@@ -2817,25 +3098,37 @@ createApp({
         const chNorm = normName(ch.tvg_name || ch.name) || normName(ch.name)
         let best = null, bestScore = 0
 
+        const mapKey = chNorm || normName(ch.name)
+        const confirmed = confirmedMappings.value[mapKey]
+        if (confirmed) {
+          bestScore = 1
+          best = { ...confirmed, sourceId: 'confirmed' }
+        }
+
         // Fast O(1) lookup against iptv-org/api channel database (exact normName or space-collapsed)
         const apiHit = pickPreferredEntry(apiNormMap.value.get(chNorm))
           || pickPreferredEntry(apiNormMap.value.get(chNorm.replace(/\s+/g, '')))
-        if (apiHit) {
+        if (!best && apiHit) {
           bestScore = 0.95
           best = { tvg_id: apiHit.id, tvg_name: apiHit.name, tvg_logo: apiHit.logo, tvg_url: '', name: apiHit.name }
         }
 
         // Fuzzy matching against M3U sources (may override if score > 0.95)
+        const sourceRank = s => ({ 'iptv-sk': 4, 'iptv-cz': 4, custom: 3, freetv: 2, 'iptv-all': 1 }[s.sourceId] || 1)
+        const candidateRank = s => sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
         srcNorm.forEach(s => {
+          if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
           const sc = Math.max(
             strSimilarity(chNorm, s.nName),
             s.nId ? strSimilarity(chNorm, s.nId) : 0
           )
-          if (sc > bestScore) { bestScore = sc; best = s }
+          if (sc > bestScore || (Math.abs(sc - bestScore) < 0.001 && best && candidateRank(s) > candidateRank(best))) {
+            bestScore = sc; best = s
+          }
         })
         const matched = best && bestScore >= modeCfg.min && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
         let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
-        let editName   = matched ? (best.tvg_name  || best.name) : (ch.tvg_name || '')
+        let editName   = cleanChannelLabel(matched ? (best.tvg_name  || best.name) : (ch.tvg_name || ''))
         let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
 
         // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
@@ -2878,16 +3171,20 @@ createApp({
           const lookupId    = (editId || ch.tvg_id || '').toLowerCase()
           const lookupClean = lookupId.replace(/@[^@]*$/, '')
           const nameKey     = normName(editName || ch.tvg_name || ch.name)
-          editTvgUrl = epgXmlIndex.value[lookupId]
-            || epgXmlIndex.value[lookupClean]
-            || (origTvgIdLow ? epgChannelIndex.value[origTvgIdLow] : '')
-            || (origTvgIdLow ? epgXmlIndex.value[origTvgIdLow] : '')
+          const canUseLookupId = isPreferredTvgId(lookupId)
+          const canUseOrigId   = isPreferredTvgId(origTvgIdLow)
+          editTvgUrl = (canUseLookupId ? (epgXmlIndex.value[lookupId] || epgXmlIndex.value[lookupClean]) : '')
+            || (canUseOrigId ? epgChannelIndex.value[origTvgIdLow] : '')
+            || (canUseOrigId ? epgXmlIndex.value[origTvgIdLow] : '')
             || epgNameIndex.value[nameKey]
             || ''
         }
         const epgFallbackMatched = !!editTvgUrl && !matched
         const resultScore = matched ? bestScore : (epgFallbackMatched ? modeCfg.epg : 0)
-        if (epgFallbackMatched && !editName) editName = ch.tvg_name || ch.name
+        if (epgFallbackMatched && !editName) editName = cleanChannelLabel(ch.tvg_name || ch.name)
+
+        const canonicalMeta = apiChannelMetaById.value[(editId || '').toLowerCase()]
+        if (canonicalMeta?.name) editName = cleanChannelLabel(canonicalMeta.name) || editName
 
         // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
         const xmlConfirmed = !!ch.tvg_id && !!epgXmlIndex.value[ch.tvg_id.toLowerCase()] && !ch.tvg_url
@@ -2896,7 +3193,16 @@ createApp({
         // 1) matched editId, 2) editId w/o @quality, 3) original ch.tvg_id w/o @quality, 4) name, 5) M3U logo
         const fullIdLow  = cleanTvgId(editId || ch.tvg_id || '').toLowerCase()
         const cleanIdLow = cleanTvgId(fullIdLow).toLowerCase()
-        let editLogo = logoChannelIndexById.value[fullIdLow]
+        const logoCandidateIds = [
+          ...tvgIdVariants(editId),
+          ...tvgIdVariants(ch.tvg_id),
+          ...aliasTvgIdVariants(ch),
+          ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
+        ].map(id => id.toLowerCase())
+        const logoFromCandidateId = logoCandidateIds.find(id => logoChannelIndexById.value[id])
+        let editLogo = (canonicalMeta?.logo || '')
+          || (logoFromCandidateId ? logoChannelIndexById.value[logoFromCandidateId] : '')
+          || logoChannelIndexById.value[fullIdLow]
           || logoChannelIndexById.value[cleanIdLow]
           || logoChannelIndexById.value[origTvgIdLow]
           || logoChannelIndex.value[normName(editName || ch.name)]
@@ -2906,7 +3212,7 @@ createApp({
         return {
           ch,
           suggestedId:     matched ? (best.tvg_id   || '') : (epgFallbackMatched ? editId : ''),
-          suggestedName:   matched ? (best.tvg_name  || best.name) : (epgFallbackMatched ? editName : ''),
+          suggestedName:   matched ? cleanChannelLabel(best.tvg_name  || best.name) : (epgFallbackMatched ? editName : ''),
           suggestedLogo:   editLogo,
           suggestedTvgUrl: editTvgUrl,
           score:         resultScore,
@@ -2943,9 +3249,12 @@ createApp({
         ch.tvg_name = r.editName || ''
         ch.tvg_logo = r.editLogo || ''
         ch.tvg_url  = r.editTvgUrl || ''
+        const key = normName(ch.name || ch.tvg_name)
+        if (key) confirmedMappings.value[key] = { tvg_id: ch.tvg_id, tvg_name: ch.tvg_name, tvg_logo: ch.tvg_logo, tvg_url: ch.tvg_url, name: ch.tvg_name || ch.name }
         logoErrors.delete(ch.id)
         applied++
       })
+      saveConfirmedMappings()
       persist()
       modal.autoDetect = false
       showToast(t('autoDetectApplied').replace('{n}', applied))
@@ -2991,14 +3300,14 @@ createApp({
       importMode, importUrl, importLoading, importFileRef,
       filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,
       mobFilterOpen, hasActiveFilters, undoStack,
-      stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs,
+      metadataHealth, confirmedMappings, stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs, roadmapItems,
       selectedRows, selectedRowsCount, allPageSelected,
       t, setTheme, toggleTheme, setLang, setSort, prevPage, nextPage, resetFilters,
       undoLastChange, metadataScore, metadataTooltip,
       toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,
       removeChannel, confirmDelete, clearAll, triggerImport, importFromFile, importFromUrl,
       toggleRowSelect, toggleSelectAll, deleteSelected,
-      exportPlaylist,
+      exportPlaylist, exportMetadataHealthReport, applyBulkMetadataRules,
       epgData, epgLoaded, epgRef, logoErrors,
       triggerEpgImport, importEpgFromFile, clearEpg,
       getCurrentProgram, getNextProgram, getTodayPrograms, formatEpgTime,
@@ -3006,7 +3315,7 @@ createApp({
       IPTV_SOURCES, ENRICHMENT_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter, autoDetectMode,
       autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
-      epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
+      epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, apiChannelMetaById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
       fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, toggleExpand,

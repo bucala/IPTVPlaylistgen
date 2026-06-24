@@ -88,6 +88,27 @@
       --shadow-md:       0 8px 24px rgba(0,0,0,.40);
       --shadow-lg:       0 20px 60px rgba(0,0,0,.55);
     }
+    [data-theme="aurora"] {
+      color-scheme: dark;
+      --bg:#030712; --bg2:#0f172a; --surface:rgba(15,23,42,.88); --surface-s:rgba(30,41,59,.94); --surface-m:rgba(15,23,42,.92);
+      --border:rgba(56,189,248,.16); --border-s:rgba(56,189,248,.24); --text:#f8fafc; --text2:rgba(226,232,240,.86); --text3:rgba(186,230,253,.62); --text4:rgba(186,230,253,.34);
+      --fill:rgba(14,165,233,.18); --fill2:rgba(14,165,233,.10); --sep:rgba(56,189,248,.20); --primary:#38bdf8; --primary-d:#0ea5e9; --primary-l:rgba(56,189,248,.16);
+      --success:#22c55e; --danger:#fb7185; --warning:#fbbf24; --purple:#a78bfa; --gray:#64748b;
+    }
+    [data-theme="grape"] {
+      color-scheme: dark;
+      --bg:#120717; --bg2:#21102b; --surface:rgba(33,16,43,.88); --surface-s:rgba(48,23,63,.94); --surface-m:rgba(33,16,43,.92);
+      --border:rgba(216,180,254,.16); --border-s:rgba(216,180,254,.24); --text:#fff7ed; --text2:rgba(250,245,255,.84); --text3:rgba(233,213,255,.60); --text4:rgba(233,213,255,.32);
+      --fill:rgba(168,85,247,.18); --fill2:rgba(168,85,247,.10); --sep:rgba(216,180,254,.18); --primary:#c084fc; --primary-d:#a855f7; --primary-l:rgba(192,132,252,.16);
+      --success:#4ade80; --danger:#f87171; --warning:#fb923c; --purple:#e879f9; --gray:#78716c;
+    }
+    [data-theme="forest"] {
+      color-scheme: dark;
+      --bg:#020d08; --bg2:#071b12; --surface:rgba(7,27,18,.88); --surface-s:rgba(12,42,29,.94); --surface-m:rgba(7,27,18,.92);
+      --border:rgba(74,222,128,.16); --border-s:rgba(74,222,128,.24); --text:#f0fdf4; --text2:rgba(220,252,231,.84); --text3:rgba(187,247,208,.60); --text4:rgba(187,247,208,.32);
+      --fill:rgba(34,197,94,.18); --fill2:rgba(34,197,94,.10); --sep:rgba(74,222,128,.18); --primary:#22c55e; --primary-d:#16a34a; --primary-l:rgba(34,197,94,.16);
+      --success:#86efac; --danger:#fb7185; --warning:#facc15; --purple:#5eead4; --gray:#64748b;
+    }
 
     /* ── Reset ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -533,7 +554,7 @@
             <button class="btn btn-secondary"  @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
             <button class="btn btn-secondary"  @click="undoLastChange" :disabled="undoStack.length === 0">{{ t('undo') }}</button>
             <button class="btn btn-secondary"  @click="epgLoaded ? clearEpg() : triggerEpgImport()" :style="epgLoaded ? 'color:var(--success)' : ''"><span v-html="icon('antenna', 15)"></span>{{ epgLoaded ? t('clearEpg') : t('epgImport') }}</button>
-            <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" class="sr-only" @change="importEpgFromFile" />
+            <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" multiple class="sr-only" @change="importEpgFromFile" />
             <button class="btn btn-secondary"  @click="openAutoDetect" :disabled="stats.total === 0"><span v-html="icon('search', 15)"></span>{{ t('autoDetectBtn') }}</button>
             <button class="btn btn-ghost"      @click="openAddChannel"><span class="inline-flex items-center gap-1.5"><span v-html="icon('plus', 14)"></span>{{ t('addChannel') }}</span></button>
             <button class="btn btn-danger"     @click="deleteSelected" :disabled="selectedRowsCount === 0">{{ t('deleteSelected') }}{{ selectedRowsCount > 0 ? ' (' + selectedRowsCount + ')' : '' }}</button>
@@ -931,10 +952,9 @@
           <div class="sec-label mb-2 mt-4">{{ t('theme') }}</div>
           <div class="design-row">
             <span class="text-sm" style="color:var(--text3)">{{ t('theme') }}</span>
-            <button class="btn btn-ghost" @click="toggleTheme" :aria-label="theme === 'dark' ? t('switchLight') : t('switchDark')">
-              <span v-if="theme === 'dark'" class="inline-flex items-center gap-1.5"><span v-html="icon('sun', 15)"></span>{{ t('light') }}</span>
-              <span v-else class="inline-flex items-center gap-1.5"><span v-html="icon('moon', 15)"></span>{{ t('dark') }}</span>
-            </button>
+            <div class="flex flex-wrap gap-1 justify-end">
+              <button v-for="opt in themeOptions" :key="opt.id" class="btn" :class="theme === opt.id ? 'btn-primary' : 'btn-secondary'" style="padding:6px 10px;font-size:12px" @click="setTheme(opt.id)">{{ t(opt.labelKey) }}</button>
+            </div>
           </div>
 
           <!-- About -->
@@ -1413,6 +1433,7 @@ const ENRICHMENT_SOURCES = [
   { id: 'epg-globe-cz',label: 'Globe CZ',      detail: 'globetvapp/epg Czech XMLTV',      type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Czech/czech1.xml' },
   { id: 'epg-globe-sk',label: 'Globe SK',      detail: 'globetvapp/epg Slovakia XMLTV',   type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Slovakia/slovakia1.xml' },
   { id: 'epg-radoslavv',label:'CZ/SK EPG',     detail: 'radoslavv/epg guide.xml',         type: 'epg-xml', url: 'https://raw.githubusercontent.com/radoslavv/epg/master/guide.xml' },
+  { id: 'epg-open-sk2', label:'Open EPG SK2',  detail: 'open-epg.com Slovakia2 XMLTV',     type: 'epg-xml', url: 'https://www.open-epg.com/files/slovakia2.xml' },
 ]
 
 const CHANNEL_TVG_ALIASES = [
@@ -1585,6 +1606,12 @@ createApp({
         langLabel:        'Výber jazyka',
         light:            'Svetlá',
         dark:             'Tmavá',
+        skinLight:        'Svetlá',
+        skinDark:         'Tmavá',
+        skinAurora:       'Aurora',
+        skinGrape:        'Grape',
+        skinForest:       'Forest',
+        epgMaxSources:    'Naraz je možné načítať najviac 8 EPG XML zdrojov',
         importTitle:      'Import Playlist',
         importFromFile:   'Zo súboru',
         importFromUrl:    'Z URL',
@@ -1809,6 +1836,12 @@ createApp({
         langLabel:        'Language selector',
         light:            'Light',
         dark:             'Dark',
+        skinLight:        'Light',
+        skinDark:         'Dark',
+        skinAurora:       'Aurora',
+        skinGrape:        'Grape',
+        skinForest:       'Forest',
+        epgMaxSources:    'You can load at most 8 EPG XML sources at once',
         importTitle:      'Import Playlist',
         importFromFile:   'From file',
         importFromUrl:    'From URL',
@@ -1914,6 +1947,8 @@ createApp({
     const importFileRef = ref(null)
     const undoStack     = ref([])
     const confirmedMappings = ref({})
+    const importedEpgXmlIndex = ref({})
+    const importedEpgNameIndex = ref({})
 
     const mobFilterOpen = ref(false)
     const epgRef        = ref(null)
@@ -1941,7 +1976,7 @@ createApp({
     const apiNormMap                = ref(new Map()) // normName/collapsed → {id, name, logo}
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
-    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api', 'epg-globe-cz', 'epg-globe-sk', 'epg-radoslavv']))
+    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api', 'epg-globe-cz', 'epg-globe-sk', 'epg-radoslavv', 'epg-open-sk2']))
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
@@ -1955,6 +1990,13 @@ createApp({
 
     let toastTimer = null
     let _uid = Date.now()
+    const themeOptions = [
+      { id: 'light', labelKey: 'skinLight' },
+      { id: 'dark', labelKey: 'skinDark' },
+      { id: 'aurora', labelKey: 'skinAurora' },
+      { id: 'grape', labelKey: 'skinGrape' },
+      { id: 'forest', labelKey: 'skinForest' },
+    ]
 
     /* ── Icons ── */
     const ICONS = {
@@ -2682,25 +2724,47 @@ createApp({
     }
 
     function importEpgFromFile(event) {
-      const file = event.target.files?.[0]; if (!file) return
-      if (file.size > MAX_FILE_SIZE) return showToast(t('fileTooLarge'))
-      const reader = new FileReader()
-      reader.onload = e => {
-        try {
-          const { programs, channelMeta } = parseXMLTV(e.target.result)
-          epgData.value = { ...epgData.value, ...programs }
-          epgChannelMeta.value = { ...epgChannelMeta.value, ...channelMeta }
-          epgLoaded.value = true
-          const chCount = Object.keys(programs).length
-          const pCount  = Object.values(programs).reduce((s, a) => s + a.length, 0)
-          showToast(`${t('epgLoadedMsg')}: ${pCount} ${t('epgPrograms')}, ${chCount} ${t('epgChannels')}`)
-        } catch { showToast(t('importError')) }
+      const files = [...(event.target.files || [])].slice(0, 8)
+      if (!files.length) return
+      if ((event.target.files || []).length > 8) showToast(t('epgMaxSources'))
+      const mergedPrograms = {}, mergedMeta = {}, xmlIdx = {}, nameIdx = {}
+      let pending = files.length, totalPrograms = 0
+      const finish = () => {
+        pending--
+        if (pending > 0) return
+        epgData.value = { ...epgData.value, ...mergedPrograms }
+        epgChannelMeta.value = { ...epgChannelMeta.value, ...mergedMeta }
+        importedEpgXmlIndex.value = { ...importedEpgXmlIndex.value, ...xmlIdx }
+        importedEpgNameIndex.value = { ...importedEpgNameIndex.value, ...nameIdx }
+        epgXmlIndex.value = { ...epgXmlIndex.value, ...xmlIdx }
+        epgNameIndex.value = { ...epgNameIndex.value, ...nameIdx }
+        epgLoaded.value = true
+        showToast(`${t('epgLoadedMsg')}: ${totalPrograms} ${t('epgPrograms')}, ${Object.keys(mergedPrograms).length} ${t('epgChannels')}`)
         event.target.value = ''
       }
-      reader.readAsText(file, 'UTF-8')
+      files.forEach(file => {
+        if (file.size > MAX_FILE_SIZE) { showToast(t('fileTooLarge')); finish(); return }
+        const reader = new FileReader()
+        reader.onload = e => {
+          try {
+            const { programs, channelMeta } = parseXMLTV(e.target.result)
+            Object.assign(mergedPrograms, programs)
+            Object.assign(mergedMeta, channelMeta)
+            totalPrograms += Object.values(programs).reduce((sum, arr) => sum + arr.length, 0)
+            for (const [id, meta] of Object.entries(channelMeta)) {
+              const sourceRef = `uploaded:${file.name}`
+              xmlIdx[id.toLowerCase()] = sourceRef
+              const key = normName(meta.displayName || id)
+              if (key && !nameIdx[key]) nameIdx[key] = sourceRef
+            }
+          } catch { showToast(t('importError')) }
+          finish()
+        }
+        reader.readAsText(file, 'UTF-8')
+      })
     }
 
-    function clearEpg() { epgData.value = {}; epgChannelMeta.value = {}; epgLoaded.value = false }
+    function clearEpg() { epgData.value = {}; epgChannelMeta.value = {}; importedEpgXmlIndex.value = {}; importedEpgNameIndex.value = {}; epgLoaded.value = false }
     function triggerEpgImport() { epgRef.value?.click() }
 
     function parseM3UforAutoDetect(text) {
@@ -2886,8 +2950,8 @@ createApp({
       sourceLoaded.value  = false
       sourceIndex.value   = []
       epgChannelIndex.value      = {}
-      epgNameIndex.value         = {}
-      epgXmlIndex.value          = {}
+      epgNameIndex.value         = { ...importedEpgNameIndex.value }
+      epgXmlIndex.value          = { ...importedEpgXmlIndex.value }
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
       apiChannelMetaById.value     = {}
@@ -2917,6 +2981,11 @@ createApp({
     }
 
     function toggleEnrichmentSource(id, checked) {
+      const source = ENRICHMENT_SOURCES.find(s => s.id === id)
+      if (checked && source?.type === 'epg-xml') {
+        const selectedXml = ENRICHMENT_SOURCES.filter(s => s.type === 'epg-xml' && enrichmentSelectedSources.has(s.id)).length
+        if (selectedXml >= 8) { showToast(t('epgMaxSources')); return }
+      }
       if (checked) enrichmentSelectedSources.add(id)
       else enrichmentSelectedSources.delete(id)
     }
@@ -3299,7 +3368,7 @@ createApp({
       channels, lang, theme, activeTab, selectedId,
       importMode, importUrl, importLoading, importFileRef,
       filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,
-      mobFilterOpen, hasActiveFilters, undoStack,
+      mobFilterOpen, hasActiveFilters, undoStack, themeOptions,
       metadataHealth, confirmedMappings, stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs, roadmapItems,
       selectedRows, selectedRowsCount, allPageSelected,
       t, setTheme, toggleTheme, setLang, setSort, prevPage, nextPage, resetFilters,
@@ -3315,7 +3384,7 @@ createApp({
       IPTV_SOURCES, ENRICHMENT_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter, autoDetectMode,
       autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
-      epgChannelIndex, epgXmlIndex, logoChannelIndex, logoChannelIndexById, apiChannelMetaById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
+      epgChannelIndex, epgXmlIndex, importedEpgXmlIndex, logoChannelIndex, logoChannelIndexById, apiChannelMetaById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
       fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, toggleExpand,

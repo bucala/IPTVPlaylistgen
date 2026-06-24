@@ -1434,6 +1434,7 @@ const ENRICHMENT_SOURCES = [
   { id: 'epg-globe-cz',label: 'Globe CZ',      detail: 'globetvapp/epg Czech XMLTV',      type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Czech/czech1.xml' },
   { id: 'epg-globe-sk',label: 'Globe SK',      detail: 'globetvapp/epg Slovakia XMLTV',   type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Slovakia/slovakia1.xml' },
   { id: 'epg-radoslavv',label:'CZ/SK EPG',     detail: 'radoslavv/epg guide.xml',         type: 'epg-xml', url: 'https://raw.githubusercontent.com/radoslavv/epg/master/guide.xml' },
+  { id: 'epg-open-sk2', label:'Open EPG SK2',  detail: 'open-epg.com Slovakia2 XMLTV',     type: 'epg-xml', url: 'https://www.open-epg.com/files/slovakia2.xml' },
 ]
 
 const CHANNEL_TVG_ALIASES = [
@@ -1996,7 +1997,7 @@ createApp({
     const apiNormMap                = ref(new Map()) // normName/collapsed → {id, name, logo}
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
-    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api', 'epg-globe-cz', 'epg-globe-sk', 'epg-radoslavv']))
+    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api', 'epg-globe-cz', 'epg-globe-sk', 'epg-radoslavv', 'epg-open-sk2']))
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
@@ -2058,6 +2059,7 @@ createApp({
       { id: 'library', svgKey: 'tv',       labelKey: 'tabLibrary', descKey: 'tabLibraryDesc' },
       { id: 'content', svgKey: 'barChart', labelKey: 'tabContent', descKey: 'tabContentDesc' },
       { id: 'design',  svgKey: 'sliders',  labelKey: 'tabDesign',  descKey: 'tabDesignDesc'  },
+      { id: 'roadmap', svgKey: 'sparkles', labelKey: 'tabRoadmap', descKey: 'tabRoadmapDesc' },
     ])
 
 

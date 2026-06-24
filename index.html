@@ -1201,6 +1201,11 @@
                 </div>
               </label>
             </template>
+            <div style="width:1px;height:18px;background:var(--sep);flex-shrink:0"></div>
+            <input class="field" style="width:230px;padding:6px 9px;font-size:12px" type="url" v-model="customEpgUrl" :placeholder="t('customEpgUrlPh')" @keydown.enter.prevent="addCustomEpgUrl" />
+            <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px" @click="addCustomEpgUrl" :disabled="!customEpgUrl.trim()">{{ t('addEpgSource') }}</button>
+            <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px" @click="triggerEpgImport">{{ t('addEpgFiles') }}</button>
+            <span v-if="customEpgSources.length" class="text-xs" style="color:var(--text3)">{{ customEpgSources.length }} URL</span>
             <span v-if="enrichmentLoaded" class="text-xs flex items-center gap-1 ml-1" style="color:var(--success)">
               <span v-html="icon('check', 10)"></span>{{ t('autoDetectEnrichLoaded') }}
             </span>
@@ -1338,6 +1343,13 @@
                           <input class="field flex-1" style="font-size:12px;padding:4px 7px" v-model="r.editTvgUrl"
                                  :placeholder="t('tvgUrl')" type="url" @click.stop />
                         </div>
+                      </div>
+                      <div class="flex items-center gap-2 mt-2" @click.stop>
+                        <span class="label" style="min-width:98px;margin:0;font-size:11px">{{ t('manualMatch') }}</span>
+                        <select class="select flex-1" style="font-size:12px;padding:5px 28px 5px 8px" @change="applyManualSuggestion(r, $event.target.value); $event.target.value=''">
+                          <option value="">{{ t('manualMatchPlaceholder') }}</option>
+                          <option v-for="sug in manualSuggestionsFor(r)" :key="sug.key" :value="sug.key">{{ sug.label }}</option>
+                        </select>
                       </div>
                       <div class="flex gap-2 mt-2 justify-end" @click.stop>
                         <button class="btn btn-ghost" style="font-size:11px;padding:3px 9px"
@@ -1669,6 +1681,12 @@ createApp({
         autoDetectSourcesDesc:   'Vyber IPTV zdroje pre vyhľadanie metadát (TVG-ID, TVG-Name, Logo, TVG URL).',
         autoDetectCustomUrl:     'Vlastná M3U URL (voliteľné)',
         autoDetectCustomUrlPh:   'https://raw.githubusercontent.com/...',
+        customEpgUrlPh:        'https://www.open-epg.com/files/slovakia2.xml',
+        addEpgSource:          'Pridať EPG URL',
+        addEpgFiles:           'Pridať XML súbory',
+        customEpgAdded:        'EPG URL zdroj pridaný',
+        manualMatch:           'Ručné párovanie',
+        manualMatchPlaceholder:'Vyhľadať podobný názov zo zdrojov...',
         autoDetectFetch:         'Načítať a spustiť',
         autoDetectFetching:      'Načítavam zdroje...',
         autoDetectNoSources:     'Vyber aspoň jeden zdroj',
@@ -1902,6 +1920,12 @@ createApp({
         autoDetectSourcesDesc:   'Select IPTV sources to search for metadata (TVG-ID, TVG-Name, Logo, TVG URL).',
         autoDetectCustomUrl:     'Custom M3U URL (optional)',
         autoDetectCustomUrlPh:   'https://raw.githubusercontent.com/...',
+        customEpgUrlPh:        'https://www.open-epg.com/files/slovakia2.xml',
+        addEpgSource:          'Add EPG URL',
+        addEpgFiles:           'Add XML files',
+        customEpgAdded:        'EPG URL source added',
+        manualMatch:           'Manual match',
+        manualMatchPlaceholder:'Find similar name from sources...',
         autoDetectFetch:         'Fetch & Run',
         autoDetectFetching:      'Loading sources...',
         autoDetectNoSources:     'Select at least one source',
@@ -1957,6 +1981,8 @@ createApp({
     const autoDetectMode       = ref('balanced')
     const autoDetectPrefilter  = ref(null)  // Set of channel IDs to process, null = all
     const autoDetectCustomUrl  = ref('')
+    const customEpgUrl         = ref('')
+    const customEpgSources     = ref([])
     const sourceIndex          = ref([])    // { name, tvg_id, tvg_name, tvg_logo, tvg_url }
     const sourceLoading        = ref(false)
     const sourceLoaded         = ref(false)
@@ -2809,7 +2835,10 @@ createApp({
     }
 
     async function fetchEnrichmentIndexes() {
-      const sources = ENRICHMENT_SOURCES.filter(s => enrichmentSelectedSources.has(s.id))
+      const sources = [
+        ...ENRICHMENT_SOURCES.filter(s => enrichmentSelectedSources.has(s.id)),
+        ...customEpgSources.value,
+      ]
       if (sources.length === 0) return
       enrichmentLoading.value = true
       enrichmentLoaded.value  = false
@@ -2951,7 +2980,7 @@ createApp({
         ...IPTV_SOURCES.filter(s => autoDetectSelectedSources.has(s.id)),
         ...(autoDetectCustomUrl.value.trim() ? [{ id: 'custom', url: autoDetectCustomUrl.value.trim() }] : [])
       ]
-      const hasEnrichment = ENRICHMENT_SOURCES.some(s => enrichmentSelectedSources.has(s.id))
+      const hasEnrichment = ENRICHMENT_SOURCES.some(s => enrichmentSelectedSources.has(s.id)) || customEpgSources.value.length > 0
       if (urls.length === 0 && !hasEnrichment) { showToast(t('autoDetectNoSources')); return }
       sourceLoading.value = true
       sourceLoaded.value  = false
@@ -2987,14 +3016,25 @@ createApp({
       else autoDetectSelectedSources.delete(id)
     }
 
+    function epgXmlSourceCount() {
+      return ENRICHMENT_SOURCES.filter(s => s.type === 'epg-xml' && enrichmentSelectedSources.has(s.id)).length + customEpgSources.value.length
+    }
+
     function toggleEnrichmentSource(id, checked) {
       const source = ENRICHMENT_SOURCES.find(s => s.id === id)
-      if (checked && source?.type === 'epg-xml') {
-        const selectedXml = ENRICHMENT_SOURCES.filter(s => s.type === 'epg-xml' && enrichmentSelectedSources.has(s.id)).length
-        if (selectedXml >= 8) { showToast(t('epgMaxSources')); return }
-      }
+      if (checked && source?.type === 'epg-xml' && epgXmlSourceCount() >= 8) { showToast(t('epgMaxSources')); return }
       if (checked) enrichmentSelectedSources.add(id)
       else enrichmentSelectedSources.delete(id)
+    }
+
+    function addCustomEpgUrl() {
+      const url = customEpgUrl.value.trim()
+      if (!url) return
+      if (epgXmlSourceCount() >= 8) { showToast(t('epgMaxSources')); return }
+      const id = 'custom-epg-' + Date.now()
+      customEpgSources.value.push({ id, label: 'Custom EPG', detail: url, type: 'epg-xml', url })
+      customEpgUrl.value = ''
+      showToast(t('customEpgAdded'))
     }
 
     function getCurrentProgram(ch) {
@@ -3030,6 +3070,8 @@ createApp({
         .replace(/\s*(?:\[[^\]]*(?:not\s*24\s*\/?\s*7|geo\s*-?\s*blocked|backup|offline)[^\]]*\]|\([^)]*(?:not\s*24\s*\/?\s*7|geo\s*-?\s*blocked|backup|offline)[^)]*\))\s*/ig, ' ')
         .replace(/\s*(?:\[[^\]]*(?:\d{3,4}p|fhd|uhd|hd|sd|4k)[^\]]*\]|\([^)]*(?:\d{3,4}p|fhd|uhd|hd|sd|4k)[^)]*\))\s*/ig, ' ')
         .replace(/^\s*(?:sk|cz|czech|slovak(?:ia)?|cesk[eé]?|slovensk[eé]?)\s*[:|\-–—]+\s*/ig, '')
+        .replace(/\s+\b(?:HD|FHD|UHD|SD|4K)\b(?=\s*$)/ig, '')
+        .replace(/\s+\b(?:HD|FHD|UHD|SD|4K)\b(?=\s*$)/ig, '')
         .replace(/[©®™℠ⓈⓇⓒ]/g, '')
         .replace(/[\u24B6-\u24FF]/g, '')
         .replace(/\s{2,}/g, ' ')
@@ -3305,6 +3347,34 @@ createApp({
       else expandedRows.add(id)
     }
 
+    function manualSuggestionsFor(result) {
+      const base = normName(result?.ch?.tvg_name || result?.ch?.name || '')
+      const suggestions = []
+      const add = (entry, source) => {
+        const name = cleanChannelLabel(entry.tvg_name || entry.name || '')
+        const id = cleanTvgId(entry.tvg_id || entry.id || '')
+        if (!name && !id) return
+        const key = `${source}|${id}|${name}`
+        if (suggestions.some(s => s.key === key)) return
+        const score = Math.max(strSimilarity(base, normName(name)), id ? strSimilarity(base, normName(id)) : 0)
+        suggestions.push({ key, label: `${name || id} · ${id || '—'} · ${Math.round(score * 100)}%`, entry: { ...entry, tvg_id: id, tvg_name: name }, score })
+      }
+      sourceIndex.value.forEach(s => add(s, s.sourceId || 'src'))
+      for (const entries of apiNormMap.value.values()) entries.forEach(e => add({ tvg_id: e.id, tvg_name: e.name, tvg_logo: e.logo, name: e.name }, 'api'))
+      return suggestions.sort((a, b) => b.score - a.score).slice(0, 12)
+    }
+
+    function applyManualSuggestion(result, key) {
+      const sug = manualSuggestionsFor(result).find(s => s.key === key)
+      if (!sug) return
+      result.editId = sug.entry.tvg_id || ''
+      result.editName = sug.entry.tvg_name || sug.entry.name || ''
+      result.editLogo = sug.entry.tvg_logo || result.editLogo || ''
+      result.editTvgUrl = sug.entry.tvg_url || result.editTvgUrl || ''
+      result.score = Math.max(result.score, 0.99)
+      result.selected = true
+    }
+
     function openAutoDetect() {
       autoDetectFilter.value = 'all'
       autoDetectPrefilter.value = selectedRows.size > 0 ? new Set(selectedRows) : null
@@ -3390,11 +3460,11 @@ createApp({
       selectRow,
       IPTV_SOURCES, ENRICHMENT_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter, autoDetectMode,
-      autoDetectCustomUrl, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
+      autoDetectCustomUrl, customEpgUrl, customEpgSources, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
       epgChannelIndex, epgXmlIndex, importedEpgXmlIndex, logoChannelIndex, logoChannelIndexById, apiChannelMetaById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
-      fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, toggleExpand,
+      fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, addCustomEpgUrl, manualSuggestionsFor, applyManualSuggestion, toggleExpand,
     }
   }
 }).mount('#app')

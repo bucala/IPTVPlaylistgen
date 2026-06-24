@@ -76,7 +76,7 @@ const {
 const dirtyNames = [
   ['(1080p) Doma HD.sk [Not 24/7]', 'Doma HD.sk'],
   ['[Not 24/7] DajTo (720p)', 'DajTo'],
-  ['SK: Markiza HD', 'Markiza HD'],
+  ['SK: Markiza HD', 'Markiza'],
   ['Slovenské - JOJ Svet [Backup]', 'JOJ Svet'],
   ['Prima LOVE [Geo-blocked]', 'Prima LOVE'],
   ['Prima MAX ©', 'Prima MAX'],
@@ -122,8 +122,8 @@ for (const [name, expected] of aliasCases) {
 }
 
 const parsed = parseExtinf('#EXTINF:-1 tvg-id="Doma.sk@HD" tvg-name="(1080p) DOMA HD [Not 24/7]" tvg-logo="https://example.test/logo.png",SK: DOMA HD');
-assert(parsed.name === 'DOMA HD', 'parseExtinf strips visible channel prefix/decorations');
-assert(parsed.tvg_name === 'DOMA HD', 'parseExtinf strips tvg-name prefix/decorations');
+assert(parsed.name === 'DOMA', 'parseExtinf strips visible channel prefix/decorations');
+assert(parsed.tvg_name === 'DOMA', 'parseExtinf strips tvg-name prefix/decorations');
 assert(parsed.quality === 'FHD', 'parseExtinf keeps quality detection from raw channel name');
 
 assert(JSON.stringify(tvgIdVariants('Dajto.sk')) === JSON.stringify(['Dajto.sk', 'Dajto.cz']), 'tvgIdVariants orders SK before CZ');

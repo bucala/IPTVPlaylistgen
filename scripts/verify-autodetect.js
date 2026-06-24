@@ -90,6 +90,7 @@ for (const [input, expected] of dirtyNames) {
 assert(normName('(1080p) DOMA HD.sk [Not 24/7]') === 'doma', 'normalizes decorated DOMA to canonical name');
 assert(normName('SK: Markiza HD') === 'markiza', 'normalizes prefixed Markiza HD');
 assert(cleanTvgId('(720p) Doma HD.sk@SD') === 'Doma.sk', 'cleans decorated tvg-id and quality suffix');
+assert(cleanTvgId('CNNPrimaNewsHD.sk') === 'CNNPrimaNews.sk', 'cleans compact HD suffix before tvg-id country');
 assert(tvgCountry('Dajto.sk') === 'sk', 'detects SK tvg-id country');
 assert(tvgCountry('Dajto.cz') === 'cz', 'detects CZ tvg-id country');
 

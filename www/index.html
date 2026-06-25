@@ -1448,6 +1448,8 @@ const ALLOWED_TVG_URLS = new Set([
   'https://www.open-epg.com/files/czech3.xml',
   'https://www.open-epg.com/files/czech4.xml',
 ])
+const TVG_URL_PRIORITY = new Map([...ALLOWED_TVG_URLS].map((url, index) => [url, index]))
+const EPG_INDEX_MATCH_RANKS = new WeakMap()
 
 const ENRICHMENT_SOURCES = [
   { id: 'epg-index',   label: 'EPG index',    detail: 'iptv-org/api guides (CC0)',       type: 'epg',     url: 'https://iptv-org.github.io/api/guides.json' },
@@ -2910,7 +2912,7 @@ createApp({
             const blockRe = /<channel\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/channel>/g
             while ((m = blockRe.exec(text)) !== null) {
               const id = m[1]
-              if (canProvideTvgUrl) epgXmlIndex.value[id.toLowerCase()] = src.url
+              if (canProvideTvgUrl) putEpgTvgUrl(epgXmlIndex.value, id, src.url)
               const displayNames = []
               let dm
               const displayRe = /<display-name[^>]*>([\s\S]*?)<\/display-name>/g
@@ -2955,7 +2957,7 @@ createApp({
                 || guide.guides?.[0]
                 || ''
               const sourceUrl = allowedTvgUrl(rawSourceUrl)
-              if (channelId && sourceUrl) idx[channelId.toLowerCase()] = sourceUrl
+              if (channelId && sourceUrl) putEpgTvgUrl(idx, channelId, sourceUrl)
               for (const label of [guide.name, ...(guide.alt_names || [])]) {
                 putEpgName(normName(label), channelId, sourceUrl)
               }
@@ -3180,6 +3182,37 @@ createApp({
     function allowedTvgUrl(url) {
       const normalized = (url || '').trim().replace(/^http:/i, 'https:')
       return ALLOWED_TVG_URLS.has(normalized) ? normalized : ''
+    }
+
+    function epgTvgIdKeys(id) {
+      const raw = (id || '').trim().toLowerCase()
+      const clean = cleanTvgId(id).toLowerCase()
+      return [...new Set([raw, clean].filter(Boolean))]
+    }
+
+    function putEpgTvgUrl(index, id, url) {
+      const sourceUrl = allowedTvgUrl(url)
+      if (!sourceUrl) return
+      const keys = epgTvgIdKeys(id)
+      const rawKey = (id || '').trim().toLowerCase()
+      let ranks = EPG_INDEX_MATCH_RANKS.get(index)
+      if (!ranks) {
+        ranks = new Map()
+        EPG_INDEX_MATCH_RANKS.set(index, ranks)
+      }
+      for (const key of keys) {
+        const current = index[key]
+        const matchRank = key === rawKey ? 2 : 1
+        const currentRank = ranks.get(key) || 0
+        if (
+          !current
+          || matchRank > currentRank
+          || (matchRank === currentRank && TVG_URL_PRIORITY.get(sourceUrl) < TVG_URL_PRIORITY.get(current))
+        ) {
+          index[key] = sourceUrl
+          ranks.set(key, matchRank)
+        }
+      }
     }
 
     function pickPreferredEntry(entries) {

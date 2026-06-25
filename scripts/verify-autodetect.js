@@ -55,6 +55,8 @@ module.exports = {
   preferredCandidateHit,
   aliasTvgIdVariants,
   allowedTvgUrl,
+  epgTvgIdKeys,
+  putEpgTvgUrl,
   parseExtinf,
   detectQuality,
 };
@@ -71,6 +73,8 @@ const {
   preferredCandidateHit,
   aliasTvgIdVariants,
   allowedTvgUrl,
+  epgTvgIdKeys,
+  putEpgTvgUrl,
   parseExtinf,
   detectQuality,
 } = sandbox.module.exports;
@@ -139,6 +143,28 @@ assert(
 assert(
   allowedTvgUrl('https://raw.githubusercontent.com/globetvapp/epg/main/Slovakia/slovakia1.xml') === '',
   'rejects Globe XML as a TVG URL while keeping it available for matching'
+);
+assert(
+  JSON.stringify(epgTvgIdKeys('Markiza Krimi HD.sk')) === JSON.stringify(['markiza krimi hd.sk', 'markizakrimi.sk']),
+  'indexes raw and canonical Open EPG TVG-ID variants'
+);
+const epgUrlIndex = {};
+putEpgTvgUrl(epgUrlIndex, 'Markiza Krimi HD.sk', 'https://www.open-epg.com/files/slovakia3.xml');
+assert(
+  epgUrlIndex['markizakrimi.sk'] === 'https://www.open-epg.com/files/slovakia3.xml',
+  'maps canonical TVG-ID to the Open EPG file containing its decorated ID'
+);
+putEpgTvgUrl(epgUrlIndex, 'Markiza Krimi HD.sk', 'https://www.open-epg.com/files/czech3.xml');
+assert(
+  epgUrlIndex['markizakrimi.sk'] === 'https://www.open-epg.com/files/slovakia3.xml',
+  'keeps deterministic Open EPG source priority when IDs occur more than once'
+);
+const exactMatchIndex = {};
+putEpgTvgUrl(exactMatchIndex, 'Jednotka HD.sk', 'https://www.open-epg.com/files/slovakia1.xml');
+putEpgTvgUrl(exactMatchIndex, 'Jednotka.sk', 'https://www.open-epg.com/files/slovakia2.xml');
+assert(
+  exactMatchIndex['jednotka.sk'] === 'https://www.open-epg.com/files/slovakia2.xml',
+  'prefers an exact TVG-ID source over an earlier normalized HD alias'
 );
 
 process.exit(failed ? 1 : 0);

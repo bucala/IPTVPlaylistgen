@@ -50,11 +50,39 @@ for (const rel of ['index.html', 'www/index.html']) {
   for (const brokenUrl of [
     'https://iptv-org.github.io/epg/channels.json',
     'https://raw.githubusercontent.com/iptv-org/iptv/master/index.m3u',
-    'https://www.open-epg.com/files/slovakia1.xml',
-    'https://www.open-epg.com/files/czech1.xml',
   ]) {
     if (html.includes(brokenUrl)) fail(`${rel} still references ${brokenUrl}`);
     else ok(`${rel} does not reference ${brokenUrl}`);
+  }
+
+  for (const allowedTvgUrl of [
+    'https://www.open-epg.com/files/slovakia1.xml',
+    'https://www.open-epg.com/files/slovakia2.xml',
+    'https://www.open-epg.com/files/slovakia3.xml',
+    'https://www.open-epg.com/files/czech1.xml',
+    'https://www.open-epg.com/files/czech3.xml',
+    'https://www.open-epg.com/files/czech4.xml',
+  ]) {
+    if (html.includes(allowedTvgUrl)) ok(`${rel} includes allowed TVG URL ${allowedTvgUrl}`);
+    else fail(`${rel} is missing allowed TVG URL ${allowedTvgUrl}`);
+  }
+
+  if (/epg-globe-sk[\s\S]{0,300}metadataOnly:\s*true/.test(html)) {
+    ok(`${rel} keeps Globe SK metadata-only`);
+  } else {
+    fail(`${rel} may copy Globe SK into TVG URL`);
+  }
+
+  if (/v-if="expandedRows\.has\(r\.ch\.id\)"/.test(html) && !/expandedRows\.has\(r\.ch\.id\)\s*&&\s*r\.score/.test(html)) {
+    ok(`${rel} allows manual expansion for unmatched channels`);
+  } else {
+    fail(`${rel} still blocks expansion for unmatched channels`);
+  }
+
+  if (/manualSuggestionCache/.test(html) && /autoDetectCandidateBuckets/.test(html)) {
+    ok(`${rel} pre-indexes and caches manual suggestions`);
+  } else {
+    fail(`${rel} is missing manual suggestion indexing`);
   }
 
   const inlineScripts = html

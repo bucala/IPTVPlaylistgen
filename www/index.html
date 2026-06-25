@@ -213,6 +213,17 @@
       transition: border-color var(--ease), box-shadow var(--ease);
     }
     .select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,122,255,.15); }
+    .select option {
+      background: #ffffff;
+      color: #1c1c1e;
+    }
+    [data-theme="dark"] .select option,
+    [data-theme="aurora"] .select option,
+    [data-theme="grape"] .select option,
+    [data-theme="forest"] .select option {
+      background: #252528;
+      color: #ffffff;
+    }
     .label {
       display: block; font-size: 11px; font-weight: 600;
       letter-spacing: 0.06em; text-transform: uppercase;
@@ -1282,8 +1293,8 @@
               <template v-else-if="filteredAutoDetectResults.length">
                 <template v-for="r in filteredAutoDetectResults" :key="r.ch.id">
                   <tr :class="{ selected: r.selected }"
-                      :style="r.score > 0 ? 'cursor:pointer' : ''"
-                      @click.stop="r.score > 0 && toggleExpand(r.ch.id)">
+                      style="cursor:pointer"
+                      @click.stop="toggleExpand(r.ch.id)">
                     <td @click.stop>
                       <input type="checkbox" v-model="r.selected" :disabled="r.score === 0" />
                     </td>
@@ -1313,11 +1324,11 @@
                       <span v-else style="color:var(--text4)">—</span>
                     </td>
                     <td class="text-center" style="color:var(--text4)">
-                      <span v-if="r.score > 0" v-html="expandedRows.has(r.ch.id) ? icon('chevUp', 14) : icon('chevDown', 14)"></span>
+                      <span v-html="expandedRows.has(r.ch.id) ? icon('chevUp', 14) : icon('chevDown', 14)"></span>
                     </td>
                   </tr>
                   <!-- Expanded edit panel -->
-                  <tr v-if="expandedRows.has(r.ch.id) && r.score > 0"
+                  <tr v-if="expandedRows.has(r.ch.id)"
                       style="background:color-mix(in srgb,var(--primary) 5%,transparent)">
                     <td colspan="5" style="padding:10px 14px">
                       <div class="grid gap-2 auto-detect-edit-grid" style="grid-template-columns:1fr 1fr">
@@ -1429,13 +1440,27 @@ const IPTV_SOURCES = [
   { id: 'freetv',   label: 'Free-TV', detail: 'Free-TV/IPTV',    url: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8' },
 ]
 
+const ALLOWED_TVG_URLS = new Set([
+  'https://www.open-epg.com/files/slovakia1.xml',
+  'https://www.open-epg.com/files/slovakia2.xml',
+  'https://www.open-epg.com/files/slovakia3.xml',
+  'https://www.open-epg.com/files/czech1.xml',
+  'https://www.open-epg.com/files/czech3.xml',
+  'https://www.open-epg.com/files/czech4.xml',
+])
+
 const ENRICHMENT_SOURCES = [
   { id: 'epg-index',   label: 'EPG index',    detail: 'iptv-org/api guides (CC0)',       type: 'epg',     url: 'https://iptv-org.github.io/api/guides.json' },
   { id: 'logo-api',    label: 'Logá (API)',    detail: 'iptv-org/api channels (CC0)',     type: 'logo',    url: 'https://iptv-org.github.io/api/channels.json' },
-  { id: 'epg-globe-cz',label: 'Globe CZ',      detail: 'globetvapp/epg Czech XMLTV',      type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Czech/czech1.xml' },
-  { id: 'epg-globe-sk',label: 'Globe SK',      detail: 'globetvapp/epg Slovakia XMLTV',   type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Slovakia/slovakia1.xml' },
-  { id: 'epg-radoslavv',label:'CZ/SK EPG',     detail: 'radoslavv/epg guide.xml',         type: 'epg-xml', url: 'https://raw.githubusercontent.com/radoslavv/epg/master/guide.xml' },
-  { id: 'epg-open-sk2', label:'Open EPG SK2',  detail: 'open-epg.com Slovakia2 XMLTV',     type: 'epg-xml', url: 'https://www.open-epg.com/files/slovakia2.xml' },
+  { id: 'epg-globe-cz',label: 'Globe CZ',      detail: 'globetvapp/epg Czech XMLTV (iba párovanie)',    type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Czech/czech1.xml', metadataOnly: true },
+  { id: 'epg-globe-sk',label: 'Globe SK',      detail: 'globetvapp/epg Slovakia XMLTV (iba párovanie)', type: 'epg-xml', url: 'https://raw.githubusercontent.com/globetvapp/epg/main/Slovakia/slovakia1.xml', metadataOnly: true },
+  { id: 'epg-radoslavv',label:'CZ/SK EPG',     detail: 'radoslavv/epg guide.xml (iba párovanie)',       type: 'epg-xml', url: 'https://raw.githubusercontent.com/radoslavv/epg/master/guide.xml', metadataOnly: true },
+  { id: 'epg-open-sk1', label:'Open EPG SK1',  detail: 'open-epg.com Slovakia1 XMLTV', type: 'epg-xml', url: 'https://www.open-epg.com/files/slovakia1.xml', allowTvgUrl: true },
+  { id: 'epg-open-sk2', label:'Open EPG SK2',  detail: 'open-epg.com Slovakia2 XMLTV', type: 'epg-xml', url: 'https://www.open-epg.com/files/slovakia2.xml', allowTvgUrl: true },
+  { id: 'epg-open-sk3', label:'Open EPG SK3',  detail: 'open-epg.com Slovakia3 XMLTV', type: 'epg-xml', url: 'https://www.open-epg.com/files/slovakia3.xml', allowTvgUrl: true },
+  { id: 'epg-open-cz1', label:'Open EPG CZ1',  detail: 'open-epg.com Czech1 XMLTV',     type: 'epg-xml', url: 'https://www.open-epg.com/files/czech1.xml', allowTvgUrl: true },
+  { id: 'epg-open-cz3', label:'Open EPG CZ3',  detail: 'open-epg.com Czech3 XMLTV',     type: 'epg-xml', url: 'https://www.open-epg.com/files/czech3.xml', allowTvgUrl: true },
+  { id: 'epg-open-cz4', label:'Open EPG CZ4',  detail: 'open-epg.com Czech4 XMLTV',     type: 'epg-xml', url: 'https://www.open-epg.com/files/czech4.xml', allowTvgUrl: true },
 ]
 
 const CHANNEL_TVG_ALIASES = [
@@ -1993,6 +2018,7 @@ createApp({
     const customEpgUrl         = ref('')
     const customEpgSources     = ref([])
     const sourceIndex          = ref([])    // { name, tvg_id, tvg_name, tvg_logo, tvg_url }
+    const epgMetadataEntries   = ref([])    // XMLTV channel metadata used for matching only
     const sourceLoading        = ref(false)
     const sourceLoaded         = ref(false)
     const autoDetectSelectedSources = reactive(new Set(['iptv-sk', 'iptv-cz']))
@@ -2006,7 +2032,15 @@ createApp({
     const apiNormMap                = ref(new Map()) // normName/collapsed → {id, name, logo}
     const enrichmentLoading         = ref(false)
     const enrichmentLoaded          = ref(false)
-    const enrichmentSelectedSources = reactive(new Set(['epg-index', 'logo-api', 'epg-globe-cz', 'epg-globe-sk', 'epg-radoslavv', 'epg-open-sk2']))
+    const enrichmentSelectedSources = reactive(new Set([
+      'epg-index', 'logo-api', 'epg-globe-sk',
+      'epg-open-sk1', 'epg-open-sk2', 'epg-open-sk3',
+      'epg-open-cz1', 'epg-open-cz3', 'epg-open-cz4',
+    ]))
+
+    let autoDetectSearchEntries = []
+    let autoDetectCandidateBuckets = new Map()
+    let manualSuggestionCache = new Map()
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
@@ -2871,22 +2905,30 @@ createApp({
                 break
               }
             }
-            const re = /<channel\s+id="([^"]+)"/g
+            const canProvideTvgUrl = src.allowTvgUrl === true && !!allowedTvgUrl(src.url)
             let m
-            while ((m = re.exec(text)) !== null) {
-              epgXmlIndex.value[m[1].toLowerCase()] = src.url
-            }
             const blockRe = /<channel\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/channel>/g
             while ((m = blockRe.exec(text)) !== null) {
               const id = m[1]
-              epgXmlIndex.value[id.toLowerCase()] = src.url
+              if (canProvideTvgUrl) epgXmlIndex.value[id.toLowerCase()] = src.url
+              const displayNames = []
               let dm
               const displayRe = /<display-name[^>]*>([\s\S]*?)<\/display-name>/g
               while ((dm = displayRe.exec(m[2])) !== null) {
                 const displayName = dm[1].replace(/<[^>]*>/g, '').trim()
+                if (displayName) displayNames.push(displayName)
                 const key = normName(displayName)
-                if (key && !epgNameIndex.value[key]) epgNameIndex.value[key] = src.url
+                if (canProvideTvgUrl && key && !epgNameIndex.value[key]) epgNameIndex.value[key] = src.url
               }
+              const iconMatch = m[2].match(/<icon[^>]+src="([^"]+)"/i)
+              epgMetadataEntries.value.push({
+                name: displayNames[0] || id,
+                tvg_name: displayNames[0] || id,
+                tvg_id: id,
+                tvg_logo: iconMatch?.[1] || '',
+                tvg_url: canProvideTvgUrl ? src.url : '',
+                sourceId: src.id || 'epg-xml',
+              })
             }
             return
           }
@@ -2908,10 +2950,11 @@ createApp({
             }
             for (const guide of data) {
               const channelId = guide.channel || guide.id || ''
-              const sourceUrl = guide.sources?.find(s => s.format === 'XML')?.url
+              const rawSourceUrl = guide.sources?.find(s => s.format === 'XML')?.url
                 || guide.sources?.[0]?.url
                 || guide.guides?.[0]
                 || ''
+              const sourceUrl = allowedTvgUrl(rawSourceUrl)
               if (channelId && sourceUrl) idx[channelId.toLowerCase()] = sourceUrl
               for (const label of [guide.name, ...(guide.alt_names || [])]) {
                 putEpgName(normName(label), channelId, sourceUrl)
@@ -2994,9 +3037,14 @@ createApp({
       sourceLoading.value = true
       sourceLoaded.value  = false
       sourceIndex.value   = []
+      epgMetadataEntries.value = []
       epgChannelIndex.value      = {}
-      epgNameIndex.value         = { ...importedEpgNameIndex.value }
-      epgXmlIndex.value          = { ...importedEpgXmlIndex.value }
+      epgNameIndex.value         = Object.fromEntries(
+        Object.entries(importedEpgNameIndex.value).filter(([, url]) => allowedTvgUrl(url))
+      )
+      epgXmlIndex.value          = Object.fromEntries(
+        Object.entries(importedEpgXmlIndex.value).filter(([, url]) => allowedTvgUrl(url))
+      )
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
       apiChannelMetaById.value     = {}
@@ -3013,6 +3061,7 @@ createApp({
           fetchEnrichmentIndexes(),
         ])
         sourceIndex.value = all
+        rebuildAutoDetectSearchIndex()
         sourceLoaded.value = true
         showToast(t('autoDetectSourcesLoaded').replace('{n}', all.length))
         runAutoDetect()
@@ -3128,6 +3177,11 @@ createApp({
       return c === 'cz' || c === 'sk'
     }
 
+    function allowedTvgUrl(url) {
+      const normalized = (url || '').trim().replace(/^http:/i, 'https:')
+      return ALLOWED_TVG_URLS.has(normalized) ? normalized : ''
+    }
+
     function pickPreferredEntry(entries) {
       if (!entries?.length) return null
       return entries.find(e => tvgCountry(e.id) === 'sk')
@@ -3205,9 +3259,87 @@ createApp({
       return base
     }
 
+    function searchKeysFor(nName, nId = '') {
+      const keys = new Set()
+      for (const value of [nName, nId]) {
+        if (!value) continue
+        const compact = value.replace(/\s+/g, '')
+        keys.add(value)
+        keys.add(compact)
+        value.split(/\s+/).filter(w => w.length >= 3).forEach(w => keys.add(w))
+        if (compact.length >= 2) keys.add(`@${compact.slice(0, 2)}`)
+      }
+      return keys
+    }
+
+    function rebuildAutoDetectSearchIndex() {
+      const unique = new Map()
+      const entries = []
+      const add = raw => {
+        const tvgId = cleanTvgId(raw.tvg_id || raw.id || '')
+        const name = cleanChannelLabel(raw.tvg_name || raw.name || '')
+        if ((!name && !tvgId) || (tvgId && !isPreferredTvgId(tvgId))) return
+        const dedupeKey = `${tvgId.toLowerCase()}|${normName(name)}`
+        const existing = unique.get(dedupeKey)
+        if (existing) {
+          existing.tvg_logo = existing.tvg_logo || raw.tvg_logo || raw.logo || ''
+          existing.tvg_url = existing.tvg_url || allowedTvgUrl(raw.tvg_url)
+          return
+        }
+        const entry = {
+          ...raw,
+          tvg_id: tvgId,
+          tvg_name: name,
+          name: name || raw.name || '',
+          tvg_url: allowedTvgUrl(raw.tvg_url),
+          nName: normName(name),
+          nId: normName(tvgId),
+        }
+        unique.set(dedupeKey, entry)
+        entries.push(entry)
+      }
+
+      sourceIndex.value.forEach(add)
+      epgMetadataEntries.value.forEach(add)
+      Object.values(apiChannelMetaById.value).forEach(entry => add({
+        tvg_id: entry.id,
+        tvg_name: entry.name,
+        tvg_logo: entry.logo,
+        sourceId: 'api',
+      }))
+
+      const buckets = new Map()
+      entries.forEach(entry => {
+        searchKeysFor(entry.nName, entry.nId).forEach(key => {
+          if (!buckets.has(key)) buckets.set(key, [])
+          buckets.get(key).push(entry)
+        })
+      })
+      autoDetectSearchEntries = entries
+      autoDetectCandidateBuckets = buckets
+      manualSuggestionCache = new Map()
+    }
+
+    function indexedCandidatesFor(name) {
+      const normalized = normName(name)
+      if (!normalized) return []
+      const seen = new Set()
+      const candidates = []
+      searchKeysFor(normalized).forEach(key => {
+        for (const entry of autoDetectCandidateBuckets.get(key) || []) {
+          const id = `${entry.sourceId || ''}|${entry.tvg_id || ''}|${entry.nName}`
+          if (!seen.has(id)) {
+            seen.add(id)
+            candidates.push(entry)
+          }
+        }
+      })
+      return candidates
+    }
+
     function runAutoDetect() {
       const hasApiData = apiNormMap.value.size > 0
-      const hasSrcData = sourceLoaded.value && sourceIndex.value.length > 0
+      const hasSrcData = sourceLoaded.value && autoDetectSearchEntries.length > 0
       if (!hasApiData && !hasSrcData) { autoDetectResults.value = []; return }
       const modeCfg = {
         safe:       { min: 0.95, auto: 0.95, epg: 0.8 },
@@ -3217,40 +3349,6 @@ createApp({
       const channelsToProcess = autoDetectPrefilter.value
         ? channels.value.filter(ch => autoDetectPrefilter.value.has(ch.id))
         : channels.value
-      const srcNorm = sourceIndex.value.map(s => ({
-        ...s,
-        nName: normName(s.tvg_name || s.name),
-        nId:   normName(cleanTvgId(s.tvg_id)),
-      })).filter(s => !s.tvg_id || isPreferredTvgId(s.tvg_id) || ['iptv-sk', 'iptv-cz', 'custom'].includes(s.sourceId))
-      const candidateBuckets = new Map()
-      const addCandidateKey = (key, entry) => {
-        if (!key) return
-        if (!candidateBuckets.has(key)) candidateBuckets.set(key, [])
-        candidateBuckets.get(key).push(entry)
-      }
-      srcNorm.forEach(s => {
-        const keys = new Set([
-          s.nName,
-          s.nId,
-          ...(s.nName || '').split(/\s+/).filter(w => w.length >= 3),
-          ...(s.nId || '').split(/\s+/).filter(w => w.length >= 3),
-        ])
-        keys.forEach(key => addCandidateKey(key, s))
-      })
-      const getCandidatesFor = key => {
-        const keys = new Set([
-          key,
-          key.replace(/\s+/g, ''),
-          ...key.split(/\s+/).filter(w => w.length >= 3),
-        ])
-        const seen = new Set()
-        const candidates = []
-        keys.forEach(k => (candidateBuckets.get(k) || []).forEach(s => {
-          const id = `${s.sourceId || ''}|${s.tvg_id || ''}|${s.name || s.tvg_name || ''}`
-          if (!seen.has(id)) { seen.add(id); candidates.push(s) }
-        }))
-        return candidates.length ? candidates : srcNorm.slice(0, 500)
-      }
       autoDetectResults.value = channelsToProcess.map(ch => {
         const chNorm = normName(ch.tvg_name || ch.name) || normName(ch.name)
         let best = null, bestScore = 0
@@ -3273,7 +3371,7 @@ createApp({
         // Fuzzy matching against M3U sources (may override if score > 0.95)
         const sourceRank = s => ({ 'iptv-sk': 4, 'iptv-cz': 4, custom: 3, freetv: 2, 'iptv-all': 1 }[s.sourceId] || 1)
         const candidateRank = s => sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
-        getCandidatesFor(chNorm).forEach(s => {
+        indexedCandidatesFor(chNorm).forEach(s => {
           if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
           const sc = Math.max(
             strSimilarity(chNorm, s.nName),
@@ -3286,7 +3384,7 @@ createApp({
         const matched = best && bestScore >= modeCfg.min && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
         let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
         let editName   = cleanChannelLabel(matched ? (best.tvg_name  || best.name) : (ch.tvg_name || ''))
-        let editTvgUrl = matched ? (best.tvg_url   || '')        : (ch.tvg_url  || '')
+        let editTvgUrl = matched ? allowedTvgUrl(best.tvg_url) : (ch.tvg_url || '')
 
         // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
         const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()
@@ -3388,19 +3486,24 @@ createApp({
 
     function manualSuggestionsFor(result) {
       const base = normName(result?.ch?.tvg_name || result?.ch?.name || '')
-      const suggestions = []
-      const add = (entry, source) => {
-        const name = cleanChannelLabel(entry.tvg_name || entry.name || '')
-        const id = cleanTvgId(entry.tvg_id || entry.id || '')
-        if (!name && !id) return
-        const key = `${source}|${id}|${name}`
-        if (suggestions.some(s => s.key === key)) return
-        const score = Math.max(strSimilarity(base, normName(name)), id ? strSimilarity(base, normName(id)) : 0)
-        suggestions.push({ key, label: `${name || id} · ${id || '—'} · ${Math.round(score * 100)}%`, entry: { ...entry, tvg_id: id, tvg_name: name }, score })
-      }
-      sourceIndex.value.forEach(s => add(s, s.sourceId || 'src'))
-      for (const entries of apiNormMap.value.values()) entries.forEach(e => add({ tvg_id: e.id, tvg_name: e.name, tvg_logo: e.logo, name: e.name }, 'api'))
-      return suggestions.sort((a, b) => b.score - a.score).slice(0, 12)
+      const cacheKey = `${result?.ch?.id || ''}|${base}`
+      if (manualSuggestionCache.has(cacheKey)) return manualSuggestionCache.get(cacheKey)
+      const suggestions = indexedCandidatesFor(base)
+        .map(entry => {
+          const name = entry.tvg_name || entry.name || ''
+          const id = entry.tvg_id || ''
+          const score = Math.max(strSimilarity(base, entry.nName), entry.nId ? strSimilarity(base, entry.nId) : 0)
+          return {
+            key: `${entry.sourceId || 'src'}|${id}|${name}`,
+            label: `${name || id} · ${id || '—'} · ${Math.round(score * 100)}%`,
+            entry,
+            score,
+          }
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 12)
+      manualSuggestionCache.set(cacheKey, suggestions)
+      return suggestions
     }
 
     function applyManualSuggestion(result, key) {
@@ -3409,7 +3512,10 @@ createApp({
       result.editId = sug.entry.tvg_id || ''
       result.editName = sug.entry.tvg_name || sug.entry.name || ''
       result.editLogo = sug.entry.tvg_logo || result.editLogo || ''
-      result.editTvgUrl = sug.entry.tvg_url || result.editTvgUrl || ''
+      result.editTvgUrl = allowedTvgUrl(sug.entry.tvg_url)
+        || epgXmlIndex.value[(result.editId || '').toLowerCase()]
+        || epgNameIndex.value[normName(result.editName)]
+        || ''
       result.score = Math.max(result.score, 0.99)
       result.selected = true
     }

@@ -29,7 +29,7 @@ function extract(start, end) {
   return html.slice(from, to);
 }
 
-const aliasBlock = extract('const CHANNEL_TVG_ALIASES = [', 'createApp({');
+const aliasBlock = extract('const ALLOWED_TVG_URLS = new Set([', 'createApp({');
 const autodetectFunctions = extract('function stripChannelDecorations', 'function strSimilarity');
 const parseFunctions = extract('function parseExtinf', 'function detectQuality');
 const detectQualityBlock = extract('function detectQuality', 'function exportPlaylist');
@@ -54,6 +54,7 @@ module.exports = {
   nameTvgIdVariants,
   preferredCandidateHit,
   aliasTvgIdVariants,
+  allowedTvgUrl,
   parseExtinf,
   detectQuality,
 };
@@ -69,6 +70,7 @@ const {
   nameTvgIdVariants,
   preferredCandidateHit,
   aliasTvgIdVariants,
+  allowedTvgUrl,
   parseExtinf,
   detectQuality,
 } = sandbox.module.exports;
@@ -130,5 +132,13 @@ assert(parsed.quality === 'FHD', 'parseExtinf keeps quality detection from raw c
 assert(JSON.stringify(tvgIdVariants('Dajto.sk')) === JSON.stringify(['Dajto.sk', 'Dajto.cz']), 'tvgIdVariants orders SK before CZ');
 assert(JSON.stringify(nameTvgIdVariants('JOJ Svet')) === JSON.stringify(['jojsvet.sk', 'jojsvet.cz']), 'nameTvgIdVariants creates SK then CZ fallbacks');
 assert(detectQuality('(720p) DajTo') === 'HD', 'detectQuality recognizes decorated 720p source names');
+assert(
+  allowedTvgUrl('https://www.open-epg.com/files/slovakia1.xml') === 'https://www.open-epg.com/files/slovakia1.xml',
+  'allows approved Open EPG TVG URLs'
+);
+assert(
+  allowedTvgUrl('https://raw.githubusercontent.com/globetvapp/epg/main/Slovakia/slovakia1.xml') === '',
+  'rejects Globe XML as a TVG URL while keeping it available for matching'
+);
 
 process.exit(failed ? 1 : 0);

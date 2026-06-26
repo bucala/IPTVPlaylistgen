@@ -55,10 +55,8 @@ module.exports = {
   preferredCandidateHit,
   aliasTvgIdVariants,
   allowedTvgUrl,
-  exportableTvgUrl,
   epgTvgIdKeys,
   putEpgTvgUrl,
-  putEpgSourceIndex,
   parseExtinf,
   detectQuality,
 };
@@ -75,10 +73,8 @@ const {
   preferredCandidateHit,
   aliasTvgIdVariants,
   allowedTvgUrl,
-  exportableTvgUrl,
   epgTvgIdKeys,
   putEpgTvgUrl,
-  putEpgSourceIndex,
   parseExtinf,
   detectQuality,
 } = sandbox.module.exports;
@@ -116,13 +112,6 @@ const hit = preferredCandidateHit(
 );
 assert(hit?.id === 'Doma.sk' && hit.url === 'sk.xml', 'prefers SK EPG URL before CZ fallback');
 
-const xmlIdx = {};
-const nameIdx = {};
-putEpgSourceIndex('DAJTO HD.sk', 'DajTO', 'https://example.test/globe.xml', xmlIdx, nameIdx);
-putEpgSourceIndex('DAJTO HD.sk', 'DajTO', 'https://www.open-epg.com/files/slovakia2.xml', xmlIdx, nameIdx);
-assert(xmlIdx['dajto.sk'] === 'https://www.open-epg.com/files/slovakia2.xml', 'indexes cleaned EPG tvg-id variants to source URL');
-assert(nameIdx.dajto === 'https://www.open-epg.com/files/slovakia2.xml', 'indexes EPG display-name to source URL');
-
 const aliasCases = [
   ['DOMA', 'Doma.sk'],
   ['DajTo', 'Dajto.sk'],
@@ -142,7 +131,6 @@ for (const [name, expected] of aliasCases) {
 const parsed = parseExtinf('#EXTINF:-1 tvg-id="Doma.sk@HD" tvg-name="(1080p) DOMA HD [Not 24/7]" tvg-logo="https://example.test/logo.png",SK: DOMA HD');
 assert(parsed.name === 'DOMA', 'parseExtinf strips visible channel prefix/decorations');
 assert(parsed.tvg_name === 'DOMA', 'parseExtinf strips tvg-name prefix/decorations');
-assert(parsed.tvg_id === 'Doma.sk', 'parseExtinf cleans tvg-id quality suffix');
 assert(parsed.quality === 'FHD', 'parseExtinf keeps quality detection from raw channel name');
 
 assert(JSON.stringify(tvgIdVariants('Dajto.sk')) === JSON.stringify(['Dajto.sk', 'Dajto.cz']), 'tvgIdVariants orders SK before CZ');
@@ -155,14 +143,6 @@ assert(
 assert(
   allowedTvgUrl('https://raw.githubusercontent.com/globetvapp/epg/main/Slovakia/slovakia1.xml') === '',
   'rejects Globe XML as a TVG URL while keeping it available for matching'
-);
-assert(
-  exportableTvgUrl('http://example.test/custom.xml') === 'https://example.test/custom.xml',
-  'normalizes custom HTTP EPG URLs for export'
-);
-assert(
-  exportableTvgUrl('uploaded:guide.xml') === '',
-  'does not export local uploaded file labels as TVG URLs'
 );
 assert(
   JSON.stringify(epgTvgIdKeys('Markiza Krimi HD.sk')) === JSON.stringify(['markiza krimi hd.sk', 'markizakrimi.sk']),

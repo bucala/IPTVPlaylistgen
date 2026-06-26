@@ -488,21 +488,14 @@
       .table-shell:not(.auto-detect-table) tbody td:nth-child(11) .flex { justify-content: stretch; }
       .table-shell:not(.auto-detect-table) tbody td:nth-child(11) .btn { flex: 1; }
       .table-shell:not(.auto-detect-table) .empty-state { padding: 42px 18px; }
-      .modal-overlay { align-items: flex-end; padding: max(.5rem, env(safe-area-inset-top)) .35rem max(.5rem, env(safe-area-inset-bottom)); }
-      .modal-card { width: min(100%, 560px); max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1rem)); padding: .85rem; border-radius: 20px; }
-      .modal-card.mobile-sheet { border-radius: 20px; max-height: 92dvh; }
-      .auto-detect-card { width: calc(100dvw - .7rem) !important; max-width: 560px !important; max-height: 92dvh !important; padding: .75rem !important; }
-      .auto-detect-bar { max-height: 21dvh; overflow-y: auto; align-items: stretch; gap: .35rem !important; }
-      .auto-detect-card h2 { font-size: 1rem; line-height: 1.18; }
+      .modal-overlay { align-items: center; padding: max(1rem, env(safe-area-inset-top)) .75rem max(1rem, env(safe-area-inset-bottom)); }
+      .modal-card { width: min(100%, 560px); max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem)); padding: 1rem; border-radius: 22px; }
+      .modal-card.mobile-sheet { border-radius: 22px; max-height: 88dvh; }
+      .auto-detect-card { width: min(100%, 560px) !important; max-height: 88dvh !important; padding: .85rem !important; }
+      .auto-detect-bar { max-height: 24dvh; overflow-y: auto; align-items: stretch; }
+      .auto-detect-card h2 { font-size: 1.12rem; line-height: 1.25; }
       .auto-detect-table { max-height: 40dvh; }
-      .auto-detect-table table { min-width: 0; width: 100%; table-layout: fixed; }
-      .auto-detect-table th:nth-child(1), .auto-detect-table td:nth-child(1) { width: 34px !important; }
-      .auto-detect-table th:nth-child(4), .auto-detect-table td:nth-child(4),
-      .auto-detect-table th:nth-child(5), .auto-detect-table td:nth-child(5) { display: none; }
-      .auto-detect-table th:nth-child(2), .auto-detect-table td:nth-child(2),
-      .auto-detect-table th:nth-child(3), .auto-detect-table td:nth-child(3) { width: auto !important; min-width: 0 !important; }
-      .auto-detect-table td { padding: 9px 6px; overflow: hidden; }
-      .auto-detect-table .mono { white-space: normal; overflow-wrap: anywhere; letter-spacing: .01em; }
+      .auto-detect-table table { min-width: 560px; }
       .auto-detect-bar .seg { width: 100%; }
       .auto-detect-stats { flex-wrap: wrap; }
       .auto-detect-stats > .seg { order: 2; flex-basis: 100%; }
@@ -1307,7 +1300,7 @@
                     </td>
                     <td>
                       <div class="font-semibold text-sm">{{ r.ch.name }}</div>
-                      <div class="text-xs mono" style="color:var(--text4)">{{ r.originalTvgId || '—' }}</div>
+                      <div class="text-xs mono" style="color:var(--text4)">{{ r.ch.tvg_id || '—' }}</div>
                     </td>
                     <td>
                       <template v-if="r.score > 0">
@@ -1647,7 +1640,7 @@ createApp({
         skinAurora:       'Aurora',
         skinGrape:        'Grape',
         skinForest:       'Forest',
-        epgMaxSources:    'Naraz je možné načítať najviac 10 EPG XML zdrojov',
+        epgMaxSources:    'Naraz je možné načítať najviac 8 EPG XML zdrojov',
         importTitle:      'Import Playlist',
         importFromFile:   'Zo súboru',
         importFromUrl:    'Z URL',
@@ -1702,7 +1695,7 @@ createApp({
         epgMatchTip:      'EPG dostupné',
         noEpgMatchTip:    'Bez EPG',
         clearEpg:            'Zmazať EPG',
-        epgImportHint:       'Načítať najviac 10 XMLTV súborov ako EPG a zdroj TVG URL pre autodetekciu',
+        epgImportHint:       'Načítať najviac 8 XMLTV súborov ako EPG a zdroj TVG URL pre autodetekciu',
         detachTvgUrl:        'Odpojiť TVG URL',
         detachedTvgUrl:      'Odpojené TVG URL pre {n} kanálov',
         themeAndLangHint:    'Téma a jazyk sú dostupné v hlavičke',
@@ -1890,7 +1883,7 @@ createApp({
         skinAurora:       'Aurora',
         skinGrape:        'Grape',
         skinForest:       'Forest',
-        epgMaxSources:    'You can load at most 10 EPG XML sources at once',
+        epgMaxSources:    'You can load at most 8 EPG XML sources at once',
         importTitle:      'Import Playlist',
         importFromFile:   'From file',
         importFromUrl:    'From URL',
@@ -1945,7 +1938,7 @@ createApp({
         epgMatchTip:      'EPG available',
         noEpgMatchTip:    'No EPG',
         clearEpg:            'Clear EPG',
-        epgImportHint:       'Load up to 10 XMLTV files as EPG and TVG URL source for autodetect',
+        epgImportHint:       'Load up to 8 XMLTV files as EPG and TVG URL source for autodetect',
         detachTvgUrl:        'Detach TVG URL',
         detachedTvgUrl:      'Detached TVG URL for {n} channels',
         themeAndLangHint:    'Theme & language controls are in the header',
@@ -2586,7 +2579,7 @@ createApp({
       const tvgName = stripChannelDecorations(rawTvgName || name)
       return {
         name,
-        tvg_id:      cleanTvgId(extractAttr(line, 'tvg-id')),
+        tvg_id:      extractAttr(line, 'tvg-id'),
         tvg_name:    tvgName || name,
         tvg_logo:    extractAttr(line, 'tvg-logo'),
         tvg_url:     extractAttr(line, 'tvg-url'),
@@ -2797,9 +2790,9 @@ createApp({
     }
 
     function importEpgFromFile(event) {
-      const files = [...(event.target.files || [])].slice(0, 10)
+      const files = [...(event.target.files || [])].slice(0, 8)
       if (!files.length) return
-      if ((event.target.files || []).length > 10) showToast(t('epgMaxSources'))
+      if ((event.target.files || []).length > 8) showToast(t('epgMaxSources'))
       const mergedPrograms = {}, mergedMeta = {}, xmlIdx = {}, nameIdx = {}
       let pending = files.length, totalPrograms = 0
       const finish = () => {
@@ -2826,7 +2819,9 @@ createApp({
             totalPrograms += Object.values(programs).reduce((sum, arr) => sum + arr.length, 0)
             for (const [id, meta] of Object.entries(channelMeta)) {
               const sourceRef = `uploaded:${file.name}`
-              putEpgSourceIndex(id, meta.displayName || id, sourceRef, xmlIdx, nameIdx)
+              xmlIdx[id.toLowerCase()] = sourceRef
+              const key = normName(meta.displayName || id)
+              if (key && !nameIdx[key]) nameIdx[key] = sourceRef
             }
           } catch { showToast(t('importError')) }
           finish()
@@ -2912,20 +2907,20 @@ createApp({
                 break
               }
             }
-            const canProvideTvgUrl = src.metadataOnly !== true
-            const sourceTvgUrl = canProvideTvgUrl ? (allowedTvgUrl(src.url) || exportableTvgUrl(src.url)) : ''
+            const canProvideTvgUrl = src.allowTvgUrl === true && !!allowedTvgUrl(src.url)
             let m
             const blockRe = /<channel\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/channel>/g
             while ((m = blockRe.exec(text)) !== null) {
               const id = m[1]
-              if (sourceTvgUrl) putEpgSourceIndex(id, id, sourceTvgUrl, epgXmlIndex.value, epgNameIndex.value)
+              if (canProvideTvgUrl) putEpgTvgUrl(epgXmlIndex.value, id, src.url)
               const displayNames = []
               let dm
               const displayRe = /<display-name[^>]*>([\s\S]*?)<\/display-name>/g
               while ((dm = displayRe.exec(m[2])) !== null) {
                 const displayName = dm[1].replace(/<[^>]*>/g, '').trim()
                 if (displayName) displayNames.push(displayName)
-                if (sourceTvgUrl) putEpgSourceIndex(id, displayName, sourceTvgUrl, epgXmlIndex.value, epgNameIndex.value)
+                const key = normName(displayName)
+                if (canProvideTvgUrl && key && !epgNameIndex.value[key]) epgNameIndex.value[key] = src.url
               }
               const iconMatch = m[2].match(/<icon[^>]+src="([^"]+)"/i)
               epgMetadataEntries.value.push({
@@ -2933,7 +2928,7 @@ createApp({
                 tvg_name: displayNames[0] || id,
                 tvg_id: id,
                 tvg_logo: iconMatch?.[1] || '',
-                tvg_url: sourceTvgUrl,
+                tvg_url: canProvideTvgUrl ? src.url : '',
                 sourceId: src.id || 'epg-xml',
               })
             }
@@ -3087,7 +3082,7 @@ createApp({
 
     function toggleEnrichmentSource(id, checked) {
       const source = ENRICHMENT_SOURCES.find(s => s.id === id)
-      if (checked && source?.type === 'epg-xml' && epgXmlSourceCount() >= 10) { showToast(t('epgMaxSources')); return }
+      if (checked && source?.type === 'epg-xml' && epgXmlSourceCount() >= 8) { showToast(t('epgMaxSources')); return }
       if (checked) enrichmentSelectedSources.add(id)
       else enrichmentSelectedSources.delete(id)
     }
@@ -3095,7 +3090,7 @@ createApp({
     function addCustomEpgUrl() {
       const url = customEpgUrl.value.trim()
       if (!url) return
-      if (epgXmlSourceCount() >= 10) { showToast(t('epgMaxSources')); return }
+      if (epgXmlSourceCount() >= 8) { showToast(t('epgMaxSources')); return }
       const id = 'custom-epg-' + Date.now()
       customEpgSources.value.push({ id, label: 'Custom EPG', detail: url, type: 'epg-xml', url })
       customEpgUrl.value = ''
@@ -3189,11 +3184,6 @@ createApp({
       return ALLOWED_TVG_URLS.has(normalized) ? normalized : ''
     }
 
-    function exportableTvgUrl(url) {
-      const normalized = (url || '').trim().replace(/^http:/i, 'https:')
-      return /^https?:\/\//i.test(normalized) ? normalized : ''
-    }
-
     function epgTvgIdKeys(id) {
       const raw = (id || '').trim().toLowerCase()
       const clean = cleanTvgId(id).toLowerCase()
@@ -3271,47 +3261,6 @@ createApp({
       return hit ? hit.ids : []
     }
 
-    function putEpgSourceIndex(rawId, displayName, sourceUrl, xmlIndex, nameIndex) {
-      const normalizedSourceUrl = exportableTvgUrl(sourceUrl)
-      if (!normalizedSourceUrl) return
-      const cleanedId = cleanTvgId(rawId || '')
-      const ids = [
-        rawId,
-        cleanedId,
-        ...tvgIdVariants(cleanedId),
-        ...nameTvgIdVariants(displayName || cleanedId),
-      ]
-      for (const id of ids) {
-        const key = cleanTvgId(id).toLowerCase()
-        if (key && (!xmlIndex[key] || /open-epg\.com\/files\//i.test(normalizedSourceUrl))) xmlIndex[key] = normalizedSourceUrl
-      }
-      const nameKey = normName(displayName || rawId || cleanedId)
-      if (nameKey && (!nameIndex[nameKey] || /open-epg\.com\/files\//i.test(normalizedSourceUrl))) nameIndex[nameKey] = normalizedSourceUrl
-    }
-
-    function selectedEpgXmlSources() {
-      return [
-        ...ENRICHMENT_SOURCES.filter(s => s.type === 'epg-xml' && s.metadataOnly !== true && enrichmentSelectedSources.has(s.id)),
-        ...customEpgSources.value,
-      ]
-    }
-
-    function preferredSelectedEpgUrl(ch, editId) {
-      const sources = selectedEpgXmlSources()
-      if (!sources.length) return ''
-      const country = tvgCountry(editId || ch?.tvg_id || '')
-      const sourceText = s => `${s.label || ''} ${s.detail || ''} ${s.url || ''}`.toLowerCase()
-      const matchesCountry = s => {
-        const txt = sourceText(s)
-        if (country === 'sk') return /(slovakia|slovak|\.sk\b|\/sk|sk\d|open-epg\.com\/files\/slovakia)/i.test(txt)
-        if (country === 'cz') return /(czech|cesk|\.cz\b|\/cz|cz\d|open-epg\.com\/files\/czech)/i.test(txt)
-        return false
-      }
-      const openCountry = sources.find(s => /open-epg\.com\/files\//i.test(s.url || '') && matchesCountry(s))
-      const byCountry = sources.find(matchesCountry)
-      return exportableTvgUrl(openCountry?.url || byCountry?.url || sources.find(s => /open-epg\.com\/files\//i.test(s.url || ''))?.url || sources[0]?.url || '')
-    }
-
     function strSimilarity(na, nb) {
       if (!na || !nb) return 0
       if (na === nb) return 1
@@ -3363,14 +3312,11 @@ createApp({
         const tvgId = cleanTvgId(raw.tvg_id || raw.id || '')
         const name = cleanChannelLabel(raw.tvg_name || raw.name || '')
         if ((!name && !tvgId) || (tvgId && !isPreferredTvgId(tvgId))) return
-        const sourceId = String(raw.sourceId || '')
-        const tvgUrl = allowedTvgUrl(raw.tvg_url)
-          || (/^(?:epg-|custom-epg)/.test(sourceId) ? exportableTvgUrl(raw.tvg_url) : '')
         const dedupeKey = `${tvgId.toLowerCase()}|${normName(name)}`
         const existing = unique.get(dedupeKey)
         if (existing) {
           existing.tvg_logo = existing.tvg_logo || raw.tvg_logo || raw.logo || ''
-          existing.tvg_url = existing.tvg_url || tvgUrl
+          existing.tvg_url = existing.tvg_url || allowedTvgUrl(raw.tvg_url)
           return
         }
         const entry = {
@@ -3378,7 +3324,7 @@ createApp({
           tvg_id: tvgId,
           tvg_name: name,
           name: name || raw.name || '',
-          tvg_url: tvgUrl,
+          tvg_url: allowedTvgUrl(raw.tvg_url),
           nName: normName(name),
           nId: normName(tvgId),
         }
@@ -3471,7 +3417,7 @@ createApp({
         const matched = best && bestScore >= modeCfg.min && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
         let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
         let editName   = cleanChannelLabel(matched ? (best.tvg_name  || best.name) : (ch.tvg_name || ''))
-        let editTvgUrl = matched ? (allowedTvgUrl(best.tvg_url) || exportableTvgUrl(best.tvg_url)) : (ch.tvg_url || '')
+        let editTvgUrl = matched ? allowedTvgUrl(best.tvg_url) : (ch.tvg_url || '')
 
         // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
         const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()
@@ -3521,9 +3467,6 @@ createApp({
             || epgNameIndex.value[nameKey]
             || ''
         }
-        if (!editTvgUrl && matched) {
-          editTvgUrl = preferredSelectedEpgUrl(ch, editId)
-        }
         const epgFallbackMatched = !!editTvgUrl && !matched
         const resultScore = matched ? bestScore : (epgFallbackMatched ? modeCfg.epg : 0)
         if (epgFallbackMatched && !editName) editName = cleanChannelLabel(ch.tvg_name || ch.name)
@@ -3556,7 +3499,6 @@ createApp({
 
         return {
           ch,
-          originalTvgId:   cleanTvgId(ch.tvg_id || ''),
           suggestedId:     matched ? (best.tvg_id   || '') : (epgFallbackMatched ? editId : ''),
           suggestedName:   matched ? cleanChannelLabel(best.tvg_name  || best.name) : (epgFallbackMatched ? editName : ''),
           suggestedLogo:   editLogo,
@@ -3604,7 +3546,6 @@ createApp({
       result.editName = sug.entry.tvg_name || sug.entry.name || ''
       result.editLogo = sug.entry.tvg_logo || result.editLogo || ''
       result.editTvgUrl = allowedTvgUrl(sug.entry.tvg_url)
-        || exportableTvgUrl(sug.entry.tvg_url)
         || epgXmlIndex.value[(result.editId || '').toLowerCase()]
         || epgNameIndex.value[normName(result.editName)]
         || ''

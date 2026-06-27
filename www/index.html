@@ -3651,7 +3651,13 @@ createApp({
           if (s.exact_tvg_id && exportableTvgUrl(s.tvg_url)) return 6
           return { confirmed: 5, 'iptv-sk': 4, 'iptv-cz': 4, custom: 3, freetv: 2, 'iptv-all': 1 }[sourceId] || 1
         }
-        const candidateRank = s => sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0) + (tvgCountry(s.exact_tvg_id || s.tvg_id) === 'sk' ? 0.1 : 0)
+        const chCountry = tvgCountry(ch.tvg_id)
+        const candidateRank = s => {
+          const sCountry = tvgCountry(s.exact_tvg_id || s.tvg_id)
+          return sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
+            + (sCountry === 'sk' ? 0.1 : 0)
+            + (chCountry && chCountry === sCountry ? 5 : 0)
+        }
         indexedCandidatesFor(chNorm).forEach(s => {
           if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
           const sc = Math.max(

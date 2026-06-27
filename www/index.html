@@ -1144,85 +1144,105 @@
           <button class="btn btn-ghost" style="padding:6px 10px;flex-shrink:0" @click="modal.autoDetect = false" :aria-label="t('close')" v-html="icon('x', 16)"></button>
         </div>
 
-        <!-- ── Compact source bar ── -->
-        <div class="mb-3 p-2.5 rounded-xl flex flex-wrap items-center gap-2 auto-detect-bar" style="background:var(--surface);border:1px solid var(--sep);flex-shrink:0">
-          <span class="label" style="margin:0">{{ t('autoDetectMode') }}</span>
-          <div class="seg" style="padding:2px">
-            <button v-for="mode in ['safe','balanced','aggressive']" :key="mode"
-                    class="seg-btn" :class="{ active: autoDetectMode === mode }"
-                    style="font-size:12px;padding:5px 9px"
-                    @click="autoDetectMode = mode; runAutoDetect()">
-              {{ t('autoDetectMode_' + mode) }}
+        <!-- ── Source bar (collapsible) ── -->
+        <div class="mb-3 rounded-xl auto-detect-bar" style="background:var(--surface);border:1px solid var(--sep);flex-shrink:0">
+          <!-- Always-visible header row -->
+          <div class="p-2.5 flex flex-wrap items-center gap-2">
+            <!-- Mode selector -->
+            <span class="label" style="margin:0;white-space:nowrap">{{ t('autoDetectMode') }}</span>
+            <div class="seg" style="padding:2px;flex-shrink:0">
+              <button v-for="mode in ['safe','balanced','aggressive']" :key="mode"
+                      class="seg-btn" :class="{ active: autoDetectMode === mode }"
+                      style="font-size:12px;padding:5px 9px"
+                      @click="autoDetectMode = mode; runAutoDetect()">
+                {{ t('autoDetectMode_' + mode) }}
+              </button>
+            </div>
+            <!-- Collapsed summary chip -->
+            <div v-if="!sourcesPanelOpen" class="text-xs px-2 py-1 rounded-lg flex-1 min-w-0 truncate"
+                 style="background:var(--bg);border:1px solid var(--sep);color:var(--text2)">
+              {{ sourcesPanelSummary }}
+            </div>
+            <div v-else style="flex:1"></div>
+            <!-- Sources toggle button -->
+            <button class="btn btn-ghost" style="padding:5px 9px;gap:4px;font-size:12px;flex-shrink:0;white-space:nowrap"
+                    @click="sourcesPanelOpen = !sourcesPanelOpen">
+              <span v-html="icon('settings', 13)"></span>
+              <span>{{ t('autoDetectSourcesToggle') }}</span>
+              <span v-html="sourcesPanelOpen ? icon('chevUp', 12) : icon('chevDown', 12)"></span>
+            </button>
+            <!-- Fetch button -->
+            <button class="btn btn-primary" style="white-space:nowrap;padding:6px 12px;gap:5px;flex-shrink:0"
+                    :disabled="sourceLoading" @click="fetchAndRunAutoDetect">
+              <span v-html="sourceLoading ? icon('refresh', 13) : icon('search', 13)"></span>
+              <span class="text-xs">{{ sourceLoading ? t('autoDetectFetching') : t('autoDetectFetch') }}</span>
             </button>
           </div>
-          <!-- IPTV playlist sources -->
-          <span class="text-xs font-semibold" style="color:var(--text3);white-space:nowrap">{{ t('sourceGroupPlaylists') }}</span>
-          <label v-for="src in IPTV_SOURCES" :key="src.id" class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
-            <input type="checkbox" :checked="autoDetectSelectedSources.has(src.id)"
-                   @change="toggleAutoDetectSource(src.id, $event.target.checked)" class="sr-only" />
-            <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
-                 :style="autoDetectSelectedSources.has(src.id)
-                   ? 'background:var(--primary);color:#fff'
-                   : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
-              <span v-if="autoDetectSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
-              {{ src.label }}
+          <!-- Collapsible settings panel -->
+          <div v-if="sourcesPanelOpen" class="px-2.5 pb-2.5" style="border-top:1px solid var(--sep)">
+            <!-- Row 1: IPTV playlist sources + custom M3U URL -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-2">
+              <span class="text-xs font-semibold" style="color:var(--text3);white-space:nowrap">{{ t('sourceGroupPlaylists') }}</span>
+              <label v-for="src in IPTV_SOURCES" :key="src.id" class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
+                <input type="checkbox" :checked="autoDetectSelectedSources.has(src.id)"
+                       @change="toggleAutoDetectSource(src.id, $event.target.checked)" class="sr-only" />
+                <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                     :style="autoDetectSelectedSources.has(src.id)
+                       ? 'background:var(--primary);color:#fff'
+                       : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
+                  <span v-if="autoDetectSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
+                  {{ src.label }}
+                </div>
+              </label>
+              <div style="width:1px;height:20px;background:var(--sep);flex-shrink:0"></div>
+              <input class="field text-xs" style="flex:1;min-width:140px;padding:5px 8px"
+                     type="url" v-model="autoDetectCustomUrl"
+                     :placeholder="t('autoDetectCustomUrlPh')"
+                     @keydown.enter="fetchAndRunAutoDetect" />
             </div>
-          </label>
-          <!-- Divider -->
-          <div style="width:1px;height:20px;background:var(--sep);flex-shrink:0"></div>
-          <!-- Custom URL -->
-          <input class="field text-xs" style="flex:1;min-width:120px;padding:5px 8px"
-                 type="url" v-model="autoDetectCustomUrl"
-                 :placeholder="t('autoDetectCustomUrlPh')"
-                 @keydown.enter="fetchAndRunAutoDetect" />
-          <!-- Fetch button -->
-          <button class="btn btn-primary" style="white-space:nowrap;padding:6px 12px;gap:5px;flex-shrink:0"
-                  :disabled="sourceLoading" @click="fetchAndRunAutoDetect">
-            <span v-html="sourceLoading ? icon('refresh', 13) : icon('search', 13)"></span>
-            <span class="text-xs">{{ sourceLoading ? t('autoDetectFetching') : t('autoDetectFetch') }}</span>
-          </button>
-          <!-- Enrichment sources row -->
-          <div class="flex flex-wrap items-center gap-1.5 w-full pt-2" style="border-top:1px solid var(--sep)">
-            <span class="text-xs mr-1" style="color:var(--text3);white-space:nowrap">{{ t('sourceGroupMetadata') }}</span>
-            <!-- Metadata enrichment (purple) -->
-            <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type !== 'epg-xml')" :key="src.id">
-              <label class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
-                <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
-                       @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
-                <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
-                     :style="enrichmentSelectedSources.has(src.id)
-                       ? 'background:var(--purple);color:#fff'
-                       : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
-                  <span v-if="enrichmentSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
-                  {{ src.label }}
-                </div>
-              </label>
-            </template>
-            <!-- Divider -->
-            <div style="width:1px;height:18px;background:var(--sep);flex-shrink:0"></div>
-            <span class="text-xs" style="color:var(--text3);white-space:nowrap">{{ t('sourceGroupEpg') }}</span>
-            <!-- EPG XML sources (orange/warning) -->
-            <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type === 'epg-xml')" :key="src.id">
-              <label class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
-                <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
-                       @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
-                <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
-                     :style="enrichmentSelectedSources.has(src.id)
-                       ? 'background:var(--warning);color:#000'
-                       : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
-                  <span v-if="enrichmentSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
-                  {{ src.label }}
-                </div>
-              </label>
-            </template>
-            <div style="width:1px;height:18px;background:var(--sep);flex-shrink:0"></div>
-            <input class="field" style="width:230px;padding:6px 9px;font-size:12px" type="url" v-model="customEpgUrl" :placeholder="t('customEpgUrlPh')" @keydown.enter.prevent="addCustomEpgUrl" />
-            <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px" @click="addCustomEpgUrl" :disabled="!customEpgUrl.trim()">{{ t('addEpgSource') }}</button>
-            <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px" @click="triggerEpgImport">{{ t('addEpgFiles') }}</button>
-            <span class="text-xs" style="color:var(--text3)">{{ t('sourceSummary').replace('{iptv}', autoDetectSelectedSources.size).replace('{epg}', epgXmlSourceCount()).replace('{custom}', customEpgSources.length) }}</span>
-            <span v-if="enrichmentLoaded" class="text-xs flex items-center gap-1 ml-1" style="color:var(--success)">
-              <span v-html="icon('check', 10)"></span>{{ t('autoDetectEnrichLoaded') }}
-            </span>
+            <!-- Row 2: Metadata enrichment + EPG XML sources + custom EPG URL -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-2 mt-1.5" style="border-top:1px solid var(--sep)">
+              <span class="text-xs" style="color:var(--text3);white-space:nowrap">{{ t('sourceGroupMetadata') }}</span>
+              <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type !== 'epg-xml')" :key="src.id">
+                <label class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
+                  <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
+                         @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
+                  <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                       :style="enrichmentSelectedSources.has(src.id)
+                         ? 'background:var(--purple);color:#fff'
+                         : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
+                    <span v-if="enrichmentSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
+                    {{ src.label }}
+                  </div>
+                </label>
+              </template>
+              <div style="width:1px;height:18px;background:var(--sep);flex-shrink:0"></div>
+              <span class="text-xs" style="color:var(--text3);white-space:nowrap">{{ t('sourceGroupEpg') }}</span>
+              <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type === 'epg-xml')" :key="src.id">
+                <label class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
+                  <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
+                         @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
+                  <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                       :style="enrichmentSelectedSources.has(src.id)
+                         ? 'background:var(--warning);color:#000'
+                         : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
+                    <span v-if="enrichmentSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
+                    {{ src.label }}
+                  </div>
+                </label>
+              </template>
+              <div style="width:1px;height:18px;background:var(--sep);flex-shrink:0"></div>
+              <input class="field" style="width:200px;padding:5px 8px;font-size:12px" type="url" v-model="customEpgUrl" :placeholder="t('customEpgUrlPh')" @keydown.enter.prevent="addCustomEpgUrl" />
+              <button class="btn btn-secondary" style="padding:5px 9px;font-size:12px" @click="addCustomEpgUrl" :disabled="!customEpgUrl.trim()">{{ t('addEpgSource') }}</button>
+              <button class="btn btn-secondary" style="padding:5px 9px;font-size:12px" @click="triggerEpgImport">{{ t('addEpgFiles') }}</button>
+            </div>
+            <!-- Summary + loaded indicator -->
+            <div class="flex items-center gap-2 pt-1.5 mt-1" style="border-top:1px solid var(--sep)">
+              <span class="text-xs" style="color:var(--text3)">{{ t('sourceSummary').replace('{iptv}', autoDetectSelectedSources.size).replace('{epg}', epgXmlSourceCount()).replace('{custom}', customEpgSources.length) }}</span>
+              <span v-if="enrichmentLoaded" class="text-xs flex items-center gap-1" style="color:var(--success)">
+                <span v-html="icon('check', 10)"></span>{{ t('autoDetectEnrichLoaded') }}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -1298,14 +1318,17 @@
                       style="cursor:pointer"
                       @click.stop="toggleExpand(r.ch.id)">
                     <td @click.stop>
-                      <input type="checkbox" v-model="r.selected" :disabled="r.score === 0" />
+                      <input type="checkbox" v-model="r.selected" :disabled="r.score === 0 || r.alreadyVerified" />
                     </td>
                     <td>
                       <div class="font-semibold text-sm">{{ r.ch.name }}</div>
                       <div class="text-xs mono" style="color:var(--text4)">{{ r.ch.tvg_id || '—' }}</div>
                     </td>
                     <td>
-                      <template v-if="r.score > 0">
+                      <template v-if="r.alreadyVerified">
+                        <span class="text-xs" style="color:var(--success)">{{ t('autoDetectAlreadyVerified') }}</span>
+                      </template>
+                      <template v-else-if="r.score > 0">
                         <div class="flex items-center gap-1.5">
                           <img v-if="r.suggestedLogo" :src="r.suggestedLogo" width="18" height="18"
                                style="border-radius:3px;object-fit:contain;flex-shrink:0"
@@ -1319,7 +1342,11 @@
                       <span v-else class="text-xs" style="color:var(--text4)">{{ r.reason || t('autoDetectNoMatch') }}</span>
                     </td>
                     <td class="text-center">
-                      <span v-if="r.score > 0" class="text-sm font-bold"
+                      <span v-if="r.alreadyVerified" class="text-xs font-semibold px-1.5 py-0.5 rounded-full"
+                            style="background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success)">
+                        ✓
+                      </span>
+                      <span v-else-if="r.score > 0" class="text-sm font-bold"
                             :style="{ color: r.score >= 0.7 ? 'var(--success)' : r.score >= 0.4 ? 'var(--warning)' : 'var(--danger)' }">
                         {{ Math.round(r.score * 100) }}%
                       </span>
@@ -1733,9 +1760,11 @@ createApp({
         autoDetectUnmatched: 'Bez zhody',
         autoDetectSuggested: 'Navrhované metadáta',
         autoDetectScore:     'Zhoda',
-        autoDetectNoMatch:   'Žiadna zhoda v EPG',
-        autoDetectEmpty:     'Žiadne výsledky',
-        autoDetectSelectAll: 'Vybrať / zrušiť všetky',
+        autoDetectNoMatch:          'Žiadna zhoda v EPG',
+        autoDetectAlreadyVerified:  'Už opravené',
+        autoDetectEmpty:            'Žiadne výsledky',
+        autoDetectSelectAll:        'Vybrať / zrušiť všetky',
+        autoDetectSourcesToggle:    'Zdroje',
         autoDetectRerun:     'Spustiť znova',
         autoDetectInfo:      'Nájdených {matched} z {total} kanálov',
         autoDetectMatchPct:  '{pct}% pokrytie',
@@ -1978,9 +2007,11 @@ createApp({
         autoDetectUnmatched: 'No match',
         autoDetectSuggested: 'Suggested metadata',
         autoDetectScore:     'Match',
-        autoDetectNoMatch:   'No EPG match found',
-        autoDetectEmpty:     'No results',
-        autoDetectSelectAll: 'Select / deselect all',
+        autoDetectNoMatch:          'No EPG match found',
+        autoDetectAlreadyVerified:  'Already corrected',
+        autoDetectEmpty:            'No results',
+        autoDetectSelectAll:        'Select / deselect all',
+        autoDetectSourcesToggle:    'Sources',
         autoDetectRerun:     'Re-run',
         autoDetectInfo:      'Found {matched} of {total} channels',
         autoDetectMatchPct:  '{pct}% coverage',
@@ -2023,6 +2054,7 @@ createApp({
     const autoDetectMode       = ref('balanced')
     const autoDetectPrefilter  = ref(null)  // Set of channel IDs to process, null = all
     const autoDetectCustomUrl  = ref('')
+    const sourcesPanelOpen     = ref(false)
     const customEpgUrl         = ref('')
     const customEpgSources     = ref([])
     const sourceIndex          = ref([])    // { name, tvg_id, tvg_name, tvg_logo, tvg_url }
@@ -2266,6 +2298,17 @@ createApp({
       matched:  autoDetectResults.value.filter(r => r.score > 0).length,
       selected: autoDetectResults.value.filter(r => r.selected).length,
     }))
+
+    const sourcesPanelSummary = computed(() => {
+      const iptvLabels = IPTV_SOURCES.filter(s => autoDetectSelectedSources.has(s.id)).map(s => s.label)
+      const epgCount = epgXmlSourceCount()
+      const parts = []
+      if (iptvLabels.length) parts.push(iptvLabels.join(', '))
+      else parts.push('—')
+      if (autoDetectCustomUrl.value.trim()) parts.push(t('autoDetectCustomUrl'))
+      if (epgCount > 0) parts.push(`${epgCount} EPG`)
+      return parts.join(' · ')
+    })
 
     const autoDetectAllSelected = computed(() => {
       const f = filteredAutoDetectResults.value
@@ -3416,8 +3459,13 @@ createApp({
       return hit?.key ? (epgXmlChannelIdIndex.value[hit.key] || hit.id || '') : ''
     }
 
+    function cleanEpgDisplayName(s) {
+      return (s || '').replace(/\s*\.[a-z]{2,3}$/i, '').trim()
+    }
+
     function exactEpgNameForHit(hit) {
-      return hit?.key ? (epgXmlDisplayNameIndex.value[hit.key] || exactEpgIdForHit(hit)) : ''
+      const raw = hit?.key ? (epgXmlDisplayNameIndex.value[hit.key] || exactEpgIdForHit(hit)) : ''
+      return raw ? cleanEpgDisplayName(raw) : ''
     }
 
     function selectedEpgXmlSources() {
@@ -3663,7 +3711,7 @@ createApp({
           const hit = epgCandidateIds.map(id => lookupEpgIndex(epgChannelIndex.value, id) || lookupEpgIndex(epgXmlIndex.value, id)).find(Boolean)
           if (hit) {
             editId = editId || epgXmlChannelIdIndex.value[hit.key] || hit.key
-            editName = epgXmlDisplayNameIndex.value[hit.key] || editName
+            editName = cleanEpgDisplayName(epgXmlDisplayNameIndex.value[hit.key]) || editName
             editTvgUrl = hit.url
             exactEpgApplied = !!epgXmlDisplayNameIndex.value[hit.key]
           }
@@ -3683,11 +3731,11 @@ createApp({
             || ''
           if (finalHit?.key) {
             editId = epgXmlChannelIdIndex.value[finalHit.key] || editId
-            editName = epgXmlDisplayNameIndex.value[finalHit.key] || editName
+            editName = cleanEpgDisplayName(epgXmlDisplayNameIndex.value[finalHit.key]) || editName
             exactEpgApplied = !!epgXmlDisplayNameIndex.value[finalHit.key]
           } else if (nameUrl && epgNameChannelIdIndex.value[nameKey]) {
             editId = epgNameChannelIdIndex.value[nameKey]
-            editName = epgNameDisplayNameIndex.value[nameKey] || editName
+            editName = cleanEpgDisplayName(epgNameDisplayNameIndex.value[nameKey]) || editName
             exactEpgApplied = !!epgNameDisplayNameIndex.value[nameKey]
           }
         }
@@ -3695,8 +3743,17 @@ createApp({
           editTvgUrl = preferredSelectedEpgUrl(ch, editId)
         }
         const epgFallbackMatched = !!editTvgUrl && !matched
-        const resultScore = matched ? bestScore : (epgFallbackMatched ? modeCfg.epg : 0)
-        if (epgFallbackMatched && !editName) editName = cleanChannelLabel(ch.tvg_name || ch.name)
+        // Channel already has a correct preferred tvg_id (.sk/.cz) and allowed tvg_url — no changes needed
+        const alreadyVerified = !matched && !epgFallbackMatched
+          && isPreferredTvgId(cleanTvgId(ch.tvg_id))
+          && !!exportableTvgUrl(ch.tvg_url)
+        if (alreadyVerified) {
+          editId = editId || cleanTvgId(ch.tvg_id)
+          editName = editName || cleanChannelLabel(ch.tvg_name || ch.name)
+          editTvgUrl = editTvgUrl || ch.tvg_url
+        }
+        const resultScore = matched ? bestScore : (epgFallbackMatched ? modeCfg.epg : (alreadyVerified ? 0.9 : 0))
+        if ((epgFallbackMatched || alreadyVerified) && !editName) editName = cleanChannelLabel(ch.tvg_name || ch.name)
 
         const canonicalMeta = apiChannelMetaById.value[(editId || '').toLowerCase()]
         if (!exactEpgApplied && canonicalMeta?.name) editName = cleanChannelLabel(canonicalMeta.name) || editName
@@ -3726,14 +3783,16 @@ createApp({
 
         return {
           ch,
-          suggestedId:     matched ? editId : (epgFallbackMatched ? editId : ''),
-          suggestedName:   matched ? editName : (epgFallbackMatched ? editName : ''),
+          suggestedId:     matched ? editId : ((epgFallbackMatched || alreadyVerified) ? editId : ''),
+          suggestedName:   matched ? editName : ((epgFallbackMatched || alreadyVerified) ? editName : ''),
           suggestedLogo:   editLogo,
           suggestedTvgUrl: editTvgUrl,
           score:         resultScore,
-          // Auto-select: M3U match ≥ 50%, OR EPG XML confirmed existing tvg-id
-          selected:      resultScore >= modeCfg.auto || xmlConfirmed,
-          reason:        resultScore > 0 ? '' : t('autoDetectNoMatch'),
+          // Auto-select: M3U match ≥ auto threshold, OR EPG XML confirmed existing tvg-id without tvg_url
+          // Do NOT auto-select alreadyVerified — channel is already correct, nothing to apply
+          selected:      (!alreadyVerified && resultScore >= modeCfg.auto) || xmlConfirmed,
+          reason:        alreadyVerified ? t('autoDetectAlreadyVerified') : (resultScore > 0 ? '' : t('autoDetectNoMatch')),
+          alreadyVerified,
           editId, editName, editLogo, editTvgUrl,
         }
       }).sort((a, b) => b.score - a.score)
@@ -3783,10 +3842,10 @@ createApp({
         const nameKey = normName(result.editName)
         if (epgNameChannelIdIndex.value[nameKey]) result.editId = epgNameChannelIdIndex.value[nameKey]
       }
-      if (hit?.key && epgXmlDisplayNameIndex.value[hit.key]) result.editName = epgXmlDisplayNameIndex.value[hit.key]
+      if (hit?.key && epgXmlDisplayNameIndex.value[hit.key]) result.editName = cleanEpgDisplayName(epgXmlDisplayNameIndex.value[hit.key])
       else {
         const nameKey = normName(result.editName)
-        if (epgNameDisplayNameIndex.value[nameKey]) result.editName = epgNameDisplayNameIndex.value[nameKey]
+        if (epgNameDisplayNameIndex.value[nameKey]) result.editName = cleanEpgDisplayName(epgNameDisplayNameIndex.value[nameKey])
       }
       result.score = Math.max(result.score, 0.99)
       result.selected = true

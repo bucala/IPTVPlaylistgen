@@ -120,11 +120,26 @@ const xmlIdx = {};
 const nameIdx = {};
 const idIdx = {};
 const nameIdIdx = {};
-putEpgSourceIndex('Markíza HD.sk', 'Markíza HD.sk', 'https://www.open-epg.com/files/slovakia1.xml', xmlIdx, nameIdx, idIdx, nameIdIdx);
+const displayIdx = {};
+const nameDisplayIdx = {};
+putEpgSourceIndex('Markíza HD.sk', 'Markíza HD.sk', 'https://www.open-epg.com/files/slovakia1.xml', xmlIdx, nameIdx, idIdx, nameIdIdx, displayIdx, nameDisplayIdx);
 assert(xmlIdx['markiza.sk'] === 'https://www.open-epg.com/files/slovakia1.xml', 'indexes diacritic-free EPG TVG-ID variants to source URL');
 assert(idIdx['markiza.sk'] === 'Markíza HD.sk', 'keeps exact XMLTV channel ID for canonical TVG-ID lookup');
 assert(nameIdx.markiza === 'https://www.open-epg.com/files/slovakia1.xml', 'indexes cleaned EPG display-name to source URL');
 assert(nameIdIdx.markiza === 'Markíza HD.sk', 'keeps exact XMLTV channel ID for display-name lookup');
+assert(displayIdx['markiza.sk'] === 'Markíza HD.sk', 'keeps exact XMLTV display-name for canonical TVG-ID lookup');
+assert(nameDisplayIdx.markiza === 'Markíza HD.sk', 'keeps exact XMLTV display-name for display-name lookup');
+
+const czXmlIdx = {};
+const czNameIdx = {};
+const czIdIdx = {};
+const czNameIdIdx = {};
+const czDisplayIdx = {};
+const czNameDisplayIdx = {};
+putEpgSourceIndex('ČT2.sk', 'ČT2.sk', 'https://www.open-epg.com/files/czech1.xml', czXmlIdx, czNameIdx, czIdIdx, czNameIdIdx, czDisplayIdx, czNameDisplayIdx);
+assert(czXmlIdx['ct2.sk'] === 'https://www.open-epg.com/files/czech1.xml', 'indexes CT2 without diacritics to Open EPG CZ source');
+assert(czIdIdx['ct2.sk'] === 'ČT2.sk', 'keeps exact CT2 XMLTV channel ID');
+assert(czDisplayIdx['ct2.sk'] === 'ČT2.sk', 'keeps exact CT2 XMLTV display-name');
 
 const aliasCases = [
   ['DOMA', 'Doma.sk'],

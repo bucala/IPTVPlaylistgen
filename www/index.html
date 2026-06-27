@@ -2030,6 +2030,8 @@ createApp({
     const epgXmlIndex               = ref({})   // id.toLowerCase() → source XML URL
     const epgXmlChannelIdIndex      = ref({})   // normalized id key → exact XMLTV channel id
     const epgNameChannelIdIndex     = ref({})   // normName/display-name → exact XMLTV channel id
+    const epgXmlDisplayNameIndex    = ref({})   // normalized id key → exact XMLTV display-name
+    const epgNameDisplayNameIndex   = ref({})   // normName/display-name → exact XMLTV display-name
     const logoChannelIndex          = ref({})      // normName → logo URL
     const logoChannelIndexById      = ref({})      // id.toLowerCase() → logo URL
     const apiChannelMetaById        = ref({})      // id.toLowerCase() → { id, name, logo }
@@ -2915,14 +2917,14 @@ createApp({
             const blockRe = /<channel\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/channel>/g
             while ((m = blockRe.exec(text)) !== null) {
               const id = m[1]
-              if (sourceTvgUrl) putEpgSourceIndex(id, id, sourceTvgUrl, epgXmlIndex.value, epgNameIndex.value, epgXmlChannelIdIndex.value, epgNameChannelIdIndex.value)
+              if (sourceTvgUrl) putEpgSourceIndex(id, id, sourceTvgUrl, epgXmlIndex.value, epgNameIndex.value, epgXmlChannelIdIndex.value, epgNameChannelIdIndex.value, epgXmlDisplayNameIndex.value, epgNameDisplayNameIndex.value)
               const displayNames = []
               let dm
               const displayRe = /<display-name[^>]*>([\s\S]*?)<\/display-name>/g
               while ((dm = displayRe.exec(m[2])) !== null) {
                 const displayName = dm[1].replace(/<[^>]*>/g, '').trim()
                 if (displayName) displayNames.push(displayName)
-                if (sourceTvgUrl) putEpgSourceIndex(id, displayName, sourceTvgUrl, epgXmlIndex.value, epgNameIndex.value, epgXmlChannelIdIndex.value, epgNameChannelIdIndex.value)
+                if (sourceTvgUrl) putEpgSourceIndex(id, displayName, sourceTvgUrl, epgXmlIndex.value, epgNameIndex.value, epgXmlChannelIdIndex.value, epgNameChannelIdIndex.value, epgXmlDisplayNameIndex.value, epgNameDisplayNameIndex.value)
               }
               const iconMatch = m[2].match(/<icon[^>]+src="([^"]+)"/i)
               epgMetadataEntries.value.push({
@@ -3051,6 +3053,8 @@ createApp({
       )
       epgXmlChannelIdIndex.value = {}
       epgNameChannelIdIndex.value = {}
+      epgXmlDisplayNameIndex.value = {}
+      epgNameDisplayNameIndex.value = {}
       logoChannelIndex.value     = {}
       logoChannelIndexById.value = {}
       apiChannelMetaById.value     = {}
@@ -3288,10 +3292,11 @@ createApp({
       return hit ? hit.ids : []
     }
 
-    function putEpgSourceIndex(rawId, displayName, sourceUrl, xmlIndex, nameIndex, idIndex, nameIdIndex) {
+    function putEpgSourceIndex(rawId, displayName, sourceUrl, xmlIndex, nameIndex, idIndex, nameIdIndex, idDisplayIndex, nameDisplayIndex) {
       const normalizedSourceUrl = exportableTvgUrl(sourceUrl)
       if (!normalizedSourceUrl) return
       const exactId = (rawId || '').trim()
+      const exactDisplayName = (displayName || exactId).trim()
       const cleanedId = cleanTvgId(exactId)
       const ids = [
         { id: exactId, rank: 3 },
@@ -3314,6 +3319,7 @@ createApp({
           if (!current || item.rank > currentRank || (item.rank === currentRank && sourceWins)) {
             xmlIndex[key] = normalizedSourceUrl
             if (idIndex && exactId) idIndex[key] = exactId
+            if (idDisplayIndex && exactDisplayName) idDisplayIndex[key] = exactDisplayName
             ranks.set(key, item.rank)
           }
         }
@@ -3324,11 +3330,16 @@ createApp({
       if (nameKey && (!currentNameUrl || nameSourceWins)) {
         nameIndex[nameKey] = normalizedSourceUrl
         if (nameIdIndex && exactId) nameIdIndex[nameKey] = exactId
+        if (nameDisplayIndex && exactDisplayName) nameDisplayIndex[nameKey] = exactDisplayName
       }
     }
 
     function exactEpgIdForHit(hit) {
       return hit?.key ? (epgXmlChannelIdIndex.value[hit.key] || hit.id || '') : ''
+    }
+
+    function exactEpgNameForHit(hit) {
+      return hit?.key ? (epgXmlDisplayNameIndex.value[hit.key] || exactEpgIdForHit(hit)) : ''
     }
 
     function selectedEpgXmlSources() {
@@ -3406,21 +3417,25 @@ createApp({
         const name = cleanChannelLabel(raw.tvg_name || raw.name || '')
         if ((!name && !tvgId) || (tvgId && !isPreferredTvgId(tvgId))) return
         const sourceId = String(raw.sourceId || '')
-        const exactTvgId = /^(?:epg-|custom-epg)/.test(sourceId) ? (raw.tvg_id || raw.id || '') : ''
         const tvgUrl = allowedTvgUrl(raw.tvg_url)
           || (/^(?:epg-|custom-epg)/.test(sourceId) ? exportableTvgUrl(raw.tvg_url) : '')
+        const canUseExactEpg = /^(?:epg-|custom-epg)/.test(sourceId) && !!tvgUrl
+        const exactTvgId = canUseExactEpg ? (raw.tvg_id || raw.id || '') : ''
+        const exactTvgName = canUseExactEpg ? (raw.tvg_name || raw.name || exactTvgId || '') : ''
         const dedupeKey = `${tvgId.toLowerCase()}|${normName(name)}`
         const existing = unique.get(dedupeKey)
         if (existing) {
           existing.tvg_logo = existing.tvg_logo || raw.tvg_logo || raw.logo || ''
           existing.tvg_url = existing.tvg_url || tvgUrl
           existing.exact_tvg_id = existing.exact_tvg_id || exactTvgId
+          existing.exact_tvg_name = existing.exact_tvg_name || exactTvgName
           return
         }
         const entry = {
           ...raw,
           tvg_id: tvgId,
           exact_tvg_id: exactTvgId,
+          exact_tvg_name: exactTvgName,
           tvg_name: name,
           name: name || raw.name || '',
           tvg_url: tvgUrl,
@@ -3501,7 +3516,13 @@ createApp({
         }
 
         // Fuzzy matching against M3U sources (may override if score > 0.95)
-        const sourceRank = s => ({ 'iptv-sk': 4, 'iptv-cz': 4, custom: 3, freetv: 2, 'iptv-all': 1 }[s.sourceId] || 1)
+        const sourceRank = s => {
+          const sourceId = String(s.sourceId || '')
+          if (/^epg-open/.test(sourceId) && exportableTvgUrl(s.tvg_url)) return 8
+          if (/^custom-epg/.test(sourceId) && exportableTvgUrl(s.tvg_url)) return 7
+          if (s.exact_tvg_id && exportableTvgUrl(s.tvg_url)) return 6
+          return { confirmed: 5, 'iptv-sk': 4, 'iptv-cz': 4, custom: 3, freetv: 2, 'iptv-all': 1 }[sourceId] || 1
+        }
         const candidateRank = s => sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
         indexedCandidatesFor(chNorm).forEach(s => {
           if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
@@ -3517,7 +3538,12 @@ createApp({
         let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
         let editName   = cleanChannelLabel(matched ? (best.tvg_name  || best.name) : (ch.tvg_name || ''))
         let editTvgUrl = matched ? (allowedTvgUrl(best.tvg_url) || exportableTvgUrl(best.tvg_url)) : (ch.tvg_url || '')
-        if (matched && best.exact_tvg_id && exportableTvgUrl(best.tvg_url)) editId = best.exact_tvg_id
+        let exactEpgApplied = false
+        if (matched && best.exact_tvg_id && exportableTvgUrl(best.tvg_url)) {
+          editId = best.exact_tvg_id
+          editName = best.exact_tvg_name || best.exact_tvg_id
+          exactEpgApplied = true
+        }
 
         // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
         const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()
@@ -3534,7 +3560,12 @@ createApp({
           const idClean = idLow.replace(/@[^@]*$/, '')
           editTvgUrl = lookupEpgIndex(epgChannelIndex.value, idLow)?.url || lookupEpgIndex(epgChannelIndex.value, idClean)?.url || ''
           const canonicalHit = preferredCandidateHit(epgCandidateIds, [epgChannelIndex.value, epgXmlIndex.value])
-          if (canonicalHit) { editId = exactEpgIdForHit(canonicalHit) || canonicalHit.id; editTvgUrl = canonicalHit.url }
+          if (canonicalHit) {
+            editId = exactEpgIdForHit(canonicalHit) || canonicalHit.id
+            editName = exactEpgNameForHit(canonicalHit) || editName
+            editTvgUrl = canonicalHit.url
+            exactEpgApplied = !!exactEpgNameForHit(canonicalHit)
+          }
         }
         if (!editTvgUrl) {
           const hit = preferredCandidateHit([
@@ -3545,14 +3576,18 @@ createApp({
           ], [epgChannelIndex.value, epgXmlIndex.value])
           if (hit) {
             editId = exactEpgIdForHit(hit) || hit.id
+            editName = exactEpgNameForHit(hit) || editName
             editTvgUrl = hit.url
+            exactEpgApplied = !!exactEpgNameForHit(hit)
           }
         }
         if (!editTvgUrl) {
           const hit = epgCandidateIds.map(id => lookupEpgIndex(epgChannelIndex.value, id) || lookupEpgIndex(epgXmlIndex.value, id)).find(Boolean)
           if (hit) {
             editId = editId || epgXmlChannelIdIndex.value[hit.key] || hit.key
+            editName = epgXmlDisplayNameIndex.value[hit.key] || editName
             editTvgUrl = hit.url
+            exactEpgApplied = !!epgXmlDisplayNameIndex.value[hit.key]
           }
         }
         if (!editTvgUrl) {
@@ -3568,8 +3603,15 @@ createApp({
           editTvgUrl = finalHit?.url
             || epgNameIndex.value[nameKey]
             || ''
-          if (finalHit?.key) editId = epgXmlChannelIdIndex.value[finalHit.key] || editId
-          else if (nameUrl && epgNameChannelIdIndex.value[nameKey]) editId = epgNameChannelIdIndex.value[nameKey]
+          if (finalHit?.key) {
+            editId = epgXmlChannelIdIndex.value[finalHit.key] || editId
+            editName = epgXmlDisplayNameIndex.value[finalHit.key] || editName
+            exactEpgApplied = !!epgXmlDisplayNameIndex.value[finalHit.key]
+          } else if (nameUrl && epgNameChannelIdIndex.value[nameKey]) {
+            editId = epgNameChannelIdIndex.value[nameKey]
+            editName = epgNameDisplayNameIndex.value[nameKey] || editName
+            exactEpgApplied = !!epgNameDisplayNameIndex.value[nameKey]
+          }
         }
         if (!editTvgUrl && matched) {
           editTvgUrl = preferredSelectedEpgUrl(ch, editId)
@@ -3579,7 +3621,7 @@ createApp({
         if (epgFallbackMatched && !editName) editName = cleanChannelLabel(ch.tvg_name || ch.name)
 
         const canonicalMeta = apiChannelMetaById.value[(editId || '').toLowerCase()]
-        if (canonicalMeta?.name) editName = cleanChannelLabel(canonicalMeta.name) || editName
+        if (!exactEpgApplied && canonicalMeta?.name) editName = cleanChannelLabel(canonicalMeta.name) || editName
 
         // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
         const xmlConfirmed = !!ch.tvg_id && !!lookupEpgIndex(epgXmlIndex.value, ch.tvg_id) && !ch.tvg_url
@@ -3606,8 +3648,8 @@ createApp({
 
         return {
           ch,
-          suggestedId:     matched ? (best.tvg_id   || '') : (epgFallbackMatched ? editId : ''),
-          suggestedName:   matched ? cleanChannelLabel(best.tvg_name  || best.name) : (epgFallbackMatched ? editName : ''),
+          suggestedId:     matched ? editId : (epgFallbackMatched ? editId : ''),
+          suggestedName:   matched ? editName : (epgFallbackMatched ? editName : ''),
           suggestedLogo:   editLogo,
           suggestedTvgUrl: editTvgUrl,
           score:         resultScore,
@@ -3630,8 +3672,8 @@ createApp({
       if (manualSuggestionCache.has(cacheKey)) return manualSuggestionCache.get(cacheKey)
       const suggestions = indexedCandidatesFor(base)
         .map(entry => {
-          const name = entry.tvg_name || entry.name || ''
-          const id = entry.tvg_id || ''
+          const name = entry.exact_tvg_name || entry.tvg_name || entry.name || ''
+          const id = entry.exact_tvg_id || entry.tvg_id || ''
           const score = Math.max(strSimilarity(base, entry.nName), entry.nId ? strSimilarity(base, entry.nId) : 0)
           return {
             key: `${entry.sourceId || 'src'}|${id}|${name}`,
@@ -3650,7 +3692,7 @@ createApp({
       const sug = manualSuggestionsFor(result).find(s => s.key === key)
       if (!sug) return
       result.editId = sug.entry.exact_tvg_id || sug.entry.tvg_id || ''
-      result.editName = sug.entry.tvg_name || sug.entry.name || ''
+      result.editName = sug.entry.exact_tvg_name || sug.entry.tvg_name || sug.entry.name || ''
       result.editLogo = sug.entry.tvg_logo || result.editLogo || ''
       result.editTvgUrl = allowedTvgUrl(sug.entry.tvg_url)
         || exportableTvgUrl(sug.entry.tvg_url)
@@ -3662,6 +3704,11 @@ createApp({
       else {
         const nameKey = normName(result.editName)
         if (epgNameChannelIdIndex.value[nameKey]) result.editId = epgNameChannelIdIndex.value[nameKey]
+      }
+      if (hit?.key && epgXmlDisplayNameIndex.value[hit.key]) result.editName = epgXmlDisplayNameIndex.value[hit.key]
+      else {
+        const nameKey = normName(result.editName)
+        if (epgNameDisplayNameIndex.value[nameKey]) result.editName = epgNameDisplayNameIndex.value[nameKey]
       }
       result.score = Math.max(result.score, 0.99)
       result.selected = true

@@ -492,7 +492,8 @@
       .modal-card { width: min(100%, 560px); max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem)); padding: 1rem; border-radius: 22px; }
       .modal-card.mobile-sheet { border-radius: 22px; max-height: 88dvh; }
       .auto-detect-card { width: min(100%, 560px) !important; max-height: 88dvh !important; padding: .85rem !important; }
-      .auto-detect-bar { max-height: 24dvh; overflow-y: auto; align-items: stretch; }
+      .auto-detect-bar { align-items: stretch; }
+      .auto-detect-bar-sources { max-height: 20dvh; overflow-y: auto; }
       .auto-detect-card h2 { font-size: 1.12rem; line-height: 1.25; }
       .auto-detect-table { max-height: 40dvh; }
       .auto-detect-table table { min-width: 560px; }
@@ -1177,7 +1178,7 @@
             </button>
           </div>
           <!-- Collapsible settings panel -->
-          <div v-if="sourcesPanelOpen" class="pb-2.5" style="border-top:1px solid var(--sep)">
+          <div v-if="sourcesPanelOpen" class="pb-2.5 auto-detect-bar-sources" style="border-top:1px solid var(--sep)">
             <!-- Row 1: IPTV playlist sources + custom M3U URL -->
             <div class="flex flex-wrap items-center gap-1.5 px-2.5 pt-2">
               <span class="text-xs font-semibold flex-shrink-0" style="color:var(--text3)">{{ t('sourceGroupPlaylists') }}</span>
@@ -3601,10 +3602,11 @@ createApp({
           ].map(id => id.toLowerCase()).filter(id => tvgCountry(id) === 'sk')
           const skHit = preferredCandidateHit(skVariants, [epgXmlIndex.value, epgChannelIndex.value])
           if (skHit) {
-            editId = exactEpgIdForHit(skHit) || skHit.id
-            editName = exactEpgNameForHit(skHit) || editName
+            const skId = exactEpgIdForHit(skHit) || skHit.id
+            editId = skId
+            editName = epgXmlDisplayNameIndex.value[skHit.key] || skId
             editTvgUrl = skHit.url
-            exactEpgApplied = !!exactEpgNameForHit(skHit)
+            exactEpgApplied = !!skId
           }
         }
 
@@ -3678,6 +3680,21 @@ createApp({
         }
         if (!editTvgUrl && matched) {
           editTvgUrl = preferredSelectedEpgUrl(ch, editId)
+        }
+        // Post-processing: if any EPG lookup resolved to .cz but playlist tvg_id is .sk, prefer SK EPG
+        if (tvgCountry(cleanTvgId(ch.tvg_id)) === 'sk' && tvgCountry(editId) === 'cz') {
+          const skVariants = [
+            ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
+            ...aliasTvgIdVariants(ch),
+          ].map(id => id.toLowerCase()).filter(id => tvgCountry(id) === 'sk')
+          const skHit = preferredCandidateHit(skVariants, [epgXmlIndex.value, epgChannelIndex.value])
+          if (skHit) {
+            const skId = exactEpgIdForHit(skHit) || skHit.id
+            editId = skId
+            editName = epgXmlDisplayNameIndex.value[skHit.key] || skId
+            editTvgUrl = skHit.url
+            exactEpgApplied = !!skId
+          }
         }
         const epgFallbackMatched = !!editTvgUrl && !matched
         // Channel already has a correct preferred tvg_id (.sk/.cz) and allowed tvg_url — no changes needed

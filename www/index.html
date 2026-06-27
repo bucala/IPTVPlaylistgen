@@ -3624,18 +3624,56 @@ createApp({
       const channelsToProcess = autoDetectPrefilter.value
         ? channels.value.filter(ch => autoDetectPrefilter.value.has(ch.id))
         : channels.value
+
+      // True if url comes from a preferred country's XML
+      const urlMatchesCountry = (url, country) => {
+        if (!country) return !!url
+        if (country === 'sk') return /slovakia\d*\.xml/i.test(url)
+        if (country === 'cz') return /czech\d*\.xml/i.test(url)
+        return !!url
+      }
+
+      // Get canonical ID + cleaned display-name from the XML channel id index
+      const xmlCanonical = (hit) => {
+        if (!hit?.key) return null
+        const id   = epgXmlChannelIdIndex.value[hit.key] || null
+        const name = epgXmlDisplayNameIndex.value[hit.key]
+          ? cleanEpgDisplayName(epgXmlDisplayNameIndex.value[hit.key]) : null
+        return (id || name) ? { id, name } : null
+      }
+
+      // Look up ids in XML index, preferring URLs from the given country
+      const xmlLookup = (ids, country) => {
+        for (const id of ids) {
+          const hit = lookupEpgIndex(epgXmlIndex.value, id)
+          if (hit && urlMatchesCountry(hit.url, country)) return hit
+        }
+        return null
+      }
+
       autoDetectResults.value = channelsToProcess.map(ch => {
-        const chNorm = normName(ch.tvg_name || ch.name) || normName(ch.name)
+        const chNorm    = normName(ch.tvg_name || ch.name) || normName(ch.name)
+        const chCountry = tvgCountry(ch.tvg_id)
+        const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()
+        const aliases   = aliasTvgIdVariants(ch)
+
+        // All lookup IDs derived from ch.tvg_id (same country, lowercase)
+        const chSameCountryIds = [
+          ch.tvg_id,
+          cleanTvgId(ch.tvg_id),
+          ...aliases,
+          ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
+          ...nameTvgIdVariants(ch.tvg_name || ch.name),
+        ].map(id => (id || '').toLowerCase())
+          .filter((id, i, a) => id && a.indexOf(id) === i)
+          .filter(id => chCountry ? tvgCountry(id) === chCountry : (tvgCountry(id) === 'sk' || tvgCountry(id) === 'cz'))
+
+        // === STEP 1: IPTV search (confirmed mappings, iptv-org API, fuzzy M3U search) ===
         let best = null, bestScore = 0
 
-        const mapKey = chNorm || normName(ch.name)
-        const confirmed = confirmedMappings.value[mapKey]
-        if (confirmed) {
-          bestScore = 1
-          best = { ...confirmed, sourceId: 'confirmed' }
-        }
+        const confirmed = confirmedMappings.value[chNorm || normName(ch.name)]
+        if (confirmed) { bestScore = 1; best = { ...confirmed, sourceId: 'confirmed' } }
 
-        // Fast O(1) lookup against iptv-org/api channel database (exact normName or space-collapsed)
         const apiHit = pickPreferredEntry(apiNormMap.value.get(chNorm))
           || pickPreferredEntry(apiNormMap.value.get(chNorm.replace(/\s+/g, '')))
         if (!best && apiHit) {
@@ -3643,159 +3681,114 @@ createApp({
           best = { tvg_id: apiHit.id, tvg_name: apiHit.name, tvg_logo: apiHit.logo, tvg_url: '', name: apiHit.name }
         }
 
-        // Fuzzy matching against M3U sources (may override if score > 0.95)
         const sourceRank = s => {
-          const sourceId = String(s.sourceId || '')
-          if (/^epg-open/.test(sourceId) && exportableTvgUrl(s.tvg_url)) return 8
-          if (/^custom-epg/.test(sourceId) && exportableTvgUrl(s.tvg_url)) return 7
-          if (s.exact_tvg_id && exportableTvgUrl(s.tvg_url)) return 6
-          return { confirmed: 5, 'iptv-sk': 4, 'iptv-cz': 4, custom: 3, freetv: 2, 'iptv-all': 1 }[sourceId] || 1
+          const sid = String(s.sourceId || '')
+          if (/^epg-open/.test(sid)   && exportableTvgUrl(s.tvg_url)) return 8
+          if (/^custom-epg/.test(sid) && exportableTvgUrl(s.tvg_url)) return 7
+          if (s.exact_tvg_id          && exportableTvgUrl(s.tvg_url)) return 6
+          return { confirmed: 5, 'iptv-sk': 4, 'iptv-cz': 4, custom: 3, freetv: 2, 'iptv-all': 1 }[sid] || 1
         }
-        const chCountry = tvgCountry(ch.tvg_id)
         const candidateRank = s => {
-          const sCountry = tvgCountry(s.exact_tvg_id || s.tvg_id)
+          const sc = tvgCountry(s.exact_tvg_id || s.tvg_id)
           return sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
-            + (sCountry === 'sk' ? 0.1 : 0)
-            + (chCountry && chCountry === sCountry ? 5 : 0)
+            + (sc === 'sk' ? 0.1 : 0)
+            + (chCountry && chCountry === sc ? 5 : 0)   // decisive country match bonus
         }
         indexedCandidatesFor(chNorm).forEach(s => {
           if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
-          const sc = Math.max(
-            strSimilarity(chNorm, s.nName),
-            s.nId ? strSimilarity(chNorm, s.nId) : 0
-          )
+          const sc = Math.max(strSimilarity(chNorm, s.nName), s.nId ? strSimilarity(chNorm, s.nId) : 0)
           if (sc > bestScore || (Math.abs(sc - bestScore) < 0.001 && best && candidateRank(s) > candidateRank(best))) {
             bestScore = sc; best = s
           }
         })
+
         const matched = best && bestScore >= modeCfg.min && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
+
+        // === STEP 2: Extract initial values from IPTV match ===
         let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
-        let editName   = cleanChannelLabel(matched ? (best.tvg_name  || best.name) : (ch.tvg_name || ''))
+        let editName   = cleanChannelLabel(matched ? (best.tvg_name || best.name) : (ch.tvg_name || ''))
         let editTvgUrl = matched ? (allowedTvgUrl(best.tvg_url) || exportableTvgUrl(best.tvg_url)) : (ch.tvg_url || '')
         let exactEpgApplied = false
+
         if (matched && best.exact_tvg_id && exportableTvgUrl(best.tvg_url)) {
-          editId = best.exact_tvg_id
-          editName = best.exact_tvg_name || best.exact_tvg_id
+          editId   = best.exact_tvg_id
+          editName = cleanEpgDisplayName(best.exact_tvg_name || best.exact_tvg_id) || editName
           exactEpgApplied = true
         }
-        // Playlist tvg_id is .sk but EPG URL is not from a Slovakia XML — prefer Slovakia XML entry early
-        // (prevents EPG fallback chain from locking in a Czech URL when Slovakia XML has a match)
+
+        // === STEP 3: XML canonicalization — fix diacritics, fix wrong-country URLs ===
+        // Runs for every channel that has a country suffix; not gated on URL correctness.
+        // Priority: ch.tvg_id variants (same country) first, then editId variants.
         {
-          const alreadySkEpg = editTvgUrl && /slovakia\d*\.xml/.test(editTvgUrl)
-          if (tvgCountry(cleanTvgId(ch.tvg_id)) === 'sk' && !alreadySkEpg) {
-            const skVariants = [
-              ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
-              ...aliasTvgIdVariants(ch),
-            ].map(id => id.toLowerCase()).filter(id => tvgCountry(id) === 'sk')
-            const skHit = preferredCandidateHit(skVariants, [epgXmlIndex.value, epgChannelIndex.value])
-            if (skHit && /slovakia\d*\.xml/.test(skHit.url)) {
-              const skId = exactEpgIdForHit(skHit) || skHit.id
-              editId = skId
-              editName = epgXmlDisplayNameIndex.value[skHit.key] || skId
-              editTvgUrl = skHit.url
-              exactEpgApplied = !!skId
-            }
+          const enrichIds = [
+            ...chSameCountryIds,
+            ...[editId, ...tvgIdVariants(editId || '')]
+              .map(id => (id || '').toLowerCase())
+              .filter(id => id && !chSameCountryIds.includes(id) && (chCountry ? tvgCountry(id) === chCountry : true)),
+          ]
+          const xmlHit = xmlLookup(enrichIds, chCountry)
+          if (xmlHit) {
+            const c = xmlCanonical(xmlHit)
+            if (c?.id)   editId   = c.id     // canonical ID with correct diacritics
+            if (c?.name) editName = c.name   // canonical display-name (suffix stripped)
+            // Update URL only if it's wrong/missing — don't downgrade a better URL
+            if (!editTvgUrl || !urlMatchesCountry(editTvgUrl, chCountry)) editTvgUrl = xmlHit.url
+            exactEpgApplied = true
           }
         }
 
-        // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
-        const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()
-        const epgCandidateIds = [
-          ...tvgIdVariants(editId),
-          ...tvgIdVariants(ch.tvg_id),
-          ...aliasTvgIdVariants(ch),
-          ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
-        ].map(id => id.toLowerCase())
+        // === STEP 4: EPG fallbacks — for channels that still have no URL ===
+        if (!editTvgUrl) {
+          const fallbackIds = [
+            ...chSameCountryIds,
+            ...[editId, ...tvgIdVariants(editId || ''), ...tvgIdVariants(ch.tvg_id), ...aliases]
+              .map(id => (id || '').toLowerCase()).filter(Boolean),
+          ].filter((id, i, a) => id && a.indexOf(id) === i)
 
-        // Enrich TVG-URL: matched id → stripped id → original ch.tvg_id
-        if (!editTvgUrl && editId) {
-          const idLow   = editId.toLowerCase()
-          const idClean = idLow.replace(/@[^@]*$/, '')
-          editTvgUrl = lookupEpgIndex(epgChannelIndex.value, idLow)?.url || lookupEpgIndex(epgChannelIndex.value, idClean)?.url || ''
-          const canonicalHit = preferredCandidateHit(epgCandidateIds, [epgChannelIndex.value, epgXmlIndex.value])
-          if (canonicalHit) {
-            editId = exactEpgIdForHit(canonicalHit) || canonicalHit.id
-            editName = exactEpgNameForHit(canonicalHit) || editName
-            editTvgUrl = canonicalHit.url
-            exactEpgApplied = !!exactEpgNameForHit(canonicalHit)
+          const fallbackHit = preferredCandidateHit(fallbackIds, [epgChannelIndex.value, epgXmlIndex.value])
+          if (fallbackHit) {
+            if (!editId) editId = exactEpgIdForHit(fallbackHit) || fallbackHit.id
+            const c = xmlCanonical(fallbackHit)
+            if (c?.id   && urlMatchesCountry(fallbackHit.url, chCountry)) editId   = c.id
+            if (c?.name) editName = c.name
+            editTvgUrl = fallbackHit.url
+            exactEpgApplied = !!epgXmlDisplayNameIndex.value[fallbackHit.key]
           }
         }
+
         if (!editTvgUrl) {
-          const hit = preferredCandidateHit([
-            ...tvgIdVariants(editId),
-            ...tvgIdVariants(ch.tvg_id),
-            ...aliasTvgIdVariants(ch),
-            ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
-          ], [epgChannelIndex.value, epgXmlIndex.value])
-          if (hit) {
-            editId = exactEpgIdForHit(hit) || hit.id
-            editName = exactEpgNameForHit(hit) || editName
-            editTvgUrl = hit.url
-            exactEpgApplied = !!exactEpgNameForHit(hit)
+          const nameKey = normName(editName || ch.tvg_name || ch.name)
+          const nameUrl = epgNameIndex.value[nameKey]
+          if (nameUrl) {
+            editTvgUrl = nameUrl
+            if (!editId) editId = epgNameChannelIdIndex.value[nameKey] || ''
+            const rawName = epgNameDisplayNameIndex.value[nameKey]
+            if (rawName) { editName = cleanEpgDisplayName(rawName); exactEpgApplied = true }
           }
         }
-        if (!editTvgUrl) {
-          const hit = epgCandidateIds.map(id => lookupEpgIndex(epgChannelIndex.value, id) || lookupEpgIndex(epgXmlIndex.value, id)).find(Boolean)
-          if (hit) {
-            editId = editId || epgXmlChannelIdIndex.value[hit.key] || hit.key
-            editName = cleanEpgDisplayName(epgXmlDisplayNameIndex.value[hit.key]) || editName
-            editTvgUrl = hit.url
-            exactEpgApplied = !!epgXmlDisplayNameIndex.value[hit.key]
+
+        if (!editTvgUrl && matched) editTvgUrl = preferredSelectedEpgUrl(ch, editId)
+
+        // === STEP 5: Final country correction ===
+        // If ch.tvg_id has a country (.sk/.cz) but resolved URL is from the wrong country, override.
+        if (chCountry && !urlMatchesCountry(editTvgUrl, chCountry)) {
+          const corrHit = xmlLookup(chSameCountryIds, chCountry)
+          if (corrHit) {
+            const c = xmlCanonical(corrHit)
+            if (c?.id)   editId   = c.id
+            if (c?.name) editName = c.name
+            editTvgUrl = corrHit.url
+            exactEpgApplied = true
           }
         }
-        if (!editTvgUrl) {
-          const lookupId    = (editId || ch.tvg_id || '').toLowerCase()
-          const lookupClean = lookupId.replace(/@[^@]*$/, '')
-          const nameKey     = normName(editName || ch.tvg_name || ch.name)
-          const canUseLookupId = isPreferredTvgId(lookupId)
-          const canUseOrigId   = isPreferredTvgId(origTvgIdLow)
-          const lookupHit = canUseLookupId ? (lookupEpgIndex(epgXmlIndex.value, lookupId) || lookupEpgIndex(epgXmlIndex.value, lookupClean)) : null
-          const origHit = canUseOrigId ? (lookupEpgIndex(epgChannelIndex.value, origTvgIdLow) || lookupEpgIndex(epgXmlIndex.value, origTvgIdLow)) : null
-          const nameUrl = epgNameIndex.value[nameKey] || ''
-          const finalHit = lookupHit || origHit
-          editTvgUrl = finalHit?.url
-            || epgNameIndex.value[nameKey]
-            || ''
-          if (finalHit?.key) {
-            editId = epgXmlChannelIdIndex.value[finalHit.key] || editId
-            editName = cleanEpgDisplayName(epgXmlDisplayNameIndex.value[finalHit.key]) || editName
-            exactEpgApplied = !!epgXmlDisplayNameIndex.value[finalHit.key]
-          } else if (nameUrl && epgNameChannelIdIndex.value[nameKey]) {
-            editId = epgNameChannelIdIndex.value[nameKey]
-            editName = cleanEpgDisplayName(epgNameDisplayNameIndex.value[nameKey]) || editName
-            exactEpgApplied = !!epgNameDisplayNameIndex.value[nameKey]
-          }
-        }
-        if (!editTvgUrl && matched) {
-          editTvgUrl = preferredSelectedEpgUrl(ch, editId)
-        }
-        // Post-processing: if playlist tvg_id is .sk but resolved URL is not a Slovakia XML, override
-        // Catches cases where epgChannelIndex (iptv-org) maps a .sk ID to a Czech URL
-        {
-          const alreadySkEpgFinal = editTvgUrl && /slovakia\d*\.xml/.test(editTvgUrl)
-          if (tvgCountry(cleanTvgId(ch.tvg_id)) === 'sk' && !alreadySkEpgFinal) {
-            const skVariants = [
-              ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
-              ...aliasTvgIdVariants(ch),
-            ].map(id => id.toLowerCase()).filter(id => tvgCountry(id) === 'sk')
-            const skHit = preferredCandidateHit(skVariants, [epgXmlIndex.value, epgChannelIndex.value])
-            if (skHit && /slovakia\d*\.xml/.test(skHit.url)) {
-              const skId = exactEpgIdForHit(skHit) || skHit.id
-              editId = skId
-              editName = epgXmlDisplayNameIndex.value[skHit.key] || skId
-              editTvgUrl = skHit.url
-              exactEpgApplied = !!skId
-            }
-          }
-        }
+
+        // === FINAL bookkeeping ===
         const epgFallbackMatched = !!editTvgUrl && !matched
-        // Channel already has a correct preferred tvg_id (.sk/.cz) and allowed tvg_url — no changes needed
         const alreadyVerified = !matched && !epgFallbackMatched
-          && isPreferredTvgId(cleanTvgId(ch.tvg_id))
-          && !!exportableTvgUrl(ch.tvg_url)
+          && isPreferredTvgId(cleanTvgId(ch.tvg_id)) && !!exportableTvgUrl(ch.tvg_url)
         if (alreadyVerified) {
-          editId = editId || cleanTvgId(ch.tvg_id)
-          editName = editName || cleanChannelLabel(ch.tvg_name || ch.name)
+          editId     = editId     || cleanTvgId(ch.tvg_id)
+          editName   = editName   || cleanChannelLabel(ch.tvg_name || ch.name)
           editTvgUrl = editTvgUrl || ch.tvg_url
         }
         const resultScore = matched ? bestScore : (epgFallbackMatched ? modeCfg.epg : (alreadyVerified ? 0.9 : 0))
@@ -3804,21 +3797,16 @@ createApp({
         const canonicalMeta = apiChannelMetaById.value[(editId || '').toLowerCase()]
         if (!exactEpgApplied && canonicalMeta?.name) editName = cleanChannelLabel(canonicalMeta.name) || editName
 
-        // Whether EPG XML index confirmed the channel's own existing tvg-id (high-confidence match)
         const xmlConfirmed = !!ch.tvg_id && !!lookupEpgIndex(epgXmlIndex.value, ch.tvg_id) && !ch.tvg_url
 
-        // Enrich logo: iptv-org CDN priority; fall back to original ch.tvg_id if match gave wrong id
-        // 1) matched editId, 2) editId w/o @quality, 3) original ch.tvg_id w/o @quality, 4) name, 5) M3U logo
         const fullIdLow  = cleanTvgId(editId || ch.tvg_id || '').toLowerCase()
         const cleanIdLow = cleanTvgId(fullIdLow).toLowerCase()
         const logoCandidateIds = [
-          ...tvgIdVariants(editId),
-          ...tvgIdVariants(ch.tvg_id),
-          ...aliasTvgIdVariants(ch),
-          ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
+          ...tvgIdVariants(editId), ...tvgIdVariants(ch.tvg_id),
+          ...aliases, ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
         ].map(id => id.toLowerCase())
         const logoFromCandidateId = logoCandidateIds.find(id => logoChannelIndexById.value[id])
-        let editLogo = (canonicalMeta?.logo || '')
+        const editLogo = (canonicalMeta?.logo || '')
           || (logoFromCandidateId ? logoChannelIndexById.value[logoFromCandidateId] : '')
           || logoChannelIndexById.value[fullIdLow]
           || logoChannelIndexById.value[cleanIdLow]
@@ -3833,11 +3821,9 @@ createApp({
           suggestedName:   matched ? editName : ((epgFallbackMatched || alreadyVerified) ? editName : ''),
           suggestedLogo:   editLogo,
           suggestedTvgUrl: editTvgUrl,
-          score:         resultScore,
-          // Auto-select: M3U match ≥ auto threshold, OR EPG XML confirmed existing tvg-id without tvg_url
-          // Do NOT auto-select alreadyVerified — channel is already correct, nothing to apply
-          selected:      (!alreadyVerified && resultScore >= modeCfg.auto) || xmlConfirmed,
-          reason:        alreadyVerified ? t('autoDetectAlreadyVerified') : (resultScore > 0 ? '' : t('autoDetectNoMatch')),
+          score:           resultScore,
+          selected:        (!alreadyVerified && resultScore >= modeCfg.auto) || xmlConfirmed,
+          reason:          alreadyVerified ? t('autoDetectAlreadyVerified') : (resultScore > 0 ? '' : t('autoDetectNoMatch')),
           alreadyVerified,
           editId, editName, editLogo, editTvgUrl,
         }

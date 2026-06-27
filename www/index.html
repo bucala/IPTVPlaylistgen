@@ -561,8 +561,10 @@
           <!-- Action buttons -->
           <div class="flex flex-wrap gap-2 justify-start md:justify-end hdr-btns">
             <button class="btn btn-primary"    @click="triggerImport">{{ t('importPlaylist') }}</button>
-            <button class="btn btn-secondary"  @click="exportPlaylist('m3u')"  :disabled="stats.total === 0">{{ t('exportM3U') }}</button>
-            <button class="btn btn-secondary"  @click="exportPlaylist('xspf')" :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
+            <button class="btn btn-secondary"  @click="exportPlaylist('m3u')"     :disabled="stats.total === 0">{{ t('exportM3U') }}</button>
+            <button class="btn btn-secondary"  @click="exportPlaylist('xspf')"    :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
+            <button class="btn btn-secondary"  @click="exportPlaylist('json')"    :disabled="stats.total === 0">{{ t('exportJSON') }}</button>
+            <button class="btn btn-secondary"  @click="exportPlaylist('enigma2')" :disabled="stats.total === 0">{{ t('exportEnigma2') }}</button>
             <button class="btn btn-secondary"  @click="undoLastChange" :disabled="undoStack.length === 0">{{ t('undo') }}</button>
             <button class="btn btn-secondary" @click="triggerEpgImport" :title="t('epgImportHint')"><span v-html="icon('antenna', 15)"></span>{{ t('epgImport') }}</button>
             <button v-if="epgLoaded" class="btn btn-secondary" @click="clearEpg" style="color:var(--success)">{{ t('clearEpg') }}</button>
@@ -1507,6 +1509,8 @@ createApp({
         importPlaylist:   'Import Playlist',
         exportM3U:        'Export M3U',
         exportXSPF:       'Export XSPF',
+        exportJSON:       'Export JSON',
+        exportEnigma2:    'Export Enigma2',
         undo:             'Späť',
         undoDone:         'Zmena vrátená späť',
         exportSelected:   'Exportujem vybrané kanály',
@@ -1750,6 +1754,8 @@ createApp({
         importPlaylist:   'Import Playlist',
         exportM3U:        'Export M3U',
         exportXSPF:       'Export XSPF',
+        exportJSON:       'Export JSON',
+        exportEnigma2:    'Export Enigma2',
         undo:             'Undo',
         undoDone:         'Change undone',
         exportSelected:   'Exporting selected channels',
@@ -2376,7 +2382,8 @@ createApp({
     function openAddChannel() {
       editCh.value = {
         id: null, name: '', tvg_id: '', tvg_name: '', tvg_logo: '', tvg_url: '',
-        tvg_country: '', group_title: '', url: '', quality: '', is_active: true
+        tvg_country: '', group_title: '', url: '', quality: '', is_active: true,
+        tvg_shift: '', catchup: '', catchup_days: '', tvg_chno: '', http_user_agent: '', http_referrer: ''
       }
       editSnapshot.value = JSON.stringify({ ...editCh.value })
       modal.edit = false
@@ -2546,6 +2553,12 @@ createApp({
         const line = lines[i].trim()
         if (line.startsWith('#EXTINF:')) {
           meta = parseExtinf(line)
+        } else if (line.startsWith('#EXTVLCOPT:') && meta) {
+          const val = line.slice('#EXTVLCOPT:'.length)
+          const ua  = val.match(/^http-user-agent=(.+)/i)
+          const ref = val.match(/^http-referrer=(.+)/i)
+          if (ua)  meta.http_user_agent = (meta.http_user_agent || '') || ua[1].trim()
+          if (ref) meta.http_referrer   = (meta.http_referrer   || '') || ref[1].trim()
         } else if (line && !line.startsWith('#')) {
           if (validUrl(line)) {
             result.push({ id: newId(), ...(meta || {}), url: line, is_active: true })
@@ -2562,14 +2575,22 @@ createApp({
       const tracks = doc.querySelectorAll('track')
       const result = []
       tracks.forEach(tr => {
-        const g = (tag) => tr.querySelector(tag)?.textContent?.trim() || ''
-        const url = g('location')
+        const g    = (tag) => tr.querySelector(tag)?.textContent?.trim() || ''
+        const meta = (rel) => tr.querySelector(`meta[rel="${rel}"]`)?.textContent?.trim() || ''
+        const url   = g('location')
         const title = stripChannelDecorations(g('title'))
         if (url && validUrl(url)) result.push({
           id: newId(), name: title, url,
-          tvg_id: '', tvg_name: title, tvg_logo: g('image'),
-          tvg_country: '', group_title: g('annotation'),
-          quality: detectQuality(g('title')), is_active: true
+          tvg_id:        meta('tvg-id') || cleanTvgId(meta('tvg-id')),
+          tvg_name:      stripChannelDecorations(meta('tvg-name') || title),
+          tvg_logo:      g('image'),
+          tvg_country:   meta('tvg-country'),
+          group_title:   meta('group-title') || g('annotation'),
+          tvg_shift:     meta('tvg-shift'),
+          catchup:       meta('catchup'),
+          catchup_days:  meta('catchup-days'),
+          tvg_chno:      meta('tvg-chno'),
+          quality:       detectQuality(g('title')), is_active: true
         })
       })
       return result
@@ -2583,13 +2604,17 @@ createApp({
       const tvgName = stripChannelDecorations(rawTvgName || name)
       return {
         name,
-        tvg_id:      cleanTvgId(extractAttr(line, 'tvg-id')),
-        tvg_name:    tvgName || name,
-        tvg_logo:    extractAttr(line, 'tvg-logo'),
-        tvg_url:     extractAttr(line, 'tvg-url'),
-        tvg_country: extractAttr(line, 'tvg-country'),
-        group_title: extractAttr(line, 'group-title'),
-        quality:     detectQuality(`${rawName} ${rawTvgName}`.trim() || name),
+        tvg_id:        cleanTvgId(extractAttr(line, 'tvg-id')),
+        tvg_name:      tvgName || name,
+        tvg_logo:      extractAttr(line, 'tvg-logo'),
+        tvg_url:       extractAttr(line, 'tvg-url'),
+        tvg_country:   extractAttr(line, 'tvg-country'),
+        group_title:   extractAttr(line, 'group-title'),
+        quality:       detectQuality(`${rawName} ${rawTvgName}`.trim() || name),
+        tvg_shift:     extractAttr(line, 'tvg-shift'),
+        catchup:       extractAttr(line, 'catchup'),
+        catchup_days:  extractAttr(line, 'catchup-days'),
+        tvg_chno:      extractAttr(line, 'tvg-chno'),
       }
     }
 
@@ -2615,6 +2640,7 @@ createApp({
       if (!active.length) return
 
       let content, filename, type
+      const baseName = selected.length ? 'playlist-selected' : (isFiltered.value ? 'playlist-filtered' : 'playlist')
       if (fmt === 'm3u') {
         const epgUrls = [...new Set(active.map(c => exportableTvgUrl(c.tvg_url)).filter(Boolean))]
         const epgHeader = epgUrls.length ? ` url-tvg="${xmlEsc(epgUrls.join(','))}" x-tvg-url="${xmlEsc(epgUrls.join(','))}"` : ''
@@ -2627,22 +2653,74 @@ createApp({
           if (c.tvg_url)     content += ` tvg-url="${xmlEsc(c.tvg_url)}"`
           if (c.group_title) content += ` group-title="${xmlEsc(c.group_title)}"`
           if (c.tvg_country) content += ` tvg-country="${xmlEsc(c.tvg_country)}"`
-          content += `,${c.name}\n${c.url}\n`
+          if (c.tvg_chno)    content += ` tvg-chno="${xmlEsc(c.tvg_chno)}"`
+          if (c.tvg_shift)   content += ` tvg-shift="${xmlEsc(c.tvg_shift)}"`
+          if (c.catchup)     content += ` catchup="${xmlEsc(c.catchup)}"`
+          if (c.catchup_days) content += ` catchup-days="${xmlEsc(c.catchup_days)}"`
+          content += `,${c.name}\n`
+          if (c.http_user_agent) content += `#EXTVLCOPT:http-user-agent=${c.http_user_agent}\n`
+          if (c.http_referrer)   content += `#EXTVLCOPT:http-referrer=${c.http_referrer}\n`
+          content += `${c.url}\n`
         })
-        filename = selected.length ? 'playlist-selected.m3u' : (isFiltered.value ? 'playlist-filtered.m3u' : 'playlist.m3u'); type = 'audio/x-mpegurl'
-      } else {
+        filename = `${baseName}.m3u`; type = 'audio/x-mpegurl'
+      } else if (fmt === 'xspf') {
         content  = '<?xml version="1.0" encoding="UTF-8"?>\n'
-        content += '<playlist version="1" xmlns="http://xspf.org/ns/0/">\n  <trackList>\n'
+        content += '<playlist version="1" xmlns="http://xspf.org/ns/0/">\n'
+        content += `  <title>${xmlEsc('IPTV Playlist')}</title>\n`
+        content += '  <trackList>\n'
         active.forEach(c => {
           content += '    <track>\n'
           content += `      <title>${xmlEsc(c.name)}</title>\n`
           content += `      <location>${xmlEsc(c.url)}</location>\n`
-          if (c.tvg_logo)    content += `      <image>${xmlEsc(c.tvg_logo)}</image>\n`
-          if (c.group_title) content += `      <annotation>${xmlEsc(c.group_title)}</annotation>\n`
+          if (c.tvg_logo)     content += `      <image>${xmlEsc(c.tvg_logo)}</image>\n`
+          if (c.tvg_id)       content += `      <meta rel="tvg-id">${xmlEsc(c.tvg_id)}</meta>\n`
+          if (c.tvg_name)     content += `      <meta rel="tvg-name">${xmlEsc(c.tvg_name)}</meta>\n`
+          if (c.group_title)  content += `      <meta rel="group-title">${xmlEsc(c.group_title)}</meta>\n`
+          if (c.tvg_country)  content += `      <meta rel="tvg-country">${xmlEsc(c.tvg_country)}</meta>\n`
+          if (c.tvg_chno)     content += `      <meta rel="tvg-chno">${xmlEsc(c.tvg_chno)}</meta>\n`
+          if (c.tvg_shift)    content += `      <meta rel="tvg-shift">${xmlEsc(c.tvg_shift)}</meta>\n`
+          if (c.catchup)      content += `      <meta rel="catchup">${xmlEsc(c.catchup)}</meta>\n`
+          if (c.catchup_days) content += `      <meta rel="catchup-days">${xmlEsc(c.catchup_days)}</meta>\n`
           content += '    </track>\n'
         })
         content += '  </trackList>\n</playlist>'
-        filename = selected.length ? 'playlist-selected.xspf' : (isFiltered.value ? 'playlist-filtered.xspf' : 'playlist.xspf'); type = 'application/xspf+xml'
+        filename = `${baseName}.xspf`; type = 'application/xspf+xml'
+      } else if (fmt === 'json') {
+        const epgUrls = [...new Set(active.map(c => exportableTvgUrl(c.tvg_url)).filter(Boolean))]
+        const obj = {
+          playlist_name: 'IPTV Playlist',
+          epg_urls: epgUrls,
+          channels: active.map((c, i) => ({
+            name: c.name,
+            stream_url: c.url,
+            logo: c.tvg_logo || null,
+            group: c.group_title || null,
+            epg: {
+              tvg_id:   c.tvg_id   || null,
+              tvg_name: c.tvg_name || null,
+              shift:    c.tvg_shift || null,
+            },
+            settings: {
+              channel_number: c.tvg_chno ? Number(c.tvg_chno) : i + 1,
+              catchup_type:   c.catchup      || null,
+              catchup_days:   c.catchup_days ? Number(c.catchup_days) : null,
+              http_user_agent: c.http_user_agent || null,
+              http_referrer:   c.http_referrer   || null,
+            },
+          })),
+        }
+        content = JSON.stringify(obj, null, 2)
+        filename = `${baseName}.json`; type = 'application/json'
+      } else if (fmt === 'enigma2') {
+        const grpName = active[0]?.group_title || 'IPTV'
+        content = `#NAME ${grpName}\n`
+        active.forEach(c => {
+          const firstColon = c.url.indexOf(':')
+          const encodedUrl = c.url.replace(/:/g, (m, offset) => offset === firstColon ? ':' : '%3a')
+          content += `#SERVICE 4097:0:1:1:0:0:0:0:0:0:${encodedUrl}:${c.name}\n`
+          content += `#DESCRIPTION ${c.name}\n`
+        })
+        filename = `${baseName}.tv`; type = 'text/plain'
       }
 
       const blob = new Blob([content], { type })

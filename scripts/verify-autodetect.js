@@ -130,6 +130,17 @@ assert(nameIdIdx.markiza === 'Markíza HD.sk', 'keeps exact XMLTV channel ID for
 assert(displayIdx['markiza.sk'] === 'Markíza HD.sk', 'keeps exact XMLTV display-name for canonical TVG-ID lookup');
 assert(nameDisplayIdx.markiza === 'Markíza HD.sk', 'keeps exact XMLTV display-name for display-name lookup');
 
+const domaXmlIdx = {};
+const domaNameIdx = {};
+const domaIdIdx = {};
+const domaNameIdIdx = {};
+const domaDisplayIdx = {};
+const domaNameDisplayIdx = {};
+putEpgSourceIndex('Doma HD.sk', 'Doma HD.sk', 'https://www.open-epg.com/files/slovakia1.xml', domaXmlIdx, domaNameIdx, domaIdIdx, domaNameIdIdx, domaDisplayIdx, domaNameDisplayIdx);
+assert(domaXmlIdx['doma.sk'] === 'https://www.open-epg.com/files/slovakia1.xml', 'indexes Doma HD.sk under canonical Doma.sk lookup');
+assert(domaIdIdx['doma.sk'] === 'Doma HD.sk', 'keeps exact Doma XMLTV channel ID with HD suffix');
+assert(domaDisplayIdx['doma.sk'] === 'Doma HD.sk', 'keeps exact Doma XMLTV display-name with HD suffix');
+
 const czXmlIdx = {};
 const czNameIdx = {};
 const czIdIdx = {};

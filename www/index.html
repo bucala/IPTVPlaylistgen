@@ -1179,11 +1179,11 @@
             </button>
           </div>
           <!-- Collapsible settings panel -->
-          <div v-if="sourcesPanelOpen" class="px-2.5 pb-2.5" style="border-top:1px solid var(--sep)">
+          <div v-if="sourcesPanelOpen" class="pb-2.5" style="border-top:1px solid var(--sep)">
             <!-- Row 1: IPTV playlist sources + custom M3U URL -->
-            <div class="flex flex-wrap items-center gap-1.5 pt-2">
-              <span class="text-xs font-semibold" style="color:var(--text3);white-space:nowrap">{{ t('sourceGroupPlaylists') }}</span>
-              <label v-for="src in IPTV_SOURCES" :key="src.id" class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
+            <div class="flex flex-wrap items-center gap-1.5 px-2.5 pt-2">
+              <span class="text-xs font-semibold flex-shrink-0" style="color:var(--text3)">{{ t('sourceGroupPlaylists') }}</span>
+              <label v-for="src in IPTV_SOURCES" :key="src.id" class="cursor-pointer select-none flex-shrink-0" :title="src.label + ' — ' + src.detail + '\n' + src.url">
                 <input type="checkbox" :checked="autoDetectSelectedSources.has(src.id)"
                        @change="toggleAutoDetectSource(src.id, $event.target.checked)" class="sr-only" />
                 <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
@@ -1194,17 +1194,16 @@
                   {{ src.label }}
                 </div>
               </label>
-              <div style="width:1px;height:20px;background:var(--sep);flex-shrink:0"></div>
               <input class="field text-xs" style="flex:1;min-width:140px;padding:5px 8px"
                      type="url" v-model="autoDetectCustomUrl"
                      :placeholder="t('autoDetectCustomUrlPh')"
                      @keydown.enter="fetchAndRunAutoDetect" />
             </div>
-            <!-- Row 2: Metadata enrichment + EPG XML sources + custom EPG URL -->
-            <div class="flex flex-wrap items-center gap-1.5 pt-2 mt-1.5" style="border-top:1px solid var(--sep)">
-              <span class="text-xs" style="color:var(--text3);white-space:nowrap">{{ t('sourceGroupMetadata') }}</span>
+            <!-- Row 2: Metadata enrichment -->
+            <div class="flex flex-wrap items-center gap-1.5 px-2.5 pt-2 mt-1" style="border-top:1px solid var(--sep)">
+              <span class="text-xs font-semibold flex-shrink-0" style="color:var(--purple)">{{ t('sourceGroupMetadata') }}</span>
               <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type !== 'epg-xml')" :key="src.id">
-                <label class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
+                <label class="cursor-pointer select-none flex-shrink-0" :title="src.label + ' — ' + src.detail + '\n' + src.url">
                   <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
                          @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
                   <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
@@ -1216,32 +1215,34 @@
                   </div>
                 </label>
               </template>
-              <div style="width:1px;height:18px;background:var(--sep);flex-shrink:0"></div>
-              <span class="text-xs" style="color:var(--text3);white-space:nowrap">{{ t('sourceGroupEpg') }}</span>
-              <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type === 'epg-xml')" :key="src.id">
-                <label class="cursor-pointer select-none" :title="src.label + ' — ' + src.detail + '\n' + src.url">
-                  <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
-                         @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
-                  <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
-                       :style="enrichmentSelectedSources.has(src.id)
-                         ? 'background:var(--warning);color:#000'
-                         : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
-                    <span v-if="enrichmentSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
-                    {{ src.label }}
-                  </div>
-                </label>
-              </template>
-              <div style="width:1px;height:18px;background:var(--sep);flex-shrink:0"></div>
-              <input class="field" style="width:200px;padding:5px 8px;font-size:12px" type="url" v-model="customEpgUrl" :placeholder="t('customEpgUrlPh')" @keydown.enter.prevent="addCustomEpgUrl" />
-              <button class="btn btn-secondary" style="padding:5px 9px;font-size:12px" @click="addCustomEpgUrl" :disabled="!customEpgUrl.trim()">{{ t('addEpgSource') }}</button>
-              <button class="btn btn-secondary" style="padding:5px 9px;font-size:12px" @click="triggerEpgImport">{{ t('addEpgFiles') }}</button>
-            </div>
-            <!-- Summary + loaded indicator -->
-            <div class="flex items-center gap-2 pt-1.5 mt-1" style="border-top:1px solid var(--sep)">
-              <span class="text-xs" style="color:var(--text3)">{{ t('sourceSummary').replace('{iptv}', autoDetectSelectedSources.size).replace('{epg}', epgXmlSourceCount()).replace('{custom}', customEpgSources.length) }}</span>
-              <span v-if="enrichmentLoaded" class="text-xs flex items-center gap-1" style="color:var(--success)">
+              <span v-if="enrichmentLoaded" class="text-xs flex items-center gap-1 ml-auto flex-shrink-0" style="color:var(--success)">
                 <span v-html="icon('check', 10)"></span>{{ t('autoDetectEnrichLoaded') }}
               </span>
+            </div>
+            <!-- Row 3: EPG XML sources + custom EPG URL -->
+            <div class="px-2.5 pt-2 mt-1" style="border-top:1px solid var(--sep)">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-xs font-semibold flex-shrink-0" style="color:var(--warning)">{{ t('sourceGroupEpg') }}</span>
+                <template v-for="src in ENRICHMENT_SOURCES.filter(s => s.type === 'epg-xml')" :key="src.id">
+                  <label class="cursor-pointer select-none flex-shrink-0" :title="src.label + ' — ' + src.detail + '\n' + src.url">
+                    <input type="checkbox" :checked="enrichmentSelectedSources.has(src.id)"
+                           @change="toggleEnrichmentSource(src.id, $event.target.checked)" class="sr-only" />
+                    <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                         :style="enrichmentSelectedSources.has(src.id)
+                           ? 'background:var(--warning);color:#000'
+                           : 'background:var(--bg);color:var(--text2);border:1px solid var(--sep)'">
+                      <span v-if="enrichmentSelectedSources.has(src.id)" v-html="icon('check', 10)"></span>
+                      {{ src.label }}
+                    </div>
+                  </label>
+                </template>
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <input class="field text-xs" style="flex:1;min-width:180px;padding:5px 8px" type="url" v-model="customEpgUrl" :placeholder="t('customEpgUrlPh')" @keydown.enter.prevent="addCustomEpgUrl" />
+                <button class="btn btn-secondary flex-shrink-0" style="padding:5px 9px;font-size:12px" @click="addCustomEpgUrl" :disabled="!customEpgUrl.trim()">{{ t('addEpgSource') }}</button>
+                <button class="btn btn-secondary flex-shrink-0" style="padding:5px 9px;font-size:12px" @click="triggerEpgImport">{{ t('addEpgFiles') }}</button>
+                <span class="text-xs ml-auto flex-shrink-0" style="color:var(--text3)">{{ t('sourceSummary').replace('{iptv}', autoDetectSelectedSources.size).replace('{epg}', epgXmlSourceCount()).replace('{custom}', customEpgSources.length) }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1499,9 +1500,9 @@ const CHANNEL_TVG_ALIASES = [
   { re: /\bdaj\s*to\b|\bdajto\b/i, ids: ['Dajto.sk', 'Dajto.cz'] },
   { re: /\bjoj\s*svet\b/i, ids: ['JOJSvet.sk', 'JOJSvet.cz'] },
   { re: /\bwau\b/i, ids: ['Wau.sk', 'Wau.cz'] },
-  { re: /\bmark[ií]za\s*krimi\b/i, ids: ['MarkizaKrimi.sk'] },
-  { re: /\bmark[ií]za\s*klasik\b/i, ids: ['MarkizaKlasik.sk'] },
-  { re: /\bmark[ií]za\b/i, ids: ['Markiza.sk'] },
+  { re: /\bmark[ií]za\s*krimi\b/i, ids: ['Markíza Krimi.sk'] },
+  { re: /\bmark[ií]za\s*klasik\b/i, ids: ['Markíza Klasik.sk'] },
+  { re: /\bmark[ií]za\b/i, ids: ['Markíza.sk'] },
   { re: /\bjoj\s*plus\b|\bplus\s*joj\b/i, ids: ['JOJPlus.sk', 'JOJPlus.cz'] },
   { re: /\bjoj\b/i, ids: ['JOJ.sk', 'JOJ.cz'] },
   { re: /\bta3\b|\bta\s*3\b/i, ids: ['TA3.sk'] },
@@ -3649,7 +3650,7 @@ createApp({
           if (s.exact_tvg_id && exportableTvgUrl(s.tvg_url)) return 6
           return { confirmed: 5, 'iptv-sk': 4, 'iptv-cz': 4, custom: 3, freetv: 2, 'iptv-all': 1 }[sourceId] || 1
         }
-        const candidateRank = s => sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
+        const candidateRank = s => sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0) + (tvgCountry(s.exact_tvg_id || s.tvg_id) === 'sk' ? 0.1 : 0)
         indexedCandidatesFor(chNorm).forEach(s => {
           if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
           const sc = Math.max(

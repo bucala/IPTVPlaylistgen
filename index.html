@@ -3671,6 +3671,20 @@ createApp({
           editName = best.exact_tvg_name || best.exact_tvg_id
           exactEpgApplied = true
         }
+        // Playlist tvg_id is .sk but matched source gave a .cz EPG — upgrade to .sk EPG if XML confirms it
+        if (tvgCountry(editId) === 'cz' && tvgCountry(cleanTvgId(ch.tvg_id)) === 'sk') {
+          const skVariants = [
+            ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
+            ...aliasTvgIdVariants(ch),
+          ].map(id => id.toLowerCase()).filter(id => tvgCountry(id) === 'sk')
+          const skHit = preferredCandidateHit(skVariants, [epgXmlIndex.value, epgChannelIndex.value])
+          if (skHit) {
+            editId = exactEpgIdForHit(skHit) || skHit.id
+            editName = exactEpgNameForHit(skHit) || editName
+            editTvgUrl = skHit.url
+            exactEpgApplied = !!exactEpgNameForHit(skHit)
+          }
+        }
 
         // origTvgIdLow: playlist tvg_id stripped of @quality (e.g. "CT1.cz@SD" → "ct1.cz")
         const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()

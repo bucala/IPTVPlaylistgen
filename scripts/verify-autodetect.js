@@ -146,7 +146,7 @@ const aliasCases = [
   ['DajTo', 'Dajto.sk'],
   ['JOJ Svet', 'JOJSvet.sk'],
   ['Wau', 'Wau.sk'],
-  ['Markíza', 'Markiza.sk'],
+  ['Markíza', 'Markíza.sk'],
   ['TA3', 'TA3.sk'],
   ['Jednotka', 'Jednotka.sk'],
   ['Dvojka', 'Dvojka.sk'],

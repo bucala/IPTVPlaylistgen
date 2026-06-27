@@ -3672,19 +3672,23 @@ createApp({
           editName = best.exact_tvg_name || best.exact_tvg_id
           exactEpgApplied = true
         }
-        // Playlist tvg_id is .sk but matched source gave a .cz EPG — upgrade to .sk EPG if XML confirms it
-        if (tvgCountry(editId) === 'cz' && tvgCountry(cleanTvgId(ch.tvg_id)) === 'sk') {
-          const skVariants = [
-            ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
-            ...aliasTvgIdVariants(ch),
-          ].map(id => id.toLowerCase()).filter(id => tvgCountry(id) === 'sk')
-          const skHit = preferredCandidateHit(skVariants, [epgXmlIndex.value, epgChannelIndex.value])
-          if (skHit) {
-            const skId = exactEpgIdForHit(skHit) || skHit.id
-            editId = skId
-            editName = epgXmlDisplayNameIndex.value[skHit.key] || skId
-            editTvgUrl = skHit.url
-            exactEpgApplied = !!skId
+        // Playlist tvg_id is .sk but EPG URL is not from a Slovakia XML — prefer Slovakia XML entry early
+        // (prevents EPG fallback chain from locking in a Czech URL when Slovakia XML has a match)
+        {
+          const alreadySkEpg = editTvgUrl && /slovakia\d*\.xml/.test(editTvgUrl)
+          if (tvgCountry(cleanTvgId(ch.tvg_id)) === 'sk' && !alreadySkEpg) {
+            const skVariants = [
+              ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
+              ...aliasTvgIdVariants(ch),
+            ].map(id => id.toLowerCase()).filter(id => tvgCountry(id) === 'sk')
+            const skHit = preferredCandidateHit(skVariants, [epgXmlIndex.value, epgChannelIndex.value])
+            if (skHit && /slovakia\d*\.xml/.test(skHit.url)) {
+              const skId = exactEpgIdForHit(skHit) || skHit.id
+              editId = skId
+              editName = epgXmlDisplayNameIndex.value[skHit.key] || skId
+              editTvgUrl = skHit.url
+              exactEpgApplied = !!skId
+            }
           }
         }
 
@@ -3759,19 +3763,23 @@ createApp({
         if (!editTvgUrl && matched) {
           editTvgUrl = preferredSelectedEpgUrl(ch, editId)
         }
-        // Post-processing: if any EPG lookup resolved to .cz but playlist tvg_id is .sk, prefer SK EPG
-        if (tvgCountry(cleanTvgId(ch.tvg_id)) === 'sk' && tvgCountry(editId) === 'cz') {
-          const skVariants = [
-            ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
-            ...aliasTvgIdVariants(ch),
-          ].map(id => id.toLowerCase()).filter(id => tvgCountry(id) === 'sk')
-          const skHit = preferredCandidateHit(skVariants, [epgXmlIndex.value, epgChannelIndex.value])
-          if (skHit) {
-            const skId = exactEpgIdForHit(skHit) || skHit.id
-            editId = skId
-            editName = epgXmlDisplayNameIndex.value[skHit.key] || skId
-            editTvgUrl = skHit.url
-            exactEpgApplied = !!skId
+        // Post-processing: if playlist tvg_id is .sk but resolved URL is not a Slovakia XML, override
+        // Catches cases where epgChannelIndex (iptv-org) maps a .sk ID to a Czech URL
+        {
+          const alreadySkEpgFinal = editTvgUrl && /slovakia\d*\.xml/.test(editTvgUrl)
+          if (tvgCountry(cleanTvgId(ch.tvg_id)) === 'sk' && !alreadySkEpgFinal) {
+            const skVariants = [
+              ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
+              ...aliasTvgIdVariants(ch),
+            ].map(id => id.toLowerCase()).filter(id => tvgCountry(id) === 'sk')
+            const skHit = preferredCandidateHit(skVariants, [epgXmlIndex.value, epgChannelIndex.value])
+            if (skHit && /slovakia\d*\.xml/.test(skHit.url)) {
+              const skId = exactEpgIdForHit(skHit) || skHit.id
+              editId = skId
+              editName = epgXmlDisplayNameIndex.value[skHit.key] || skId
+              editTvgUrl = skHit.url
+              exactEpgApplied = !!skId
+            }
           }
         }
         const epgFallbackMatched = !!editTvgUrl && !matched

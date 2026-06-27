@@ -3633,12 +3633,12 @@ createApp({
         return !!url
       }
 
-      // Get canonical ID + cleaned display-name from the XML channel id index
+      // Get canonical ID + raw display-name from the XML channel id index.
+      // Values are used AS-IS from the XML source — .sk/.cz suffixes in display-name are intentional.
       const xmlCanonical = (hit) => {
         if (!hit?.key) return null
         const id   = epgXmlChannelIdIndex.value[hit.key] || null
-        const name = epgXmlDisplayNameIndex.value[hit.key]
-          ? cleanEpgDisplayName(epgXmlDisplayNameIndex.value[hit.key]) : null
+        const name = epgXmlDisplayNameIndex.value[hit.key] || null
         return (id || name) ? { id, name } : null
       }
 
@@ -3692,10 +3692,14 @@ createApp({
           const sc = tvgCountry(s.exact_tvg_id || s.tvg_id)
           return sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
             + (sc === 'sk' ? 0.1 : 0)
-            + (chCountry && chCountry === sc ? 5 : 0)   // decisive country match bonus
         }
         indexedCandidatesFor(chNorm).forEach(s => {
           if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
+          // Hard country filter: if playlist tvg-id has .sk/.cz, reject candidates from the opposite country
+          if (chCountry) {
+            const candCountry = tvgCountry(s.exact_tvg_id || s.tvg_id || '')
+            if (candCountry && candCountry !== chCountry) return
+          }
           const sc = Math.max(strSimilarity(chNorm, s.nName), s.nId ? strSimilarity(chNorm, s.nId) : 0)
           if (sc > bestScore || (Math.abs(sc - bestScore) < 0.001 && best && candidateRank(s) > candidateRank(best))) {
             bestScore = sc; best = s
@@ -3712,7 +3716,7 @@ createApp({
 
         if (matched && best.exact_tvg_id && exportableTvgUrl(best.tvg_url)) {
           editId   = best.exact_tvg_id
-          editName = cleanEpgDisplayName(best.exact_tvg_name || best.exact_tvg_id) || editName
+          editName = best.exact_tvg_name || best.exact_tvg_id || editName
           exactEpgApplied = true
         }
 
@@ -3730,7 +3734,7 @@ createApp({
           if (xmlHit) {
             const c = xmlCanonical(xmlHit)
             if (c?.id)   editId   = c.id     // canonical ID with correct diacritics
-            if (c?.name) editName = c.name   // canonical display-name (suffix stripped)
+            if (c?.name) editName = c.name   // raw display-name from XML (.sk/.cz suffix kept)
             // Update URL only if it's wrong/missing — don't downgrade a better URL
             if (!editTvgUrl || !urlMatchesCountry(editTvgUrl, chCountry)) editTvgUrl = xmlHit.url
             exactEpgApplied = true
@@ -3763,7 +3767,7 @@ createApp({
             editTvgUrl = nameUrl
             if (!editId) editId = epgNameChannelIdIndex.value[nameKey] || ''
             const rawName = epgNameDisplayNameIndex.value[nameKey]
-            if (rawName) { editName = cleanEpgDisplayName(rawName); exactEpgApplied = true }
+            if (rawName) { editName = rawName; exactEpgApplied = true }
           }
         }
 

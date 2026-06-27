@@ -205,4 +205,18 @@ assert(
   'prefers an exact TVG-ID source over an earlier normalized HD alias'
 );
 
+// Markíza Klasik.sk: XML has <channel id="Markíza Klasik.sk"><display-name>Markíza Klasik.sk</display-name></channel>
+// After autodetect: TVG-ID = "Markíza Klasik.sk", TVG-NAME = "Markíza Klasik.sk" (exact XML values, .sk NOT stripped)
+{
+  const xi = {}, ni = {}, ii = {}, nii = {}, di = {}, ndi = {};
+  putEpgSourceIndex('Markíza Klasik.sk', 'Markíza Klasik.sk', 'https://www.open-epg.com/files/slovakia1.xml',
+    xi, ni, ii, nii, di, ndi);
+  assert(xi['markizaklasik.sk'] === 'https://www.open-epg.com/files/slovakia1.xml',
+    'Markíza Klasik.sk indexed under diacritic-free key for playlist lookup');
+  assert(ii['markizaklasik.sk'] === 'Markíza Klasik.sk',
+    'autodetect TVG-ID for Markíza Klasik is exact XML id "Markíza Klasik.sk" (diacritics + .sk preserved)');
+  assert(di['markizaklasik.sk'] === 'Markíza Klasik.sk',
+    'autodetect TVG-NAME for Markíza Klasik is raw XML display-name "Markíza Klasik.sk" (.sk suffix NOT stripped)');
+}
+
 process.exit(failed ? 1 : 0);

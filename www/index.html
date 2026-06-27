@@ -1166,8 +1166,9 @@
             </div>
             <div v-else style="flex:1"></div>
             <!-- Sources toggle button -->
-            <button class="btn btn-ghost" style="padding:5px 9px;gap:4px;font-size:12px;flex-shrink:0;white-space:nowrap"
-                    @click="sourcesPanelOpen = !sourcesPanelOpen">
+            <button type="button" class="btn btn-ghost" style="padding:5px 9px;gap:4px;font-size:12px;flex-shrink:0;white-space:nowrap"
+                    :aria-expanded="sourcesPanelOpen.toString()"
+                    @click.stop="toggleSourcesPanel">
               <span v-html="icon('settings', 13)"></span>
               <span>{{ t('autoDetectSourcesToggle') }}</span>
               <span v-html="sourcesPanelOpen ? icon('chevUp', 12) : icon('chevDown', 12)"></span>
@@ -1320,7 +1321,7 @@
                       style="cursor:pointer"
                       @click.stop="toggleExpand(r.ch.id)">
                     <td @click.stop>
-                      <input type="checkbox" v-model="r.selected" :disabled="r.score === 0 || r.alreadyVerified" />
+                      <input type="checkbox" v-model="r.selected" :disabled="r.alreadyVerified" />
                     </td>
                     <td>
                       <div class="font-semibold text-sm">{{ r.ch.name }}</div>
@@ -1365,11 +1366,11 @@
                       <div class="grid gap-2 auto-detect-edit-grid" style="grid-template-columns:1fr 1fr">
                         <div class="flex items-center gap-2">
                           <span class="label" style="min-width:58px;margin:0;font-size:11px">TVG-ID</span>
-                          <input class="field flex-1" style="font-size:12px;padding:4px 7px" v-model="r.editId" :placeholder="t('tvgId')" @click.stop />
+                          <input class="field flex-1" style="font-size:12px;padding:4px 7px" v-model="r.editId" :placeholder="t('tvgId')" @click.stop @input="markAutoDetectManual(r)" />
                         </div>
                         <div class="flex items-center gap-2">
                           <span class="label" style="min-width:58px;margin:0;font-size:11px">{{ t('tvgName') }}</span>
-                          <input class="field flex-1" style="font-size:12px;padding:4px 7px" v-model="r.editName" :placeholder="t('tvgName')" @click.stop />
+                          <input class="field flex-1" style="font-size:12px;padding:4px 7px" v-model="r.editName" :placeholder="t('tvgName')" @click.stop @input="markAutoDetectManual(r)" />
                         </div>
                         <div class="flex items-center gap-2">
                           <span class="label" style="min-width:58px;margin:0;font-size:11px">Logo URL</span>
@@ -1378,13 +1379,13 @@
                                  style="border-radius:4px;object-fit:contain;background:var(--surface);flex-shrink:0"
                                  @error="e => e.target.style.display='none'" />
                             <input class="field flex-1" style="font-size:12px;padding:4px 7px" v-model="r.editLogo"
-                                   :placeholder="t('tvgLogo')" type="url" @click.stop />
+                                   :placeholder="t('tvgLogo')" type="url" @click.stop @input="markAutoDetectManual(r)" />
                           </div>
                         </div>
                         <div class="flex items-center gap-2">
                           <span class="label" style="min-width:58px;margin:0;font-size:11px">TVG URL</span>
                           <input class="field flex-1" style="font-size:12px;padding:4px 7px" v-model="r.editTvgUrl"
-                                 :placeholder="t('tvgUrl')" type="url" @click.stop />
+                                 :placeholder="t('tvgUrl')" type="url" @click.stop @input="markAutoDetectManual(r)" />
                         </div>
                       </div>
                       <div class="flex items-center gap-2 mt-2" @click.stop>
@@ -1396,11 +1397,11 @@
                       </div>
                       <div class="flex gap-2 mt-2 justify-end" @click.stop>
                         <button class="btn btn-ghost" style="font-size:11px;padding:3px 9px"
-                                @click="r.editId=r.ch.tvg_id||'';r.editName=r.ch.tvg_name||'';r.editLogo=r.ch.tvg_logo||'';r.editTvgUrl=r.ch.tvg_url||''">
+                                @click="r.editId=r.ch.tvg_id||'';r.editName=r.ch.tvg_name||'';r.editLogo=r.ch.tvg_logo||'';r.editTvgUrl=r.ch.tvg_url||'';markAutoDetectManual(r)">
                           {{ t('autoDetectKeepOriginal') }}
                         </button>
                         <button class="btn btn-secondary" style="font-size:11px;padding:3px 9px"
-                                @click="r.editId=r.suggestedId;r.editName=r.suggestedName;r.editLogo=r.suggestedLogo;r.editTvgUrl=r.suggestedTvgUrl||''">
+                                @click="r.editId=r.suggestedId;r.editName=r.suggestedName;r.editLogo=r.suggestedLogo;r.editTvgUrl=r.suggestedTvgUrl||'';markAutoDetectManual(r)">
                           {{ t('autoDetectUseSuggested') }}
                         </button>
                       </div>
@@ -2298,7 +2299,7 @@ createApp({
     const autoDetectSummary = computed(() => ({
       total:    autoDetectResults.value.length,
       matched:  autoDetectResults.value.filter(r => r.score > 0).length,
-      selected: autoDetectResults.value.filter(r => r.selected).length,
+      selected: autoDetectResults.value.filter(canApplyAutoDetectResult).length,
     }))
 
     const sourcesPanelSummary = computed(() => {
@@ -2313,7 +2314,7 @@ createApp({
     })
 
     const autoDetectAllSelected = computed(() => {
-      const f = filteredAutoDetectResults.value
+      const f = filteredAutoDetectResults.value.filter(r => !r.alreadyVerified)
       return f.length > 0 && f.every(r => r.selected)
     })
 
@@ -3039,14 +3040,14 @@ createApp({
             let m
             const blockRe = /<channel\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/channel>/g
             while ((m = blockRe.exec(text)) !== null) {
-              const id = m[1]
+              const id = decodeXmlText(m[1])
               if (sourceTvgUrl) putEpgSourceIndex(id, id, sourceTvgUrl, epgXmlIndex.value, epgNameIndex.value, epgXmlChannelIdIndex.value, epgNameChannelIdIndex.value, epgXmlDisplayNameIndex.value, epgNameDisplayNameIndex.value)
               const displayNames = []
               let dm
               const displayRe = /<display-name[^>]*>([\s\S]*?)<\/display-name>/g
               while ((dm = displayRe.exec(m[2])) !== null) {
-                const displayName = dm[1].replace(/<[^>]*>/g, '').trim()
-                if (displayName) displayNames.push(displayName)
+                const displayName = decodeXmlText(dm[1].replace(/<[^>]*>/g, ''))
+                if (displayName.trim()) displayNames.push(displayName)
                 if (sourceTvgUrl) putEpgSourceIndex(id, displayName, sourceTvgUrl, epgXmlIndex.value, epgNameIndex.value, epgXmlChannelIdIndex.value, epgNameChannelIdIndex.value, epgXmlDisplayNameIndex.value, epgNameDisplayNameIndex.value)
               }
               const iconMatch = m[2].match(/<icon[^>]+src="([^"]+)"/i)
@@ -3310,6 +3311,10 @@ createApp({
       return c === 'cz' || c === 'sk'
     }
 
+    function supportedEpgCountry(country) {
+      return country === 'sk' || country === 'cz' ? country : ''
+    }
+
     function allowedTvgUrl(url) {
       const normalized = (url || '').trim().replace(/^http:/i, 'https:')
       return ALLOWED_TVG_URLS.has(normalized) ? normalized : ''
@@ -3322,6 +3327,14 @@ createApp({
 
     function stripDiacritics(value) {
       return (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    }
+
+    function decodeXmlText(value) {
+      const text = String(value || '')
+      if (!/[&<]/.test(text)) return text
+      const el = document.createElement('textarea')
+      el.innerHTML = text
+      return el.value
     }
 
     function epgTvgIdKeys(id) {
@@ -3410,16 +3423,35 @@ createApp({
     }
 
     function aliasTvgIdVariants(ch) {
-      const text = [ch?.name, ch?.tvg_name, ch?.tvg_id].filter(Boolean).join(' ')
-      const hit = CHANNEL_TVG_ALIASES.find(a => a.re.test(text))
-      return hit ? hit.ids : []
+      for (const text of [ch?.name, ch?.tvg_id, ch?.tvg_name]) {
+        if (!text) continue
+        const hit = CHANNEL_TVG_ALIASES.find(a => a.re.test(text))
+        if (hit) return hit.ids
+      }
+      return []
+    }
+
+    function channelLookupIds(ch, country = '') {
+      const matchCountry = supportedEpgCountry(country)
+      const rawId = ch?.tvg_id || ''
+      const cleanId = cleanTvgId(rawId)
+      return [
+        rawId,
+        cleanId,
+        ...aliasTvgIdVariants(ch),
+        ...tvgIdVariants(cleanId),
+        ...nameTvgIdVariants(ch?.name || ''),
+        ...nameTvgIdVariants(ch?.tvg_name || ''),
+      ].map(id => (id || '').toLowerCase())
+        .filter((id, i, a) => id && a.indexOf(id) === i)
+        .filter(id => matchCountry ? tvgCountry(id) === matchCountry : isPreferredTvgId(id))
     }
 
     function putEpgSourceIndex(rawId, displayName, sourceUrl, xmlIndex, nameIndex, idIndex, nameIdIndex, idDisplayIndex, nameDisplayIndex) {
       const normalizedSourceUrl = exportableTvgUrl(sourceUrl)
       if (!normalizedSourceUrl) return
-      const exactId = (rawId || '').trim()
-      const exactDisplayName = (displayName || exactId).trim()
+      const exactId = String(rawId || '')
+      const exactDisplayName = String(displayName || exactId)
       const cleanedId = cleanTvgId(exactId)
       const ids = [
         { id: exactId, rank: 3 },
@@ -3654,19 +3686,11 @@ createApp({
       autoDetectResults.value = channelsToProcess.map(ch => {
         const chNorm    = normName(ch.name) || normName(ch.tvg_name)
         const chCountry = tvgCountry(ch.tvg_id)
+        const matchCountry = supportedEpgCountry(chCountry)
         const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()
         const aliases   = aliasTvgIdVariants(ch)
 
-        // All lookup IDs derived from ch.tvg_id (same country, lowercase)
-        const chSameCountryIds = [
-          ch.tvg_id,
-          cleanTvgId(ch.tvg_id),
-          ...aliases,
-          ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
-          ...nameTvgIdVariants(ch.name || ch.tvg_name),
-        ].map(id => (id || '').toLowerCase())
-          .filter((id, i, a) => id && a.indexOf(id) === i)
-          .filter(id => chCountry ? tvgCountry(id) === chCountry : (tvgCountry(id) === 'sk' || tvgCountry(id) === 'cz'))
+        const chLookupIds = channelLookupIds(ch, matchCountry)
 
         // === STEP 1: IPTV search (confirmed mappings, iptv-org API, fuzzy M3U search) ===
         let best = null, bestScore = 0
@@ -3674,8 +3698,24 @@ createApp({
         const confirmed = confirmedMappings.value[chNorm || normName(ch.name)]
         if (confirmed) { bestScore = 1; best = { ...confirmed, sourceId: 'confirmed' } }
 
-        const apiHit = pickPreferredEntry(apiNormMap.value.get(chNorm))
-          || pickPreferredEntry(apiNormMap.value.get(chNorm.replace(/\s+/g, '')))
+        const directXmlHit = !best ? xmlLookup(chLookupIds, matchCountry) : null
+        if (directXmlHit) {
+          const c = xmlCanonical(directXmlHit)
+          bestScore = 1
+          best = {
+            tvg_id: c?.id || directXmlHit.id,
+            tvg_name: c?.name || c?.id || directXmlHit.id,
+            tvg_logo: '',
+            tvg_url: directXmlHit.url,
+            exact_tvg_id: c?.id || directXmlHit.id,
+            exact_tvg_name: c?.name || c?.id || directXmlHit.id,
+            name: c?.name || c?.id || directXmlHit.id,
+            sourceId: 'epg-exact',
+          }
+        }
+
+        const apiHit = !best && (pickPreferredEntry(apiNormMap.value.get(chNorm))
+          || pickPreferredEntry(apiNormMap.value.get(chNorm.replace(/\s+/g, ''))))
         if (!best && apiHit) {
           bestScore = 0.95
           best = { tvg_id: apiHit.id, tvg_name: apiHit.name, tvg_logo: apiHit.logo, tvg_url: '', name: apiHit.name }
@@ -3696,9 +3736,9 @@ createApp({
         indexedCandidatesFor(chNorm).forEach(s => {
           if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
           // Hard country filter: if playlist tvg-id has .sk/.cz, reject candidates from the opposite country
-          if (chCountry) {
+          if (matchCountry) {
             const candCountry = tvgCountry(s.exact_tvg_id || s.tvg_id || '')
-            if (candCountry && candCountry !== chCountry) return
+            if (candCountry && candCountry !== matchCountry) return
           }
           const sc = Math.max(strSimilarity(chNorm, s.nName), s.nId ? strSimilarity(chNorm, s.nId) : 0)
           if (sc > bestScore || (Math.abs(sc - bestScore) < 0.001 && best && candidateRank(s) > candidateRank(best))) {
@@ -3725,12 +3765,12 @@ createApp({
         // Priority: ch.tvg_id variants (same country) first, then editId variants.
         {
           const enrichIds = [
-            ...chSameCountryIds,
+            ...chLookupIds,
             ...[editId, ...tvgIdVariants(editId || '')]
               .map(id => (id || '').toLowerCase())
-              .filter(id => id && !chSameCountryIds.includes(id) && (chCountry ? tvgCountry(id) === chCountry : true)),
+              .filter(id => id && !chLookupIds.includes(id) && (matchCountry ? tvgCountry(id) === matchCountry : isPreferredTvgId(id))),
           ]
-          const xmlHit = xmlLookup(enrichIds, chCountry)
+          const xmlHit = xmlLookup(enrichIds, matchCountry)
           if (xmlHit) {
             const c = xmlCanonical(xmlHit)
             if (c?.id)   editId   = c.id     // canonical ID with correct diacritics
@@ -3744,7 +3784,7 @@ createApp({
         // === STEP 4: EPG fallbacks — for channels that still have no URL ===
         if (!editTvgUrl) {
           const fallbackIds = [
-            ...chSameCountryIds,
+            ...chLookupIds,
             ...[editId, ...tvgIdVariants(editId || ''), ...tvgIdVariants(ch.tvg_id), ...aliases]
               .map(id => (id || '').toLowerCase()).filter(Boolean),
           ].filter((id, i, a) => id && a.indexOf(id) === i)
@@ -3753,7 +3793,7 @@ createApp({
           if (fallbackHit) {
             if (!editId) editId = exactEpgIdForHit(fallbackHit) || fallbackHit.id
             const c = xmlCanonical(fallbackHit)
-            if (c?.id   && urlMatchesCountry(fallbackHit.url, chCountry)) editId   = c.id
+            if (c?.id   && urlMatchesCountry(fallbackHit.url, matchCountry)) editId   = c.id
             if (c?.name) editName = c.name
             editTvgUrl = fallbackHit.url
             exactEpgApplied = !!epgXmlDisplayNameIndex.value[fallbackHit.key]
@@ -3775,8 +3815,8 @@ createApp({
 
         // === STEP 5: Final country correction ===
         // If ch.tvg_id has a country (.sk/.cz) but resolved URL is from the wrong country, override.
-        if (chCountry && !urlMatchesCountry(editTvgUrl, chCountry)) {
-          const corrHit = xmlLookup(chSameCountryIds, chCountry)
+        if (matchCountry && !urlMatchesCountry(editTvgUrl, matchCountry)) {
+          const corrHit = xmlLookup(chLookupIds, matchCountry)
           if (corrHit) {
             const c = xmlCanonical(corrHit)
             if (c?.id)   editId   = c.id
@@ -3839,6 +3879,22 @@ createApp({
       else expandedRows.add(id)
     }
 
+    function toggleSourcesPanel() {
+      sourcesPanelOpen.value = !sourcesPanelOpen.value
+    }
+
+    function markAutoDetectManual(result) {
+      if (!result || result.alreadyVerified) return
+      result.selected = true
+      result.reason = ''
+    }
+
+    function canApplyAutoDetectResult(result) {
+      return !!result?.selected
+        && !result.alreadyVerified
+        && !!(result.editId || result.editName || result.editLogo || result.editTvgUrl)
+    }
+
     function manualSuggestionsFor(result) {
       const base = normName(result?.ch?.name || result?.ch?.tvg_name || '')
       const cacheKey = `${result?.ch?.id || ''}|${base}`
@@ -3884,13 +3940,14 @@ createApp({
         if (epgNameDisplayNameIndex.value[nameKey]) result.editName = epgNameDisplayNameIndex.value[nameKey]
       }
       result.score = Math.max(result.score, 0.99)
-      result.selected = true
+      markAutoDetectManual(result)
     }
 
     function openAutoDetect() {
       autoDetectFilter.value = 'all'
       autoDetectPrefilter.value = selectedRows.size > 0 ? new Set(selectedRows) : null
       expandedRows.clear()
+      sourcesPanelOpen.value = false
       modal.autoDetect = true
       if ((sourceLoaded.value || apiNormMap.value.size > 0) && enrichmentLoaded.value) runAutoDetect()
       else if (!sourceLoading.value) fetchAndRunAutoDetect()
@@ -3900,7 +3957,7 @@ createApp({
       let applied = 0
       snapshot('autoDetect')
       autoDetectResults.value.forEach(r => {
-        if (!r.selected) return
+        if (!canApplyAutoDetectResult(r)) return
         const ch = channels.value.find(c => c.id === r.ch.id)
         if (!ch) return
         ch.tvg_id   = r.editId || ''
@@ -3920,7 +3977,7 @@ createApp({
 
     function toggleAllAutoDetect(checked) {
       filteredAutoDetectResults.value.forEach(r => {
-        if (r.suggestedId || r.editId) r.selected = checked
+        if (!r.alreadyVerified && (r.suggestedId || r.editId || r.editName || r.editLogo || r.editTvgUrl)) r.selected = checked
       })
     }
 
@@ -3977,6 +4034,7 @@ createApp({
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
       fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, epgXmlSourceCount, addCustomEpgUrl, manualSuggestionsFor, applyManualSuggestion, toggleExpand,
+      toggleSourcesPanel, markAutoDetectManual, canApplyAutoDetectResult,
     }
   }
 }).mount('#app')

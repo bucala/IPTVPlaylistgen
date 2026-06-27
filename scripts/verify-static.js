@@ -114,6 +114,18 @@ for (const rel of ['index.html', 'www/index.html']) {
     fail(`${rel} still strips raw XMLTV display-names during autodetect`);
   }
 
+  if (/function\s+toggleSourcesPanel\(\)/.test(html) && /@click\.stop="toggleSourcesPanel"/.test(html)) {
+    ok(`${rel} has an explicit sources panel toggle`);
+  } else {
+    fail(`${rel} may leave the autodetect sources panel stuck open or closed`);
+  }
+
+  if (!/:disabled="r\.score === 0 \|\| r\.alreadyVerified"/.test(html) && /@input="markAutoDetectManual\(r\)"/.test(html)) {
+    ok(`${rel} applies manually edited autodetect rows`);
+  } else {
+    fail(`${rel} still blocks applying manual autodetect edits`);
+  }
+
   const inlineScripts = html
     .split(/<script(?![^>]*src=)[^>]*>/i)
     .slice(1)

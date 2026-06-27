@@ -3467,7 +3467,7 @@ createApp({
 
     function exactEpgNameForHit(hit) {
       const raw = hit?.key ? (epgXmlDisplayNameIndex.value[hit.key] || exactEpgIdForHit(hit)) : ''
-      return raw ? cleanEpgDisplayName(raw) : ''
+      return raw || ''
     }
 
     function selectedEpgXmlSources() {
@@ -3652,7 +3652,7 @@ createApp({
       }
 
       autoDetectResults.value = channelsToProcess.map(ch => {
-        const chNorm    = normName(ch.tvg_name || ch.name) || normName(ch.name)
+        const chNorm    = normName(ch.name) || normName(ch.tvg_name)
         const chCountry = tvgCountry(ch.tvg_id)
         const origTvgIdLow = cleanTvgId(ch.tvg_id).toLowerCase()
         const aliases   = aliasTvgIdVariants(ch)
@@ -3663,7 +3663,7 @@ createApp({
           cleanTvgId(ch.tvg_id),
           ...aliases,
           ...tvgIdVariants(cleanTvgId(ch.tvg_id)),
-          ...nameTvgIdVariants(ch.tvg_name || ch.name),
+          ...nameTvgIdVariants(ch.name || ch.tvg_name),
         ].map(id => (id || '').toLowerCase())
           .filter((id, i, a) => id && a.indexOf(id) === i)
           .filter(id => chCountry ? tvgCountry(id) === chCountry : (tvgCountry(id) === 'sk' || tvgCountry(id) === 'cz'))
@@ -3840,7 +3840,7 @@ createApp({
     }
 
     function manualSuggestionsFor(result) {
-      const base = normName(result?.ch?.tvg_name || result?.ch?.name || '')
+      const base = normName(result?.ch?.name || result?.ch?.tvg_name || '')
       const cacheKey = `${result?.ch?.id || ''}|${base}`
       if (manualSuggestionCache.has(cacheKey)) return manualSuggestionCache.get(cacheKey)
       const suggestions = indexedCandidatesFor(base)
@@ -3878,10 +3878,10 @@ createApp({
         const nameKey = normName(result.editName)
         if (epgNameChannelIdIndex.value[nameKey]) result.editId = epgNameChannelIdIndex.value[nameKey]
       }
-      if (hit?.key && epgXmlDisplayNameIndex.value[hit.key]) result.editName = cleanEpgDisplayName(epgXmlDisplayNameIndex.value[hit.key])
+      if (hit?.key && epgXmlDisplayNameIndex.value[hit.key]) result.editName = epgXmlDisplayNameIndex.value[hit.key]
       else {
         const nameKey = normName(result.editName)
-        if (epgNameDisplayNameIndex.value[nameKey]) result.editName = cleanEpgDisplayName(epgNameDisplayNameIndex.value[nameKey])
+        if (epgNameDisplayNameIndex.value[nameKey]) result.editName = epgNameDisplayNameIndex.value[nameKey]
       }
       result.score = Math.max(result.score, 0.99)
       result.selected = true

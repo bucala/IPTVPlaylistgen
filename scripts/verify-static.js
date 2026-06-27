@@ -100,6 +100,20 @@ for (const rel of ['index.html', 'www/index.html']) {
     fail(`${rel} does not export EPG URLs in the M3U header`);
   }
 
+  if (/const\s+chNorm\s*=\s*normName\(ch\.name\)\s*\|\|\s*normName\(ch\.tvg_name\)/.test(html)) {
+    ok(`${rel} matches autodetect primarily from the visible channel name`);
+  } else {
+    fail(`${rel} may let stale TVG-NAME override channel-name autodetect`);
+  }
+
+  if (!/exactEpgNameForHit[\s\S]{0,180}cleanEpgDisplayName/.test(html)
+    && !/epgXmlDisplayNameIndex\.value\[hit\.key\]\)\s*result\.editName\s*=\s*cleanEpgDisplayName/.test(html)
+    && !/epgNameDisplayNameIndex\.value\[nameKey\]\)\s*result\.editName\s*=\s*cleanEpgDisplayName/.test(html)) {
+    ok(`${rel} preserves raw XMLTV display-names in autodetect`);
+  } else {
+    fail(`${rel} still strips raw XMLTV display-names during autodetect`);
+  }
+
   const inlineScripts = html
     .split(/<script(?![^>]*src=)[^>]*>/i)
     .slice(1)

@@ -23,6 +23,9 @@ function sameFile(left, right) {
 
 for (const rel of ['index.html', 'www/index.html']) {
   const html = read(rel);
+  if (/^(?:<<<<<<<|=======|>>>>>>>)/m.test(html)) fail(`${rel} contains unresolved merge conflict markers`);
+  else ok(`${rel} has no merge conflict markers`);
+
   if (!/<\/body>/i.test(html)) fail(`${rel} is missing </body>`);
   else ok(`${rel} has </body>`);
 
@@ -83,6 +86,18 @@ for (const rel of ['index.html', 'www/index.html']) {
     ok(`${rel} pre-indexes and caches manual suggestions`);
   } else {
     fail(`${rel} is missing manual suggestion indexing`);
+  }
+
+  if (/najviac 10 EPG XML zdrojov|at most 10 EPG XML sources/.test(html) && !/epgXmlSourceCount\(\)\s*>=\s*8/.test(html)) {
+    ok(`${rel} raises EPG XML source limit to 10`);
+  } else {
+    fail(`${rel} does not consistently raise EPG XML source limit to 10`);
+  }
+
+  if (/url-tvg=/.test(html) && /x-tvg-url=/.test(html)) {
+    ok(`${rel} exports EPG URLs in the M3U header`);
+  } else {
+    fail(`${rel} does not export EPG URLs in the M3U header`);
   }
 
   const inlineScripts = html

@@ -36,6 +36,21 @@ const detectQualityBlock = extract('function detectQuality', 'function exportPla
 
 const sandbox = {
   module: { exports: {} },
+  document: {
+    createElement() {
+      return {
+        value: '',
+        set innerHTML(value) {
+          this.value = String(value || '')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>');
+        },
+      };
+    },
+  },
 };
 
 vm.createContext(sandbox);
@@ -46,14 +61,17 @@ ${parseFunctions}
 ${detectQualityBlock}
 module.exports = {
   stripChannelDecorations,
+  decodeXmlText,
   normName,
   cleanTvgId,
   tvgCountry,
+  supportedEpgCountry,
   pickPreferredEntry,
   tvgIdVariants,
   nameTvgIdVariants,
   preferredCandidateHit,
   aliasTvgIdVariants,
+  channelLookupIds,
   allowedTvgUrl,
   exportableTvgUrl,
   epgTvgIdKeys,
@@ -67,14 +85,17 @@ module.exports = {
 
 const {
   stripChannelDecorations,
+  decodeXmlText,
   normName,
   cleanTvgId,
   tvgCountry,
+  supportedEpgCountry,
   pickPreferredEntry,
   tvgIdVariants,
   nameTvgIdVariants,
   preferredCandidateHit,
   aliasTvgIdVariants,
+  channelLookupIds,
   allowedTvgUrl,
   exportableTvgUrl,
   epgTvgIdKeys,
@@ -105,6 +126,8 @@ assert(cleanTvgId('(720p) Doma HD.sk@SD') === 'Doma.sk', 'cleans decorated tvg-i
 assert(cleanTvgId('CNNPrimaNewsHD.sk') === 'CNNPrimaNews.sk', 'cleans compact HD suffix before tvg-id country');
 assert(tvgCountry('Dajto.sk') === 'sk', 'detects SK tvg-id country');
 assert(tvgCountry('Dajto.cz') === 'cz', 'detects CZ tvg-id country');
+assert(supportedEpgCountry('pl') === '', 'does not hard-filter unsupported playlist country suffixes');
+assert(decodeXmlText('Crime &amp; Investigation.cz') === 'Crime & Investigation.cz', 'decodes XML entities before preserving exact channel text');
 
 const preferred = pickPreferredEntry([
   { id: 'Doma.cz', name: 'Doma CZ' },
@@ -132,6 +155,28 @@ assert(nameIdIdx.markiza === 'Markíza HD.sk', 'keeps exact XMLTV channel ID for
 assert(displayIdx['markiza.sk'] === 'Markíza HD.sk', 'keeps exact XMLTV display-name for canonical TVG-ID lookup');
 assert(nameDisplayIdx.markiza === 'Markíza HD.sk', 'keeps exact XMLTV display-name for display-name lookup');
 
+const domaXmlIdx = {};
+const domaNameIdx = {};
+const domaIdIdx = {};
+const domaNameIdIdx = {};
+const domaDisplayIdx = {};
+const domaNameDisplayIdx = {};
+putEpgSourceIndex('Doma HD.sk', 'Doma HD.sk', 'https://www.open-epg.com/files/slovakia1.xml', domaXmlIdx, domaNameIdx, domaIdIdx, domaNameIdIdx, domaDisplayIdx, domaNameDisplayIdx);
+assert(domaXmlIdx['doma.sk'] === 'https://www.open-epg.com/files/slovakia1.xml', 'indexes Doma HD.sk under canonical Doma.sk lookup');
+assert(domaIdIdx['doma.sk'] === 'Doma HD.sk', 'keeps exact Doma XMLTV channel ID with HD suffix');
+assert(domaDisplayIdx['doma.sk'] === 'Doma HD.sk', 'keeps exact Doma XMLTV display-name with HD suffix');
+
+const hboXmlIdx = {};
+const hboNameIdx = {};
+const hboIdIdx = {};
+const hboNameIdIdx = {};
+const hboDisplayIdx = {};
+const hboNameDisplayIdx = {};
+putEpgSourceIndex('HBO 2.sk', 'HBO 2.sk', 'https://www.open-epg.com/files/slovakia2.xml', hboXmlIdx, hboNameIdx, hboIdIdx, hboNameIdIdx, hboDisplayIdx, hboNameDisplayIdx);
+assert(hboXmlIdx['hbo2.sk'] === 'https://www.open-epg.com/files/slovakia2.xml', 'indexes HBO 2.sk under canonical HBO2.sk lookup');
+assert(hboIdIdx['hbo2.sk'] === 'HBO 2.sk', 'keeps exact HBO 2 XMLTV channel ID including the space');
+assert(hboDisplayIdx['hbo2.sk'] === 'HBO 2.sk', 'keeps exact HBO 2 XMLTV display-name including the space');
+
 const czXmlIdx = {};
 const czNameIdx = {};
 const czIdIdx = {};
@@ -158,6 +203,15 @@ for (const [name, expected] of aliasCases) {
   const ids = aliasTvgIdVariants({ name, tvg_name: '', tvg_id: '' });
   assert(ids[0] === expected, `maps ${name} to primary ${expected}`);
 }
+
+const staleDomaAliases = aliasTvgIdVariants({ name: 'Doma', tvg_name: 'MarkizaDoma.sk', tvg_id: 'MarkizaDoma.sk' });
+assert(staleDomaAliases[0] === 'Doma.sk', 'prefers visible channel name before stale TVG metadata for aliases');
+
+const axnLookupIds = channelLookupIds({ name: 'AXN', tvg_name: 'AXN', tvg_id: 'AXN.pl' }, supportedEpgCountry(tvgCountry('AXN.pl')));
+assert(axnLookupIds.includes('axn.sk') && axnLookupIds.includes('axn.cz'), 'AXN.pl can still search selected SK/CZ Open EPG XML sources');
+
+const hbo2LookupIds = channelLookupIds({ name: 'HBO 2', tvg_name: 'HBO 2', tvg_id: 'HBO2.sk' }, supportedEpgCountry(tvgCountry('HBO2.sk')));
+assert(hbo2LookupIds.includes('hbo2.sk') && !hbo2LookupIds.includes('hbo2.cz'), 'HBO2.sk exact lookup stays in SK country');
 
 const parsed = parseExtinf('#EXTINF:-1 tvg-id="Doma.sk@HD" tvg-name="(1080p) DOMA HD [Not 24/7]" tvg-logo="https://example.test/logo.png",SK: DOMA HD');
 assert(parsed.name === 'DOMA', 'parseExtinf strips visible channel prefix/decorations');

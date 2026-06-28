@@ -267,5 +267,26 @@ assert(cleanDisplayNameQuality('JOJ Svet HD.sk') === 'JOJ Svet.sk', 'cleanDispla
 assert(cleanDisplayNameQuality('Markíza Klasik.sk') === 'Markíza Klasik.sk', 'cleanDisplayNameQuality leaves name unchanged when no quality marker present');
 assert(cleanDisplayNameQuality('Prima FHD.cz') === 'Prima.cz', 'cleanDisplayNameQuality strips FHD before .cz');
 assert(cleanDisplayNameQuality('Doma.sk') === 'Doma.sk', 'cleanDisplayNameQuality leaves clean name unchanged');
+assert(cleanDisplayNameQuality('TA3 HD') === 'TA3', 'cleanDisplayNameQuality strips trailing HD without country suffix');
+assert(cleanDisplayNameQuality('Nova FHD') === 'Nova', 'cleanDisplayNameQuality strips trailing FHD without country suffix');
+assert(cleanDisplayNameQuality('Sport1 4K') === 'Sport1', 'cleanDisplayNameQuality strips trailing 4K without country suffix');
+
+const jojCinemaIds = aliasTvgIdVariants({ name: 'JOJ Cinema', tvg_name: '', tvg_id: '' });
+assert(jojCinemaIds[0] === 'JOJCinema.sk', 'maps JOJ Cinema to JOJCinema.sk');
+
+const trojkaIds = aliasTvgIdVariants({ name: 'Trojka', tvg_name: '', tvg_id: '' });
+assert(trojkaIds[0] === 'Trojka.sk', 'maps Trojka to Trojka.sk');
+
+const rtvs1Ids = aliasTvgIdVariants({ name: 'RTVS 1', tvg_name: '', tvg_id: '' });
+assert(rtvs1Ids[0] === 'Jednotka.sk', 'maps RTVS 1 to Jednotka.sk');
+
+const rtvs2Ids = aliasTvgIdVariants({ name: 'RTVS 2', tvg_name: '', tvg_id: '' });
+assert(rtvs2Ids[0] === 'Dvojka.sk', 'maps RTVS 2 to Dvojka.sk');
+
+const sport1Ids = aliasTvgIdVariants({ name: 'Sport 1', tvg_name: '', tvg_id: '' });
+assert(sport1Ids[0] === 'Sport1.sk', 'maps Sport 1 to Sport1.sk');
+
+const sport2Ids = aliasTvgIdVariants({ name: 'Sport 2', tvg_name: '', tvg_id: '' });
+assert(sport2Ids[0] === 'Sport2.sk', 'maps Sport 2 to Sport2.sk');
 
 process.exit(failed ? 1 : 0);

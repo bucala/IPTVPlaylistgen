@@ -126,6 +126,32 @@ for (const rel of ['index.html', 'www/index.html']) {
     fail(`${rel} still blocks applying manual autodetect edits`);
   }
 
+  // Guard: every bare identifier used as `ident.toString()` in the template must
+  // be exposed from setup()'s return block, otherwise Vue crashes the render
+  // (blackscreen) when that branch mounts. See sourcesPanelOpen regression.
+  const returnMatch = html.match(/\n\s*return\s*\{([\s\S]*?)\n\s*\}\s*\n\s*\}\s*\)\.mount/);
+  const returnBlock = returnMatch ? returnMatch[1] : '';
+  const returnIdents = new Set(
+    returnBlock
+      .replace(/\/\/[^\n]*/g, '')
+      .split(/[\s,{}:]+/)
+      .filter(Boolean)
+  );
+  const toStringIdents = new Set();
+  for (const m of html.matchAll(/(?:[="]|\{\{)\s*([A-Za-z_$][\w$]*)\.toString\(\)/g)) {
+    toStringIdents.add(m[1]);
+  }
+  for (const ident of toStringIdents) {
+    if (returnIdents.has(ident)) ok(`${rel} exposes template identifier ${ident}`);
+    else fail(`${rel} uses ${ident}.toString() in template but setup() does not return ${ident}`);
+  }
+
+  // Targeted guard for the autodetect sources panel state that caused the blackscreen.
+  if (/\{\{\s*sourcesPanelSummary\s*\}\}/.test(html)) {
+    if (returnIdents.has('sourcesPanelSummary')) ok(`${rel} exposes sourcesPanelSummary to template`);
+    else fail(`${rel} renders sourcesPanelSummary but setup() does not return it`);
+  }
+
   const inlineScripts = html
     .split(/<script(?![^>]*src=)[^>]*>/i)
     .slice(1)

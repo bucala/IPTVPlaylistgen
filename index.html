@@ -1508,6 +1508,7 @@ const ENRICHMENT_SOURCES = [
 const CHANNEL_TVG_ALIASES = [
   { re: /\bdoma\b/i, ids: ['Doma.sk', 'Doma.cz'] },
   { re: /\bdaj\s*to\b|\bdajto\b/i, ids: ['Dajto.sk', 'Dajto.cz'] },
+  { re: /\bjoj\s*cinema\b|\bjojcinema\b/i, ids: ['JOJCinema.sk'] },
   { re: /\bjoj\s*svet\b/i, ids: ['JOJSvet.sk', 'JOJSvet.cz'] },
   { re: /\bwau\b/i, ids: ['Wau.sk', 'Wau.cz'] },
   { re: /\bmark[ií]za\s*krimi\b/i, ids: ['Markíza Krimi.sk'] },
@@ -1517,8 +1518,11 @@ const CHANNEL_TVG_ALIASES = [
   { re: /\bjoj\b/i, ids: ['JOJ.sk', 'JOJ.cz'] },
   { re: /\bta3\b|\bta\s*3\b/i, ids: ['TA3.sk'] },
   { re: /\brtv[sš]\s*24\b|\b:24\b/i, ids: ['RTVS24.sk'] },
+  { re: /\brtv[sš]\s*1\b/i, ids: ['Jednotka.sk'] },
+  { re: /\brtv[sš]\s*2\b/i, ids: ['Dvojka.sk'] },
   { re: /\bjednotka\b/i, ids: ['Jednotka.sk'] },
   { re: /\bdvojka\b/i, ids: ['Dvojka.sk'] },
+  { re: /\btrojka\b/i, ids: ['Trojka.sk'] },
   { re: /\baxn\b/i, ids: ['AXN.sk', 'AXN.cz'] },
   { re: /\bamc\b/i, ids: ['AMC.sk', 'AMC.cz'] },
   { re: /\bcanal\s*\+\s*action\b|\bcanal\s*plus\s*action\b/i, ids: ['CanalPlusAction.sk', 'CanalPlusAction.cz'] },
@@ -1531,6 +1535,9 @@ const CHANNEL_TVG_ALIASES = [
   { re: /\bfilmbox\s*premium\b/i, ids: ['FilmBoxPremium.cz', 'FilmBoxPremium.sk'] },
   { re: /\bfilmbox\s*family\b/i, ids: ['FilmBoxFamily.cz', 'FilmBoxFamily.sk'] },
   { re: /\bfilmbox\b/i, ids: ['FilmBox.cz', 'FilmBox.sk'] },
+  { re: /\bsport\s*1\b/i, ids: ['Sport1.sk', 'Sport1.cz'] },
+  { re: /\bsport\s*2\b/i, ids: ['Sport2.sk', 'Sport2.cz'] },
+  { re: /\bsport\s*5\b/i, ids: ['Sport5.sk'] },
 ]
 
 createApp({
@@ -2096,6 +2103,7 @@ createApp({
     let autoDetectSearchEntries = []
     let autoDetectCandidateBuckets = new Map()
     let manualSuggestionCache = new Map()
+    let _fetchRunId = 0
 
     const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
     const sort       = reactive({ by: 'name', asc: true })
@@ -3023,7 +3031,7 @@ createApp({
         ...ENRICHMENT_SOURCES.filter(s => enrichmentSelectedSources.has(s.id)),
         ...customEpgSources.value,
       ]
-      if (sources.length === 0) return
+      if (sources.length === 0) { enrichmentLoaded.value = true; return }
       enrichmentLoading.value = true
       enrichmentLoaded.value  = false
       await Promise.all(sources.map(async src => {
@@ -3173,6 +3181,7 @@ createApp({
     }
 
     async function fetchAndRunAutoDetect() {
+      const runId = ++_fetchRunId
       const urls = [
         ...IPTV_SOURCES.filter(s => autoDetectSelectedSources.has(s.id)),
         ...(autoDetectCustomUrl.value.trim() ? [{ id: 'custom', url: autoDetectCustomUrl.value.trim() }] : [])
@@ -3209,6 +3218,7 @@ createApp({
           })) : Promise.resolve(),
           fetchEnrichmentIndexes(),
         ])
+        if (runId !== _fetchRunId) return
         sourceIndex.value = all
         rebuildAutoDetectSearchIndex()
         sourceLoaded.value = true
@@ -3513,7 +3523,10 @@ createApp({
     }
 
     function cleanDisplayNameQuality(s) {
-      return (s || '').replace(/\s+(?:4K|UHD|FHD|HD|SD)(?=\.[a-z]{2,3}$)/i, '').trim()
+      return (s || '')
+        .replace(/\s+(?:4K|UHD|FHD|HD|SD)(?=\.[a-z]{2,3}$)/i, '')
+        .replace(/\s+(?:4K|UHD|FHD|HD|SD)$/i, '')
+        .trim()
     }
 
     function exactEpgNameForHit(hit) {
@@ -3968,7 +3981,7 @@ createApp({
       sourcesPanelOpen.value = false
       modal.autoDetect = true
       if ((sourceLoaded.value || apiNormMap.value.size > 0) && enrichmentLoaded.value) runAutoDetect()
-      else if (!sourceLoading.value) fetchAndRunAutoDetect()
+      else if (!sourceLoading.value && !enrichmentLoading.value) fetchAndRunAutoDetect()
     }
 
     function applyAutoDetect() {
@@ -4048,6 +4061,7 @@ createApp({
       IPTV_SOURCES, ENRICHMENT_SOURCES,
       autoDetectResults, autoDetectFilter, autoDetectPrefilter, autoDetectMode,
       autoDetectCustomUrl, customEpgUrl, customEpgSources, autoDetectSelectedSources, sourceLoading, sourceLoaded, expandedRows,
+      sourcesPanelOpen, sourcesPanelSummary,
       epgChannelIndex, epgXmlIndex, importedEpgXmlIndex, logoChannelIndex, logoChannelIndexById, apiChannelMetaById, enrichmentLoading, enrichmentLoaded, enrichmentSelectedSources,
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,

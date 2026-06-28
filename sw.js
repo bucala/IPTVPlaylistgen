@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iptv-playlistgen-v3-cache';
+const CACHE_NAME = 'iptv-playlistgen-v4-cache';
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,11 @@ const CACHEABLE_PATHS = new Set([
   '/manifest.json',
   '/icons/icon.svg',
   '/icons/icon.png'
+]);
+
+// CDN dependencies — cached on first load so the PWA works offline afterwards
+const CDN_DEPS = new Set([
+  'https://unpkg.com/vue@3/dist/vue.global.prod.js',
 ]);
 
 // URLs which must NEVER be served from cache (live playlist/EPG data)
@@ -48,6 +53,26 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // CDN deps (Vue): cache-first so the PWA works offline after the first load
+  if (CDN_DEPS.has(event.request.url)) {
+    event.respondWith(
+      caches.match(event.request).then(async (cached) => {
+        if (cached) return cached;
+        try {
+          const response = await fetch(event.request);
+          if (response.ok) {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(event.request, response.clone());
+          }
+          return response;
+        } catch {
+          return new Response('', { status: 503, statusText: 'Offline — CDN unavailable' });
+        }
+      })
+    );
+    return;
+  }
 
   // Network-only: playlist/EPG data, external resources and user URLs must always be fresh
   if (isNetworkOnly(event.request.url) || !isCacheableAppAsset(event.request.url)) {

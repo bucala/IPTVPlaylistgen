@@ -3465,6 +3465,10 @@ createApp({
       return (s || '').replace(/\s*\.[a-z]{2,3}$/i, '').trim()
     }
 
+    function cleanDisplayNameQuality(s) {
+      return (s || '').replace(/\s+(?:4K|UHD|FHD|HD|SD)(?=\.[a-z]{2,3}$)/i, '').trim()
+    }
+
     function exactEpgNameForHit(hit) {
       const raw = hit?.key ? (epgXmlDisplayNameIndex.value[hit.key] || exactEpgIdForHit(hit)) : ''
       return raw ? cleanEpgDisplayName(raw) : ''
@@ -3633,12 +3637,12 @@ createApp({
         return !!url
       }
 
-      // Get canonical ID + cleaned display-name from the XML channel id index
+      // Get canonical ID + quality-stripped display-name from the XML channel id index
       const xmlCanonical = (hit) => {
         if (!hit?.key) return null
         const id   = epgXmlChannelIdIndex.value[hit.key] || null
         const name = epgXmlDisplayNameIndex.value[hit.key]
-          ? cleanEpgDisplayName(epgXmlDisplayNameIndex.value[hit.key]) : null
+          ? cleanDisplayNameQuality(epgXmlDisplayNameIndex.value[hit.key]) : null
         return (id || name) ? { id, name } : null
       }
 
@@ -3692,10 +3696,13 @@ createApp({
           const sc = tvgCountry(s.exact_tvg_id || s.tvg_id)
           return sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
             + (sc === 'sk' ? 0.1 : 0)
-            + (chCountry && chCountry === sc ? 5 : 0)   // decisive country match bonus
         }
         indexedCandidatesFor(chNorm).forEach(s => {
           if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
+          if (chCountry) {
+            const candCountry = tvgCountry(s.exact_tvg_id || s.tvg_id || '')
+            if (candCountry && candCountry !== chCountry) return
+          }
           const sc = Math.max(strSimilarity(chNorm, s.nName), s.nId ? strSimilarity(chNorm, s.nId) : 0)
           if (sc > bestScore || (Math.abs(sc - bestScore) < 0.001 && best && candidateRank(s) > candidateRank(best))) {
             bestScore = sc; best = s
@@ -3712,7 +3719,7 @@ createApp({
 
         if (matched && best.exact_tvg_id && exportableTvgUrl(best.tvg_url)) {
           editId   = best.exact_tvg_id
-          editName = cleanEpgDisplayName(best.exact_tvg_name || best.exact_tvg_id) || editName
+          editName = cleanDisplayNameQuality(best.exact_tvg_name || best.exact_tvg_id) || editName
           exactEpgApplied = true
         }
 
@@ -3763,7 +3770,7 @@ createApp({
             editTvgUrl = nameUrl
             if (!editId) editId = epgNameChannelIdIndex.value[nameKey] || ''
             const rawName = epgNameDisplayNameIndex.value[nameKey]
-            if (rawName) { editName = cleanEpgDisplayName(rawName); exactEpgApplied = true }
+            if (rawName) { editName = cleanDisplayNameQuality(rawName); exactEpgApplied = true }
           }
         }
 

@@ -61,6 +61,7 @@ module.exports = {
   putEpgSourceIndex,
   parseExtinf,
   detectQuality,
+  cleanDisplayNameQuality,
 };
 `, sandbox, { filename: 'autodetect-regressions.vm.js' });
 
@@ -81,6 +82,7 @@ const {
   putEpgSourceIndex,
   parseExtinf,
   detectQuality,
+  cleanDisplayNameQuality,
 } = sandbox.module.exports;
 
 const dirtyNames = [
@@ -204,5 +206,12 @@ assert(
   exactMatchIndex['jednotka.sk'] === 'https://www.open-epg.com/files/slovakia2.xml',
   'prefers an exact TVG-ID source over an earlier normalized HD alias'
 );
+
+assert(cleanDisplayNameQuality('Doma HD.sk') === 'Doma.sk', 'cleanDisplayNameQuality strips HD before .sk');
+assert(cleanDisplayNameQuality('DAJTO HD.sk') === 'DAJTO.sk', 'cleanDisplayNameQuality strips HD before .sk (uppercase name)');
+assert(cleanDisplayNameQuality('JOJ Svet HD.sk') === 'JOJ Svet.sk', 'cleanDisplayNameQuality strips HD from multi-word name before .sk');
+assert(cleanDisplayNameQuality('Markíza Klasik.sk') === 'Markíza Klasik.sk', 'cleanDisplayNameQuality leaves name unchanged when no quality marker present');
+assert(cleanDisplayNameQuality('Prima FHD.cz') === 'Prima.cz', 'cleanDisplayNameQuality strips FHD before .cz');
+assert(cleanDisplayNameQuality('Doma.sk') === 'Doma.sk', 'cleanDisplayNameQuality leaves clean name unchanged');
 
 process.exit(failed ? 1 : 0);

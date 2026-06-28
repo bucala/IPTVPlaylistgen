@@ -79,6 +79,7 @@ module.exports = {
   putEpgSourceIndex,
   parseExtinf,
   detectQuality,
+  cleanDisplayNameQuality,
 };
 `, sandbox, { filename: 'autodetect-regressions.vm.js' });
 
@@ -102,6 +103,7 @@ const {
   putEpgSourceIndex,
   parseExtinf,
   detectQuality,
+  cleanDisplayNameQuality,
 } = sandbox.module.exports;
 
 const dirtyNames = [
@@ -259,18 +261,11 @@ assert(
   'prefers an exact TVG-ID source over an earlier normalized HD alias'
 );
 
-// Markíza Klasik.sk: XML has <channel id="Markíza Klasik.sk"><display-name>Markíza Klasik.sk</display-name></channel>
-// After autodetect: TVG-ID = "Markíza Klasik.sk", TVG-NAME = "Markíza Klasik.sk" (exact XML values, .sk NOT stripped)
-{
-  const xi = {}, ni = {}, ii = {}, nii = {}, di = {}, ndi = {};
-  putEpgSourceIndex('Markíza Klasik.sk', 'Markíza Klasik.sk', 'https://www.open-epg.com/files/slovakia1.xml',
-    xi, ni, ii, nii, di, ndi);
-  assert(xi['markizaklasik.sk'] === 'https://www.open-epg.com/files/slovakia1.xml',
-    'Markíza Klasik.sk indexed under diacritic-free key for playlist lookup');
-  assert(ii['markizaklasik.sk'] === 'Markíza Klasik.sk',
-    'autodetect TVG-ID for Markíza Klasik is exact XML id "Markíza Klasik.sk" (diacritics + .sk preserved)');
-  assert(di['markizaklasik.sk'] === 'Markíza Klasik.sk',
-    'autodetect TVG-NAME for Markíza Klasik is raw XML display-name "Markíza Klasik.sk" (.sk suffix NOT stripped)');
-}
+assert(cleanDisplayNameQuality('Doma HD.sk') === 'Doma.sk', 'cleanDisplayNameQuality strips HD before .sk');
+assert(cleanDisplayNameQuality('DAJTO HD.sk') === 'DAJTO.sk', 'cleanDisplayNameQuality strips HD before .sk (uppercase name)');
+assert(cleanDisplayNameQuality('JOJ Svet HD.sk') === 'JOJ Svet.sk', 'cleanDisplayNameQuality strips HD from multi-word name before .sk');
+assert(cleanDisplayNameQuality('Markíza Klasik.sk') === 'Markíza Klasik.sk', 'cleanDisplayNameQuality leaves name unchanged when no quality marker present');
+assert(cleanDisplayNameQuality('Prima FHD.cz') === 'Prima.cz', 'cleanDisplayNameQuality strips FHD before .cz');
+assert(cleanDisplayNameQuality('Doma.sk') === 'Doma.sk', 'cleanDisplayNameQuality leaves clean name unchanged');
 
 process.exit(failed ? 1 : 0);

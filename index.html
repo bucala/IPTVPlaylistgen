@@ -19,7 +19,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <!-- Anti-FOUC: apply persisted theme + lang before any paint -->
   <script>(function(){try{var t=localStorage.getItem('iptv-theme')||'dark';document.documentElement.setAttribute('data-theme',t);var l=localStorage.getItem('iptv-lang')||'sk';document.documentElement.lang=l;}catch(e){}})()</script>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <style>
     /* ───────────────────────────────────────────────
        Apple HIG Design Tokens
@@ -529,11 +528,19 @@
     .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cursor-pointer{cursor:pointer}.select-none{user-select:none;-webkit-user-select:none}
     @media (min-width:768px){.md\:px-5{padding-left:1.25rem;padding-right:1.25rem}.md\:px-7{padding-left:1.75rem;padding-right:1.75rem}.md\:py-5{padding-top:1.25rem;padding-bottom:1.25rem}.md\:pt-5{padding-top:1.25rem}.md\:items-center{align-items:center}.md\:items-end{align-items:flex-end}.md\:justify-end{justify-content:flex-end}.md\:text-\[2\.2rem\]{font-size:2.2rem}}
     @media (min-width:1024px){.lg\:px-6{padding-left:1.5rem;padding-right:1.5rem}}
+
+    /* ── Loading screen (shown until Vue mounts) ── */
+    [v-cloak] { display: none; }
+    #app-loader { display: none; position: fixed; inset: 0; z-index: 9999; background: var(--bg); align-items: center; justify-content: center; }
+    [v-cloak] ~ #app-loader { display: flex; }
+    .app-loader-ring { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--primary); animation: app-spin .75s linear infinite; }
+    @keyframes app-spin { to { transform: rotate(360deg); } }
   </style>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
 <body>
 <noscript><style>body{display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#000;color:#fff;text-align:center;padding:2rem}</style><p>IPTV Playlist Generator requires JavaScript to run.</p></noscript>
-<div id="app" class="min-h-screen px-3 md:px-5 lg:px-6 pb-8">
+<div id="app" v-cloak class="min-h-screen px-3 md:px-5 lg:px-6 pb-8">
   <div class="max-w-[1720px] mx-auto pt-4 md:pt-5">
 
     <!-- ══════════════════════ HEADER ══════════════════════ -->
@@ -1458,6 +1465,7 @@
 
   </div><!-- /max-w -->
 </div><!-- /app -->
+<div id="app-loader"><div class="app-loader-ring"></div></div>
 
 <script>
 const { createApp, ref, computed, reactive, watch, onMounted, onUnmounted } = Vue

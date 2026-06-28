@@ -64,6 +64,8 @@ module.exports = {
   decodeXmlText,
   normName,
   cleanTvgId,
+  canonicalEpgTvgId,
+  canonicalEpgDisplayName,
   tvgCountry,
   supportedEpgCountry,
   pickPreferredEntry,
@@ -88,6 +90,8 @@ const {
   decodeXmlText,
   normName,
   cleanTvgId,
+  canonicalEpgTvgId,
+  canonicalEpgDisplayName,
   tvgCountry,
   supportedEpgCountry,
   pickPreferredEntry,
@@ -124,6 +128,9 @@ assert(normName('(1080p) DOMA HD.sk [Not 24/7]') === 'doma', 'normalizes decorat
 assert(normName('SK: Markiza HD') === 'markiza', 'normalizes prefixed Markiza HD');
 assert(cleanTvgId('(720p) Doma HD.sk@SD') === 'Doma.sk', 'cleans decorated tvg-id and quality suffix');
 assert(cleanTvgId('CNNPrimaNewsHD.sk') === 'CNNPrimaNews.sk', 'cleans compact HD suffix before tvg-id country');
+assert(canonicalEpgTvgId('Markíza HD.sk') === 'Markíza.sk', 'canonical EPG TVG-ID strips quality before country suffix');
+assert(canonicalEpgTvgId('Markíza Klasik.sk') === 'Markíza Klasik.sk', 'canonical EPG TVG-ID keeps meaningful spaces');
+assert(canonicalEpgDisplayName('DomaHD.sk') === 'Doma.sk', 'canonical EPG display-name strips compact quality suffix');
 assert(tvgCountry('Dajto.sk') === 'sk', 'detects SK tvg-id country');
 assert(tvgCountry('Dajto.cz') === 'cz', 'detects CZ tvg-id country');
 assert(supportedEpgCountry('pl') === '', 'does not hard-filter unsupported playlist country suffixes');
@@ -149,11 +156,11 @@ const displayIdx = {};
 const nameDisplayIdx = {};
 putEpgSourceIndex('Markíza HD.sk', 'Markíza HD.sk', 'https://www.open-epg.com/files/slovakia1.xml', xmlIdx, nameIdx, idIdx, nameIdIdx, displayIdx, nameDisplayIdx);
 assert(xmlIdx['markiza.sk'] === 'https://www.open-epg.com/files/slovakia1.xml', 'indexes diacritic-free EPG TVG-ID variants to source URL');
-assert(idIdx['markiza.sk'] === 'Markíza HD.sk', 'keeps exact XMLTV channel ID for canonical TVG-ID lookup');
+assert(idIdx['markiza.sk'] === 'Markíza.sk', 'stores XMLTV channel ID without quality suffix for canonical TVG-ID lookup');
 assert(nameIdx.markiza === 'https://www.open-epg.com/files/slovakia1.xml', 'indexes cleaned EPG display-name to source URL');
-assert(nameIdIdx.markiza === 'Markíza HD.sk', 'keeps exact XMLTV channel ID for display-name lookup');
-assert(displayIdx['markiza.sk'] === 'Markíza HD.sk', 'keeps exact XMLTV display-name for canonical TVG-ID lookup');
-assert(nameDisplayIdx.markiza === 'Markíza HD.sk', 'keeps exact XMLTV display-name for display-name lookup');
+assert(nameIdIdx.markiza === 'Markíza.sk', 'stores XMLTV channel ID without quality suffix for display-name lookup');
+assert(displayIdx['markiza.sk'] === 'Markíza.sk', 'stores XMLTV display-name without quality suffix for canonical TVG-ID lookup');
+assert(nameDisplayIdx.markiza === 'Markíza.sk', 'stores XMLTV display-name without quality suffix for display-name lookup');
 
 const domaXmlIdx = {};
 const domaNameIdx = {};
@@ -163,8 +170,8 @@ const domaDisplayIdx = {};
 const domaNameDisplayIdx = {};
 putEpgSourceIndex('Doma HD.sk', 'Doma HD.sk', 'https://www.open-epg.com/files/slovakia1.xml', domaXmlIdx, domaNameIdx, domaIdIdx, domaNameIdIdx, domaDisplayIdx, domaNameDisplayIdx);
 assert(domaXmlIdx['doma.sk'] === 'https://www.open-epg.com/files/slovakia1.xml', 'indexes Doma HD.sk under canonical Doma.sk lookup');
-assert(domaIdIdx['doma.sk'] === 'Doma HD.sk', 'keeps exact Doma XMLTV channel ID with HD suffix');
-assert(domaDisplayIdx['doma.sk'] === 'Doma HD.sk', 'keeps exact Doma XMLTV display-name with HD suffix');
+assert(domaIdIdx['doma.sk'] === 'Doma.sk', 'stores Doma XMLTV channel ID without HD suffix');
+assert(domaDisplayIdx['doma.sk'] === 'Doma.sk', 'stores Doma XMLTV display-name without HD suffix');
 
 const hboXmlIdx = {};
 const hboNameIdx = {};

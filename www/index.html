@@ -3326,6 +3326,18 @@ createApp({
         .replace(/\s+/g, '')
     }
 
+    function canonicalEpgTvgId(id) {
+      return stripChannelDecorations(id)
+        .trim()
+        .replace(/@[^@]*$/, '')
+        .replace(/\s*(?:FHD|UHD|HD|SD|4K)(?=\.[a-z]{2}$)/ig, '')
+        .replace(/\s+(?=\.[a-z]{2}$)/i, '')
+    }
+
+    function canonicalEpgDisplayName(name) {
+      return canonicalEpgTvgId(name)
+    }
+
     function tvgCountry(id) {
       const m = cleanTvgId(id).toLowerCase().match(/\.([a-z]{2})$/)
       return m ? m[1] : ''
@@ -3475,11 +3487,13 @@ createApp({
     function putEpgSourceIndex(rawId, displayName, sourceUrl, xmlIndex, nameIndex, idIndex, nameIdIndex, idDisplayIndex, nameDisplayIndex) {
       const normalizedSourceUrl = exportableTvgUrl(sourceUrl)
       if (!normalizedSourceUrl) return
-      const exactId = String(rawId || '')
-      const exactDisplayName = String(displayName || exactId)
+      const rawExactId = (rawId || '').trim()
+      const exactId = canonicalEpgTvgId(rawExactId)
+      const exactDisplayName = canonicalEpgDisplayName(displayName || exactId)
       const cleanedId = cleanTvgId(exactId)
       const ids = [
-        { id: exactId, rank: 3 },
+        { id: rawExactId, rank: 3 },
+        { id: exactId, rank: rawExactId === exactId ? 3 : 2 },
         { id: cleanedId, rank: exactId === cleanedId ? 3 : 2 },
         ...tvgIdVariants(cleanedId).map(id => ({ id, rank: 1 })),
         ...nameTvgIdVariants(displayName || cleanedId).map(id => ({ id, rank: 1 })),
@@ -3515,11 +3529,11 @@ createApp({
     }
 
     function exactEpgIdForHit(hit) {
-      return hit?.key ? (epgXmlChannelIdIndex.value[hit.key] || hit.id || '') : ''
+      return hit?.key ? canonicalEpgTvgId(epgXmlChannelIdIndex.value[hit.key] || hit.id || '') : ''
     }
 
     function cleanEpgDisplayName(s) {
-      return (s || '').replace(/\s*\.[a-z]{2,3}$/i, '').trim()
+      return canonicalEpgDisplayName(s).replace(/\s*\.[a-z]{2,3}$/i, '').trim()
     }
 
     function cleanDisplayNameQuality(s) {
@@ -3612,8 +3626,8 @@ createApp({
         const tvgUrl = allowedTvgUrl(raw.tvg_url)
           || (/^(?:epg-|custom-epg)/.test(sourceId) ? exportableTvgUrl(raw.tvg_url) : '')
         const canUseExactEpg = /^(?:epg-|custom-epg)/.test(sourceId) && !!tvgUrl
-        const exactTvgId = canUseExactEpg ? (raw.tvg_id || raw.id || '') : ''
-        const exactTvgName = canUseExactEpg ? (raw.tvg_name || raw.name || exactTvgId || '') : ''
+        const exactTvgId = canUseExactEpg ? canonicalEpgTvgId(raw.tvg_id || raw.id || '') : ''
+        const exactTvgName = canUseExactEpg ? canonicalEpgDisplayName(raw.tvg_name || raw.name || exactTvgId || '') : ''
         const dedupeKey = `${tvgId.toLowerCase()}|${normName(name)}`
         const existing = unique.get(dedupeKey)
         if (existing) {
@@ -3697,12 +3711,12 @@ createApp({
         return !!url
       }
 
-      // Get canonical ID + quality-stripped display-name from the XML channel id index
+      // Get canonical ID + display-name from the XML channel id index.
+      // XML quality suffixes are for stream variants, not TVG identity.
       const xmlCanonical = (hit) => {
         if (!hit?.key) return null
-        const id   = epgXmlChannelIdIndex.value[hit.key] || null
-        const name = epgXmlDisplayNameIndex.value[hit.key]
-          ? cleanDisplayNameQuality(epgXmlDisplayNameIndex.value[hit.key]) : null
+        const id   = canonicalEpgTvgId(epgXmlChannelIdIndex.value[hit.key] || '')
+        const name = canonicalEpgDisplayName(epgXmlDisplayNameIndex.value[hit.key] || '')
         return (id || name) ? { id, name } : null
       }
 

@@ -848,7 +848,7 @@
                       class="btn btn-ghost" style="padding:5px 10px; font-size:12px"
                       @click="toggleChannel(ch)"
                       :aria-label="(ch.is_active ? t('deactivate') : t('activate')) + ' ' + ch.name"
-                      role="switch" :aria-checked="ch.is_active.toString()"
+                      role="switch" :aria-checked="String(ch.is_active !== false)"
                     >
                       <span :style="{ color: ch.is_active ? 'var(--success)' : 'var(--text3)' }" class="inline-flex items-center gap-1"><span v-html="icon(ch.is_active ? 'circle' : 'circleOff', 8)"></span>{{ ch.is_active ? t('activeLabel') : t('offLabel') }}</span>
                     </button>
@@ -1089,7 +1089,7 @@
 
           <div class="md:col-span-2 flex items-center gap-3 pt-1">
             <button
-              role="switch" :aria-checked="editCh.is_active.toString()"
+              role="switch" :aria-checked="String(editCh.is_active !== false)"
               :aria-label="t('activeStatus')"
               class="btn btn-ghost"
               @click="editCh.is_active = !editCh.is_active"
@@ -2856,7 +2856,10 @@ createApp({
     onMounted(() => {
       try {
         const saved = localStorage.getItem(STORAGE_KEY)
-        if (saved) channels.value = JSON.parse(saved)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          channels.value = parsed.map(ch => ch.is_active === undefined ? { ...ch, is_active: true } : ch)
+        }
       } catch {}
       try {
         const savedMappings = localStorage.getItem(MAPPING_KEY)
@@ -3028,7 +3031,11 @@ createApp({
           if (src.type === 'epg-xml') {
             // Stream XML, stop at first <programme> — avoids downloading the full guide
             const ctrl = new AbortController()
-            const res  = await fetch(src.url, { signal: ctrl.signal })
+            // open-epg.com has no CORS headers — route through Cloudflare Pages proxy
+            const fetchUrl = /open-epg\.com/i.test(src.url)
+              ? `/epg-proxy?url=${encodeURIComponent(src.url)}`
+              : src.url
+            const res  = await fetch(fetchUrl, { signal: ctrl.signal })
             if (!res.ok) return
             const reader  = res.body.getReader()
             const decoder = new TextDecoder()

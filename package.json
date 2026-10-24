@@ -30,6 +30,7 @@
       "manifest.json",
       "sw.js",
       "icons/**/*",
+      "vendor/**/*",
       "electron/**/*",
       "capacitor.config.json"
     ],

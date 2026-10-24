@@ -10,6 +10,10 @@ const copies = [
   ['_redirects', 'www/_redirects'],
   ['icons/icon.svg', 'www/icons/icon.svg'],
   ['icons/icon.png', 'www/icons/icon.png'],
+  // vendored runtime libraries (vendor/vue-x.y.z.global.prod.js)
+  ...fs.readdirSync(path.join(root, 'vendor'))
+    .filter((name) => name.endsWith('.js'))
+    .map((name) => [`vendor/${name}`, `www/vendor/${name}`]),
 ];
 
 for (const [from, to] of copies) {

@@ -149,7 +149,9 @@ https://iptvplaylistgen.pages.dev
 | `_headers` | Bezpečnostné hlavičky (CSP, HSTS, Permissions-Policy …) |
 | `_redirects` | SPA fallback routing (`/* /index.html 200`) |
 | `manifest.json` | PWA manifest |
-| `sw.js` | Service Worker (offline cache) |
+| `sw.js` | Service Worker — `index.html` network-first (nový deploy sa prejaví hneď), offline záloha z cache |
+| `functions/epg-proxy.js` | Cloudflare Pages Function — CORS proxy pre `open-epg.com` XMLTV súbory |
+| `vendor/` | Vendorovaný a pinnutý Vue runtime (bez CDN, funguje offline) |
 
 ---
 
@@ -299,7 +301,7 @@ tvg-url  = "https://www.open-epg.com/files/slovakia1.xml"
 
 | Vrstva | Technológia | Verzia |
 |--------|------------|--------|
-| UI Framework | [Vue 3](https://vuejs.org) Composition API (CDN global build) | `3.x` |
+| UI Framework | [Vue 3](https://vuejs.org) Composition API (global build, vendorovaný v `vendor/`) | `3.5.44` |
 | Štýly | [Tailwind CSS](https://tailwindcss.com) CDN (Oxide/WASM engine) | `v4` |
 | Písmo | [Inter](https://fonts.google.com/specimen/Inter) via Google Fonts | — |
 | Perzistencia | `localStorage` (žiadny backend, žiadna DB) | — |
@@ -354,7 +356,6 @@ Každý kanál je uložený v `localStorage` (kľúč `iptv-channels`) ako JSON 
 ```
 default-src     'self'
 script-src      'self' 'unsafe-inline' 'unsafe-eval'
-                https://unpkg.com
 style-src       'self' 'unsafe-inline'
                 https://fonts.googleapis.com
 font-src        https://fonts.gstatic.com data:
@@ -384,7 +385,8 @@ manifest-src    'self'
 - `xmlEsc()` sanitizuje všetky hodnoty pri M3U/XSPF exporte (prevencia XSS)
 - URL whitelist validácia v `saveEdit()` pred každým uložením
 - Limit **50 MB** na importované súbory (kontrola pred FileReader)
-- `no-cache` pre `index.html` a `sw.js` — vždy čerstvá verzia z CDN
+- `no-cache` pre `index.html` a `sw.js`; Service Worker načítava `index.html` network-first — vždy čerstvá verzia po deployi
+- Vue runtime je vendorovaný z npm (overená `sha512` integrita v `vendor/README.md`) — žiadny skript z cudzej domény
 
 ---
 

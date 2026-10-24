@@ -1,106 +1,112 @@
-const CACHE_NAME = 'iptv-playlistgen-v4-cache';
-const APP_SHELL = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icons/icon.svg'
-];
-const CACHEABLE_PATHS = new Set([
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon.svg',
-  '/icons/icon.png'
-]);
+// Bump CACHE_NAME whenever this file or the precached app shell changes.
+const CACHE_NAME = 'iptv-playlistgen-v5-cache';
+// v1–v4 served index.html cache-first, so their clients never received new deploys.
+const LEGACY_SHELL_CACHE = /^iptv-playlistgen-v[1-4]-cache$/;
+const VUE_RUNTIME = 'vendor/vue-3.5.44.global.prod.js';
 
-// CDN dependencies — cached on first load so the PWA works offline afterwards
-const CDN_DEPS = new Set([
-  'https://unpkg.com/vue@3/dist/vue.global.prod.js',
-]);
+// './index.html' is not precached: Cloudflare Pages redirects it to './',
+// and a redirected response cannot answer a navigation request.
+const APP_SHELL = ['./', './manifest.json', './icons/icon.svg', './' + VUE_RUNTIME];
+const STATIC_ASSETS = new Set(['manifest.json', 'icons/icon.svg', 'icons/icon.png']);
 
-// URLs which must NEVER be served from cache (live playlist/EPG data)
-function isNetworkOnly(url) {
-  return /\.m3u8?$/i.test(url) ||
-         /\.xml(tv)?$/i.test(url) ||
-         url.includes('raw.githubusercontent.com') ||
-         url.includes('iptv-org') ||
-         url.includes('/epg');
+// Path relative to the SW scope for same-origin URLs, otherwise null
+function scopePath(requestUrl) {
+  const url = new URL(requestUrl);
+  const base = new URL(self.registration.scope);
+  if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) return null;
+  return url.pathname.slice(base.pathname.length);
 }
 
-function isCacheableAppAsset(requestUrl) {
-  const url = new URL(requestUrl);
-  if (url.origin !== self.location.origin) return false;
-  return CACHEABLE_PATHS.has(url.pathname);
+// Responses that followed a redirect must be rebuilt before they can answer a navigation
+function cleanResponse(response) {
+  if (!response || !response.redirected) return response;
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers: response.headers });
+}
+
+// App shell HTML: always try the network so a new deploy is used on the next load;
+// the cached copy is only an offline fallback.
+async function networkFirst(request, isShell) {
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    const response = await fetch(request);
+    const isHtml = (response.headers.get('Content-Type') || '').includes('text/html');
+    if (isShell && isHtml && response.ok && response.type === 'basic' && !response.redirected) {
+      await cache.put('./', response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await cache.match('./');
+    return cleanResponse(cached) || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+  }
+}
+
+// Versioned vendor files never change
+async function cacheFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) await cache.put(request, response.clone());
+  return response;
+}
+
+async function staleWhileRevalidate(event, request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  const update = fetch(request)
+    .then(async (response) => {
+      if (response.ok) await cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => null);
+  if (cached) {
+    event.waitUntil(update);
+    return cached;
+  }
+  return (await update) || new Response('', { status: 504, statusText: 'Network request failed' });
 }
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then((cache) => cache.addAll(APP_SHELL.map((url) => new Request(url, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      ))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const stale = (await caches.keys()).filter((key) => key !== CACHE_NAME);
+    await Promise.all(stale.map((key) => caches.delete(key)));
+    await self.clients.claim();
+    // Pages opened under a legacy SW still show the old cached index.html — reload them once.
+    // Not awaited: those navigations are fetched through this SW, which only starts handling
+    // fetches after activation finishes (awaiting here would deadlock).
+    if (stale.some((key) => LEGACY_SHELL_CACHE.test(key))) {
+      const windows = await self.clients.matchAll({ type: 'window' });
+      windows.forEach((client) => client.navigate(client.url).catch(() => {}));
+    }
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  const { request } = event;
+  if (request.method !== 'GET') return;
+  const path = scopePath(request.url);
 
-  // CDN deps (Vue): cache-first so the PWA works offline after the first load
-  if (CDN_DEPS.has(event.request.url)) {
-    event.respondWith(
-      caches.match(event.request).then(async (cached) => {
-        if (cached) return cached;
-        try {
-          const response = await fetch(event.request);
-          if (response.ok) {
-            const cache = await caches.open(CACHE_NAME);
-            await cache.put(event.request, response.clone());
-          }
-          return response;
-        } catch {
-          return new Response('', { status: 503, statusText: 'Offline — CDN unavailable' });
-        }
-      })
-    );
+  const isShell = path === '' || path === 'index.html';
+  if (request.mode === 'navigate' || isShell) {
+    event.respondWith(networkFirst(request, isShell));
     return;
   }
-
-  // Network-only: playlist/EPG data, external resources and user URLs must always be fresh
-  if (isNetworkOnly(event.request.url) || !isCacheableAppAsset(event.request.url)) {
-    event.respondWith(
-      fetch(event.request).catch(() => new Response('', {
-        status: 504,
-        statusText: 'Network request failed'
-      }))
-    );
+  if (path !== null && path.startsWith('vendor/')) {
+    event.respondWith(cacheFirst(request));
     return;
   }
-
-  // Cache-first only for app shell and explicitly listed local static assets
-  event.respondWith(
-    caches.match(event.request).then(async (cached) => {
-      if (cached) return cached;
-      try {
-        const response = await fetch(event.request);
-        if (response.ok) {
-          const cache = await caches.open(CACHE_NAME);
-          await cache.put(event.request, response.clone()); // fix: properly awaited
-        }
-        return response;
-      } catch {
-        // Offline fallback: return app shell
-        const fallback = await caches.match('./index.html');
-        return fallback || new Response('Offline', { status: 503 });
-      }
-    })
-  );
+  if (path !== null && STATIC_ASSETS.has(path)) {
+    event.respondWith(staleWhileRevalidate(event, request));
+    return;
+  }
+  // Everything else (playlists, EPG XML, APIs, /epg-proxy, external hosts) goes straight
+  // to the network without the SW in between, so aborts and errors reach the page unchanged.
 });

@@ -535,8 +535,17 @@
     [v-cloak] ~ #app-loader { display: flex; }
     .app-loader-ring { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--primary); animation: app-spin .75s linear infinite; }
     @keyframes app-spin { to { transform: rotate(360deg); } }
+
+    /* ── Fatal error panel (rendered outside Vue instead of a blank screen) ── */
+    #app-fatal { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: var(--bg); color: var(--text); }
+    #app-fatal[hidden] { display: none; }
+    .app-fatal-card { width: 100%; max-width: 520px; padding: 1.5rem; border-radius: var(--radius-xl); background: var(--surface-s); border: 1px solid var(--border-s); box-shadow: var(--shadow-lg); }
+    .app-fatal-card h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; }
+    .app-fatal-card p { color: var(--text2); font-size: .9rem; margin-bottom: .75rem; }
+    .app-fatal-card code { display: block; max-height: 8rem; overflow: auto; margin-bottom: 1rem; padding: .6rem .75rem; border-radius: var(--radius-sm); background: var(--fill2); color: var(--text3); font-size: .75rem; white-space: pre-wrap; word-break: break-word; -webkit-user-select: text; user-select: text; }
   </style>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Vue is vendored and pinned (see vendor/README.md) so the app starts offline and never changes under us -->
+  <script src="./vendor/vue-3.5.44.global.prod.js"></script>
 </head>
 <body>
 <noscript><style>body{display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#000;color:#fff;text-align:center;padding:2rem}</style><p>IPTV Playlist Generator requires JavaScript to run.</p></noscript>
@@ -1466,6 +1475,33 @@
   </div><!-- /max-w -->
 </div><!-- /app -->
 <div id="app-loader"><div class="app-loader-ring"></div></div>
+<div id="app-fatal" role="alert" hidden>
+  <div class="app-fatal-card">
+    <h2 data-i18n="title"></h2>
+    <p data-i18n="body"></p>
+    <code id="app-fatal-detail"></code>
+    <button type="button" class="btn btn-primary" data-i18n="reload" onclick="location.reload()"></button>
+  </div>
+</div>
+
+<script>
+// Shown instead of a blank page when the app cannot render; works without Vue
+function showAppFatal(error) {
+  const panel = document.getElementById('app-fatal')
+  if (!panel || !panel.hidden) return
+  const text = document.documentElement.lang === 'en'
+    ? { title: 'The app could not be displayed', body: 'Your channels are still saved in this browser. Reload the page; if it happens again, send the text below.', reload: 'Reload page' }
+    : { title: 'Aplikáciu sa nepodarilo zobraziť', body: 'Kanály zostali uložené v prehliadači. Obnovte stránku; ak sa chyba opakuje, pošlite text nižšie.', reload: 'Obnoviť stránku' }
+  panel.querySelectorAll('[data-i18n]').forEach(node => { node.textContent = text[node.dataset.i18n] })
+  document.getElementById('app-fatal-detail').textContent = String(error?.stack || error?.message || error || '')
+  panel.hidden = false
+}
+
+// Errors before Vue has mounted (e.g. the runtime failed to load) would otherwise leave the spinner forever
+window.addEventListener('error', e => {
+  if (!document.getElementById('app')?.hasAttribute('data-v-app')) showAppFatal(e.error || e.message)
+})
+</script>
 
 <script>
 const { createApp, ref, computed, reactive, watch, onMounted, onUnmounted } = Vue
@@ -1540,7 +1576,27 @@ const CHANNEL_TVG_ALIASES = [
   { re: /\bsport\s*5\b/i, ids: ['Sport5.sk'] },
 ]
 
-createApp({
+// A render error makes Vue replace the whole UI with an empty node (the "black screen").
+// setup() registers a recovery that closes dialogs; if the UI stays empty, #app-fatal is shown.
+let recoverUiAfterRenderError = null
+let lastUiRecovery = 0
+
+function handleAppError(err, instance, info) {
+  console.error(`[IPTV] Vue error (${info}):`, err)
+  setTimeout(() => {
+    const root = document.getElementById('app')
+    if (!root || root.firstElementChild) return
+    if (recoverUiAfterRenderError && Date.now() - lastUiRecovery > 3000) {
+      lastUiRecovery = Date.now()
+      recoverUiAfterRenderError()
+      setTimeout(() => { if (!root.firstElementChild) showAppFatal(err) }, 500)
+    } else {
+      showAppFatal(err)
+    }
+  })
+}
+
+const app = createApp({
   setup() {
     const STORAGE_KEY = 'iptv-channels'
     const MAPPING_KEY = 'iptv-confirmed-mappings'
@@ -1772,6 +1828,9 @@ createApp({
         autoDetectFetching:      'Načítavam zdroje...',
         autoDetectNoSources:     'Vyber aspoň jeden zdroj',
         autoDetectSourcesLoaded: 'Načítaných {n} kanálov zo zdrojov',
+        autoDetectSourcesPartial: 'Načítaných {n} kanálov · nedostupné zdroje: {failed}',
+        autoDetectFailed:        'Autodetekcia zlyhala (detail v konzole F12)',
+        renderErrorRecovered:    'Nastala chyba zobrazenia — dialóg bol zatvorený (detail v konzole F12)',
         autoDetectMatched:   'Nájdených',
         autoDetectSelected:  'Vybraných',
         autoDetectMatchedOnly:'Len nájdené',
@@ -2019,6 +2078,9 @@ createApp({
         autoDetectFetching:      'Loading sources...',
         autoDetectNoSources:     'Select at least one source',
         autoDetectSourcesLoaded: 'Loaded {n} channels from sources',
+        autoDetectSourcesPartial: 'Loaded {n} channels · unavailable sources: {failed}',
+        autoDetectFailed:        'Auto-detect failed (details in the F12 console)',
+        renderErrorRecovered:    'A display error occurred — the dialog was closed (details in the F12 console)',
         autoDetectMatched:   'Matched',
         autoDetectSelected:  'Selected',
         autoDetectMatchedOnly:'Matched only',
@@ -2556,6 +2618,8 @@ createApp({
     function triggerImport() { modal.import = true }
 
     const MAX_FILE_SIZE = 50 * 1024 * 1024  // 50 MB
+    const EPG_FETCH_TIMEOUT = 20000
+    const EPG_PROXY_ORIGIN  = 'https://iptvplaylistgen.pages.dev'  // serves functions/epg-proxy.js
 
     function importFromFile(e) {
       const file = e.target.files[0]; if (!file) return
@@ -2860,6 +2924,11 @@ createApp({
       if (modal.autoDetect)   { modal.autoDetect = false; return }
     }
 
+    recoverUiAfterRenderError = () => {
+      Object.keys(modal).forEach(key => { modal[key] = false })
+      showToast(t('renderErrorRecovered'))
+    }
+
     /* ── Lifecycle ── */
     onMounted(() => {
       try {
@@ -3026,38 +3095,70 @@ createApp({
       return /(?:mozilla\/|chrome\/|safari\/|gecko\)|group-title=|http-user-agent)/i.test(value || '')
     }
 
+    // open-epg.com sends no CORS headers, so it is read through our Cloudflare Pages proxy:
+    // same-origin on the deployed site, the public one from Android/desktop/local dev, and
+    // finally directly for environments that do not enforce CORS.
+    function epgXmlFetchUrls(url) {
+      if (!/^https:\/\/www\.open-epg\.com\//i.test(url)) return [url]
+      const viaProxy = origin => `${origin}/epg-proxy?url=${encodeURIComponent(url)}`
+      const deployedSite = /^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+      const urls = deployedSite ? [viaProxy(location.origin)] : []
+      if (location.origin !== EPG_PROXY_ORIGIN) urls.push(viaProxy(EPG_PROXY_ORIGIN))
+      return [...urls, url]
+    }
+
+    // Channel section of an XMLTV guide (everything before the first <programme>), or null
+    async function fetchEpgXmlHead(url) {
+      for (const candidate of epgXmlFetchUrls(url)) {
+        const ctrl  = new AbortController()
+        const timer = setTimeout(() => ctrl.abort(), EPG_FETCH_TIMEOUT)
+        try {
+          const res = await fetch(candidate, { signal: ctrl.signal })
+          if (!res.ok || !res.body) {
+            console.warn('[autodetect] EPG source HTTP', res.status, candidate)
+            continue
+          }
+          // Stream XML, stop at first <programme> — avoids downloading the full guide
+          const reader  = res.body.getReader()
+          const decoder = new TextDecoder()
+          let text = ''
+          while (true) {
+            const { value, done } = await reader.read()
+            if (value) text += decoder.decode(value, { stream: !done })
+            const stop = text.indexOf('<programme')
+            if (done || stop !== -1) {
+              if (!done) ctrl.abort()
+              if (stop !== -1) text = text.slice(0, stop)
+              break
+            }
+          }
+          // A host without the proxy answers with the app's own index.html (SPA fallback)
+          if (/<tv[\s>]/i.test(text) && !/<html[\s>]/i.test(text)) return text
+          console.warn('[autodetect] EPG source is not XMLTV:', candidate)
+        } catch (e) {
+          console.warn('[autodetect] EPG source failed:', candidate, e?.message || e)
+        } finally {
+          clearTimeout(timer)
+        }
+      }
+      return null
+    }
+
+    // Returns labels of the sources that could not be loaded
     async function fetchEnrichmentIndexes() {
       const sources = [
         ...ENRICHMENT_SOURCES.filter(s => enrichmentSelectedSources.has(s.id)),
         ...customEpgSources.value,
       ]
-      if (sources.length === 0) { enrichmentLoaded.value = true; return }
+      if (sources.length === 0) { enrichmentLoaded.value = true; return [] }
       enrichmentLoading.value = true
       enrichmentLoaded.value  = false
+      const failed = []
       await Promise.all(sources.map(async src => {
         try {
           if (src.type === 'epg-xml') {
-            // Stream XML, stop at first <programme> — avoids downloading the full guide
-            const ctrl = new AbortController()
-            // open-epg.com has no CORS headers — route through Cloudflare Pages proxy
-            const fetchUrl = /open-epg\.com/i.test(src.url)
-              ? `/epg-proxy?url=${encodeURIComponent(src.url)}`
-              : src.url
-            const res  = await fetch(fetchUrl, { signal: ctrl.signal })
-            if (!res.ok) return
-            const reader  = res.body.getReader()
-            const decoder = new TextDecoder()
-            let text = ''
-            while (true) {
-              const { value, done } = await reader.read()
-              if (value) text += decoder.decode(value, { stream: !done })
-              const stop = text.indexOf('<programme')
-              if (done || stop !== -1) {
-                if (!done) ctrl.abort()
-                if (stop !== -1) text = text.slice(0, stop)
-                break
-              }
-            }
+            const text = await fetchEpgXmlHead(src.url)
+            if (text === null) { failed.push(src.label || src.url); return }
             const canProvideTvgUrl = src.metadataOnly !== true
             const sourceTvgUrl = canProvideTvgUrl ? (allowedTvgUrl(src.url) || exportableTvgUrl(src.url)) : ''
             let m
@@ -3088,7 +3189,7 @@ createApp({
           const jsonCtrl = new AbortController()
           const jsonTimer = setTimeout(() => jsonCtrl.abort(), 15000)
           const res = await fetch(src.url, { signal: jsonCtrl.signal }).finally(() => clearTimeout(jsonTimer))
-          if (!res.ok) return
+          if (!res.ok) throw new Error('HTTP ' + res.status)
           const data = await res.json()
           if (src.type === 'epg') {
             const idx = {}, byName = {}, byNameCountry = {}
@@ -3174,10 +3275,14 @@ createApp({
             apiChannelMetaById.value = byMetaId
             apiNormMap.value         = nMap
           }
-        } catch {}
+        } catch (e) {
+          failed.push(src.label || src.url)
+          console.warn('[autodetect] enrichment source failed:', src.url, e?.message || e)
+        }
       }))
       enrichmentLoading.value = false
       enrichmentLoaded.value  = true
+      return failed
     }
 
     async function fetchAndRunAutoDetect() {
@@ -3210,21 +3315,35 @@ createApp({
       enrichmentLoaded.value     = false
       try {
         const all = []
-        await Promise.all([
-          urls.length > 0 ? Promise.all(urls.map(async source => {
+        const failed = []
+        const [, enrichmentFailed] = await Promise.all([
+          Promise.all(urls.map(async source => {
             const url = typeof source === 'string' ? source : source.url
-            const text = await fetchTextWithLimit(url, { timeout: 20000 })
-            all.push(...parseM3UforAutoDetect(text).map(item => ({ ...item, sourceId: source.id || 'custom' })))
-          })) : Promise.resolve(),
+            // One unreachable playlist must not discard the sources that did load
+            try {
+              const text = await fetchTextWithLimit(url, { timeout: 20000 })
+              all.push(...parseM3UforAutoDetect(text).map(item => ({ ...item, sourceId: source.id || 'custom' })))
+            } catch (e) {
+              failed.push(source.label || url)
+              console.warn('[autodetect] playlist source failed:', url, e?.message || e)
+            }
+          })),
           fetchEnrichmentIndexes(),
         ])
         if (runId !== _fetchRunId) return
+        failed.push(...enrichmentFailed)
         sourceIndex.value = all
         rebuildAutoDetectSearchIndex()
         sourceLoaded.value = true
-        showToast(t('autoDetectSourcesLoaded').replace('{n}', all.length))
+        const failedLabel = failed.length > 3 ? `${failed.slice(0, 3).join(', ')} +${failed.length - 3}` : failed.join(', ')
+        showToast(failed.length
+          ? t('autoDetectSourcesPartial').replace('{n}', all.length).replace('{failed}', failedLabel)
+          : t('autoDetectSourcesLoaded').replace('{n}', all.length))
         runAutoDetect()
-      } catch { showToast(t('importError')) }
+      } catch (e) {
+        console.error('[autodetect]', e)
+        showToast(t('autoDetectFailed'))
+      }
       finally { sourceLoading.value = false }
     }
 
@@ -4083,7 +4202,9 @@ createApp({
       toggleSourcesPanel, markAutoDetectManual, canApplyAutoDetectResult,
     }
   }
-}).mount('#app')
+})
+app.config.errorHandler = handleAppError
+app.mount('#app')
 </script>
 </body>
 </html>

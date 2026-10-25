@@ -96,6 +96,8 @@ Podrobnosti pozri v sekcii [EPG Autodetekcia — technické detaily](#-epg-autod
 
 - **Apple HIG** dizajn — glass morphism, dynamické CSS premenné, smooth animácie
 - Horný panel so zoskupenými menu **Import** (playlist, EPG) · **Export** (M3U, XSPF, JSON, Enigma2) · **Úpravy** (autodetekcia, pridať kanál, späť, pravidlá metadát, odpojiť TVG URL, report kvality, vymazať vybrané) · **Filter** a kompaktným info panelom (počty kanálov, skupín, kvalít)
+- **Profily a záloha** (⚙): samostatné knižnice kanálov, záloha/obnova všetkých profilov, párovaní a nastavení do JSON
+- **Hromadné akcie** nad vybranými kanálmi a **kontrola streamov** (Úpravy → Skontrolovať streamy)
 - **Nastavenia** (⚙ vpravo hore): jazyk SK/EN a téma (Svetlá, Tmavá, Aurora, Grape, Forest) — persist v `localStorage`, anti-FOUC inline skript
 - Mobilný layout: karty kanálov, menu cez celú šírku panela, plynulé posúvanie prstom
 - **PWA** — inštalovateľná na iOS / Android home screen (manifest + SW)
@@ -155,6 +157,13 @@ https://iptvplaylistgen.pages.dev
 ---
 
 ## Lokálny vývoj
+
+### Testy
+
+```bash
+npm test                 # statické kontroly + unit testy autodetekcie (bez závislostí)
+npm run verify:browser   # autodetekcia v Chromiu nad tests/fixtures/autodetect (vyžaduje Playwright)
+```
 
 ### Webový preview
 

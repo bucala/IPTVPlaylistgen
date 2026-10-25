@@ -25,6 +25,13 @@ Všetky významné zmeny v projekte sú dokumentované v tomto súbore.
 - **open-epg.com cez proxy všade** — na webe same-origin `/epg-proxy`, v Android/desktop aplikácii a lokálne verejná proxy, nakoniec priamy request. Proxy funkcia posiela `Content-Type: application/xml`, ošetruje chyby upstreamu a CORS hlavičky má aj na chybových odpovediach.
 
 #### Added
+- **Profily** — viac samostatných knižníc kanálov (napr. TV, Mobil, Šport) v menu ⚙; doterajšia knižnica je profil „Hlavný“.
+- **Záloha jedným klikom** — ⚙ → *Zálohovať všetko* uloží všetky profily, uložené párovania a nastavenia do JSON; *Obnoviť zo zálohy* ich vráti.
+- **Kontrola streamov** — *Úpravy → Skontrolovať streamy* overí vybrané alebo zobrazené kanály (odpovedá / neodpovedá / neoverené), farebná bodka pri kanáli a filter *Stream*.
+- **Hromadné akcie** — pri výbere kanálov sa zobrazí lišta: presun do skupiny, zapnúť/vypnúť, export M3U, autodetekcia a vymazanie výberu.
+- **Regresný test autodetekcie** — `npm run verify:browser` spustí autodetekciu v Chromiu nad fixtúrou SK/CZ kanálov s očakávanými TVG-ID a logami (aj v CI pri každom PR).
+- **Týždenná aktualizácia log** — GitHub Action obnoví zoznam log tv-logos a otvorí PR.
+- **Kontrola nedefinovaných identifikátorov** — `npm test` zlyhá, ak skript číta nedeklarovaný názov (ako `isFiltered`, ktorý rozbil Export).
 - **Prečo bola zhoda navrhnutá** — pri každom výsledku autodetekcie je uvedený pôvod (uložené párovanie, presné TVG-ID v EPG + súbor, presný názov v iptv-org, podobný názov + zdroj + %, EPG podľa názvu).
 - **Výber loga** — rozbalený riadok ukazuje náhľady všetkých nájdených log (tv-logos, iptv-org, zdroj playlistu, pôvodné); klik ho vyberie.
 - **Zabudnúť uložené párovanie** — tlačidlo v rozbalenom riadku.

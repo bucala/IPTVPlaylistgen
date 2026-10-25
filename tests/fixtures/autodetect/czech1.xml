@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tv generator-info-name="fixture (open-epg.com czech1 shape)">
+  <channel id="ČT1 HD.cz"><display-name lang="cs">ČT1 HD.cz</display-name></channel>
+  <channel id="Oneplay Sport 1.cz"><display-name lang="cs">Oneplay Sport 1.cz</display-name></channel>
+  <programme start="20261025060000 +0200" stop="20261025070000 +0200" channel="ČT1 HD.cz"><title>Test</title></programme>
+</tv>

@@ -1,0 +1,47 @@
+name: Update SK/CZ logo index
+
+# Refreshes the tv-logo/tv-logos snapshot (TV_LOGOS in index.html) and opens a PR when it changed.
+# Needs "Allow GitHub Actions to create and approve pull requests" in Settings → Actions → General.
+on:
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Refresh tv-logos snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Refresh snapshot
+        run: node scripts/update-tv-logos.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync www and verify
+        run: |
+          node scripts/sync-www.js
+          node scripts/verify-static.js
+          node scripts/verify-autodetect.js
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/update-tv-logos
+          commit-message: 'chore(logos): refresh tv-logos SK/CZ snapshot'
+          title: 'chore(logos): refresh tv-logos SK/CZ snapshot'
+          body: |
+            Weekly refresh of the SK/CZ logo index from https://github.com/tv-logo/tv-logos
+            (`node scripts/update-tv-logos.js`). The run log lists added and removed logos.
+          delete-branch: true

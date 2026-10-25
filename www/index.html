@@ -346,6 +346,12 @@
     .info-chip strong { color: var(--text); font-weight: 600; }
     .info-chip .q-badge { padding: 0 5px; font-size: 10px; }
     .dot-active { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+    .info-chip-profile { background: var(--primary-l); color: var(--primary); }
+    .info-chip-profile strong { color: var(--primary); }
+    .profile-row { padding: 0 6px 6px; }
+    .profile-row .select { padding-top: 7px; padding-bottom: 7px; }
+    .profile-actions { display: flex; gap: 6px; padding: 0 6px 6px; }
+    .profile-actions .btn { flex: 1; padding: 6px 8px; font-size: 12px; }
 
     /* ── Active filter summary ── */
     .filter-bar {
@@ -354,6 +360,10 @@
       background: var(--primary-l); color: var(--primary); font-size: 13px; font-weight: 500;
     }
     .filter-bar-text { flex: 1 1 10rem; }
+    .stream-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .stream-ok { background: var(--success); }
+    .stream-fail { background: var(--danger); }
+    .stream-unknown { background: var(--text4); }
 
     /* ── Autodetect: match origin and logo choices ── */
     .why-line { font-size: 11px; color: var(--text3); margin-top: 1px; max-width: 32rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -437,6 +447,26 @@
       width: max-content; max-width: calc(100vw - 2rem); text-align: center; pointer-events: none;
     }
     [data-theme="dark"] .toast { background: rgba(72,72,74,.94); }
+    .toast.above-bar { bottom: calc(max(24px, env(safe-area-inset-bottom, 24px)) + 76px); }
+
+    /* ── Bulk actions bar (selected channels) ── */
+    .bulk-bar {
+      position: fixed; left: 50%; transform: translateX(-50%); z-index: 45;
+      bottom: max(14px, env(safe-area-inset-bottom)); width: max-content; max-width: calc(100vw - 1.5rem);
+      display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; justify-content: center;
+      padding: .55rem .6rem .55rem .9rem; border-radius: var(--radius-lg); animation: slideUp .2s ease;
+    }
+    .bulk-bar .btn { padding: 7px 11px; font-size: 13px; }
+    .bulk-count { font-size: 13px; margin-right: .2rem; white-space: nowrap; }
+    .bulk-group { width: auto; padding-top: 7px; padding-bottom: 7px; font-size: 13px; max-width: 12rem; }
+    main { padding-bottom: 5rem; }
+    @media (max-width: 640px) {
+      .bulk-bar { left: .75rem; right: .75rem; transform: none; width: auto; max-width: none; flex-wrap: nowrap; padding: .5rem; gap: .3rem; }
+      .bulk-bar .bulk-label { display: none; }
+      .bulk-count { min-width: 1.6rem; height: 1.6rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: var(--primary); color: #fff; margin: 0; }
+      .bulk-bar .btn { padding: 8px 9px; }
+      .bulk-group { flex: 1; min-width: 0; max-width: none; }
+    }
 
     /* ── Empty state ── */
     .empty-state { padding: 64px 24px; text-align: center; color: var(--text3); }
@@ -635,6 +665,27 @@
             <button type="button" class="seg-btn" :class="{ active: lang === 'sk' }" @click="setLang('sk')" :aria-pressed="String(lang === 'sk')">Slovenčina</button>
             <button type="button" class="seg-btn" :class="{ active: lang === 'en' }" @click="setLang('en')" :aria-pressed="String(lang === 'en')">English</button>
           </div>
+          <div class="menu-label">{{ t('profile') }}</div>
+          <div class="profile-row">
+            <select class="select" :aria-label="t('profile')" :value="activeProfile" @change="switchProfile($event.target.value)">
+              <option v-for="p in profiles" :key="p.id" :value="p.id">{{ profileName(p) }}</option>
+            </select>
+          </div>
+          <div class="profile-actions">
+            <button type="button" class="btn btn-secondary" @click="createProfile">{{ t('profileNew') }}</button>
+            <button type="button" class="btn btn-secondary" @click="renameProfile">{{ t('profileRename') }}</button>
+            <button type="button" class="btn btn-danger" :disabled="activeProfile === 'default'" @click="deleteProfile">{{ t('delete') }}</button>
+          </div>
+          <div class="menu-label">{{ t('backup') }}</div>
+          <button type="button" class="menu-item" @click="exportBackup">
+            <span class="mi-icon" v-html="icon('download', 16)"></span>
+            <span class="mi-text">{{ t('backupExport') }}<small class="mi-hint">{{ t('backupExportHint') }}</small></span>
+          </button>
+          <button type="button" class="menu-item" @click="backupRef?.click()">
+            <span class="mi-icon" v-html="icon('upload', 16)"></span>
+            <span class="mi-text">{{ t('backupImport') }}<small class="mi-hint">{{ t('backupImportHint') }}</small></span>
+          </button>
+          <input ref="backupRef" type="file" accept=".json,application/json" class="sr-only" tabindex="-1" aria-hidden="true" @change="importBackup" />
           <div class="menu-label">{{ t('theme') }}</div>
           <button v-for="opt in themeOptions" :key="opt.id" type="button" class="menu-item"
                   :aria-pressed="String(theme === opt.id)" @click="setTheme(opt.id)">
@@ -707,6 +758,10 @@
               <span class="mi-icon" v-html="icon('fileText', 16)"></span>
               <span class="mi-text">{{ t('metadataHealthReport') }}</span>
             </button>
+            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="closeMenu(); checkStreams()">
+              <span class="mi-icon" v-html="icon('refresh', 16)"></span>
+              <span class="mi-text">{{ streamCheck.running ? t('streamCheckStop') : t('streamCheck') }}<small class="mi-hint">{{ t(selectedRowsCount ? 'streamCheckHintSelected' : 'streamCheckHintVisible') }}</small></span>
+            </button>
             <div class="menu-sep" role="separator"></div>
             <button type="button" class="menu-item danger" role="menuitem" :disabled="selectedRowsCount === 0" @click="closeMenu(); deleteSelected()">
               <span class="mi-icon" v-html="icon('trash', 16)"></span>
@@ -727,6 +782,7 @@
 
       <!-- Info panel -->
       <div class="hdr-stats" role="status" aria-live="polite">
+        <span v-if="profiles.length > 1" class="info-chip info-chip-profile"><span v-html="icon('folder', 13)"></span><strong>{{ profileName(profiles.find(p => p.id === activeProfile)) }}</strong></span>
         <span class="info-chip"><span v-html="icon('tv', 13)"></span><strong>{{ stats.total }}</strong> {{ t('total') }}</span>
         <span class="info-chip"><span class="dot-active" aria-hidden="true"></span><strong>{{ stats.active }}</strong> {{ t('active') }}</span>
         <span class="info-chip"><span v-html="icon('folder', 13)"></span><strong>{{ stats.groups }}</strong> {{ t('groups') }}</span>
@@ -743,6 +799,12 @@
           <div class="mb-4">
             <div class="sec-label">{{ t('tabLibrary') }}</div>
             <h2 class="text-[1.3rem] font-bold tracking-[-0.03em]">{{ t('libraryHeading') }}</h2>
+          </div>
+
+          <div v-if="streamCheck.running" class="filter-bar" role="status">
+            <span v-html="icon('refresh', 14)"></span>
+            <span class="filter-bar-text">{{ t('streamCheckProgress').replace('{done}', streamCheck.done).replace('{total}', streamCheck.total) }}</span>
+            <button type="button" class="btn btn-ghost" style="padding:4px 10px" @click="checkStreams()">{{ t('streamCheckStop') }}</button>
           </div>
 
           <!-- Active filter summary -->
@@ -784,7 +846,7 @@
                     </div>
                   </td>
                   <td>
-                    <div class="font-semibold">{{ ch.name || t('untitled') }}</div>
+                    <div class="font-semibold"><span v-if="ch.stream_status" class="stream-dot" :class="'stream-' + ch.stream_status" :title="t('streamStatus_' + ch.stream_status)" role="img" :aria-label="t('streamStatus_' + ch.stream_status)"></span>{{ ch.name || t('untitled') }}</div>
                     <div class="text-xs muted">{{ ch.tvg_name || t('noTvgName') }}</div>
                     <div v-if="epgLoaded && getCurrentProgram(ch)" class="epg-tag now">{{ t('nowPlaying') }}: {{ getCurrentProgram(ch).title }}</div>
                     <div v-else-if="epgLoaded && getNextProgram(ch)" class="epg-tag nxt">{{ t('nextProgram') }}: {{ getNextProgram(ch).title }}</div>
@@ -905,6 +967,16 @@
               <button type="button" class="seg-btn" :class="{ active: filters.status === 'active' }"   @click="filters.status = 'active'"   :aria-pressed="String(filters.status === 'active')">{{ t('activeLabel') }}</button>
               <button type="button" class="seg-btn" :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'" :aria-pressed="String(filters.status === 'inactive')">{{ t('offLabel') }}</button>
             </div>
+          </div>
+          <div>
+            <label class="label" for="filter-stream">{{ t('streamFilter') }}</label>
+            <select id="filter-stream" class="select" v-model="filters.stream">
+              <option value="">{{ t('streamFilterAll') }}</option>
+              <option value="ok">{{ t('streamStatus_ok') }}</option>
+              <option value="fail">{{ t('streamStatus_fail') }}</option>
+              <option value="unknown">{{ t('streamStatus_unknown') }}</option>
+              <option value="unchecked">{{ t('streamStatus_unchecked') }}</option>
+            </select>
           </div>
           <div>
             <label class="label" for="filter-limit">{{ t('perPage') }}</label>
@@ -1404,9 +1476,26 @@
       </div>
     </div>
 
+    <!-- Bulk actions for selected channels -->
+    <div v-if="selectedRowsCount > 0" class="bulk-bar glass-s" role="toolbar" :aria-label="t('bulkActions')">
+      <strong class="bulk-count" :title="t('bulkSelected').replace('{n}', selectedRowsCount)">{{ selectedRowsCount }}<span class="bulk-label">{{ t('bulkSelected').replace('{n}', '') }}</span></strong>
+      <select class="select bulk-group" :aria-label="t('bulkMoveTo')" @change="bulkSetGroup($event.target.value); $event.target.value = ''">
+        <option value="">{{ t('bulkMoveTo') }}</option>
+        <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
+        <option value="__none__">{{ t('bulkNoGroup') }}</option>
+        <option value="__new__">{{ t('bulkNewGroup') }}</option>
+      </select>
+      <button type="button" class="btn btn-secondary" @click="bulkSetActive(true)" :title="t('bulkEnable')" :aria-label="t('bulkEnable')"><span v-html="icon('circle', 10)" style="color:var(--success)"></span><span class="bulk-label">{{ t('bulkEnable') }}</span></button>
+      <button type="button" class="btn btn-secondary" @click="bulkSetActive(false)" :title="t('bulkDisable')" :aria-label="t('bulkDisable')"><span v-html="icon('circleOff', 10)"></span><span class="bulk-label">{{ t('bulkDisable') }}</span></button>
+      <button type="button" class="btn btn-secondary" @click="exportPlaylist('m3u')" :title="t('bulkExport')" :aria-label="t('bulkExport')"><span v-html="icon('upload', 14)"></span><span class="bulk-label">{{ t('bulkExport') }}</span></button>
+      <button type="button" class="btn btn-secondary" @click="openAutoDetect()" :title="t('autoDetectShort')" :aria-label="t('autoDetectShort')"><span v-html="icon('search', 14)"></span><span class="bulk-label">{{ t('autoDetectShort') }}</span></button>
+      <button type="button" class="btn btn-danger" @click="deleteSelected" :title="t('delete')" :aria-label="t('delete')"><span v-html="icon('trash', 14)"></span><span class="bulk-label">{{ t('delete') }}</span></button>
+      <button type="button" class="btn btn-ghost bulk-close" @click="selectedRows.clear()" :aria-label="t('clearSelection')" :title="t('clearSelection')" v-html="icon('x', 16)"></button>
+    </div>
+
     <!-- Toast -->
     <transition name="fade">
-      <div v-if="toast.show" class="toast" role="status" aria-live="polite" aria-atomic="true">{{ toast.message }}</div>
+      <div v-if="toast.show" class="toast" :class="{ 'above-bar': selectedRowsCount > 0 }" role="status" aria-live="polite" aria-atomic="true">{{ toast.message }}</div>
     </transition>
 
   </div><!-- /max-w -->
@@ -1515,7 +1604,7 @@ const CHANNEL_TVG_ALIASES = [
 
 // Snapshot of github.com/tv-logo/tv-logos countries/slovakia and countries/czech-republic (2026-10-25):
 // transparent PNGs named after the full channel name, e.g. premier-sport-3-cz.png. Files are served by jsDelivr.
-// To refresh, copy the file names (without .png) from those two GitHub folders.
+// Refreshed weekly by .github/workflows/update-tv-logos.yml (node scripts/update-tv-logos.js).
 const TV_LOGOS_BASE = 'https://cdn.jsdelivr.net/gh/tv-logo/tv-logos@main/countries/'
 const TV_LOGOS = {
   slovakia: `
@@ -1523,24 +1612,24 @@ const TV_LOGOS = {
     cs-history-sk cs-horror-sk cs-mystery-sk dvojka-sk folklorika-sk jednotka-sk joj-24-sk joj-cinema-plus-sk
     joj-cinema-sk joj-plus-sk joj-sk joj-sport-2-sk joj-sport-sk joj-svet-sk joj-wau-sk jojko-sk kanal1-sk
     markiza-dajto-sk markiza-doma-sk markiza-krimi-sk markiza-sk nova-international-sk nova-sport-1-sk
-    nova-sport-2-sk nova-sport-3-sk-sk nova-sport-4-sk-sk park-tv-sk prima-cool-sk prima-krimi-sk
-    prima-love-sk prima-sk rtvs-24-sk rtvs-sport-sk senzi-sk skylink-7-sk sport1-sk sport2-sk ta3-sk
-    tuki-tv-sk tv-lux-sk tv-osem-sk`,
+    nova-sport-2-sk nova-sport-3-sk-sk nova-sport-4-sk-sk park-tv-sk prima-cool-sk prima-krimi-sk prima-love-sk
+    prima-sk rtvs-24-sk rtvs-sport-sk senzi-sk skylink-7-sk sport1-sk sport2-sk ta3-sk tuki-tv-sk tv-lux-sk
+    tv-osem-sk`,
   'czech-republic': `
     amc-cz axn-black-cz axn-cz axn-white-cz barrandov-kino-cz barrandov-krimi-cz barrandov-tv-cz
     canal-plus-sport-2-cz cnn-prima-news-cz cs-history-cz cs-mystery-cz ct-art-cz ct-d-ct-art-cz ct-d-cz
-    ct-sport-cz ct1-cz ct2-cz ct24-cz erox-cz eroxxx-cz extasy-cz film-europe-cz film-europe-plus-cz
-    film-plus-cz filmbox-cz filmbox-extra-cz filmbox-family-cz filmbox-premium-cz filmbox-stars-cz hbo-cz
-    hbo2-cz hbo3-cz hobby-tv-cz hustler-hd-cz inultra-cz joj-cinema-cz joj-cinema-plus-cz joj-family-cz
-    joj-svet-cz jtv-cz kanal1-cz lala-tv-cz leo-tv-cz leo-tv-gold-cz love-nature-4k-cz minimax-cz mnam-cz
-    mnau-tv-cz nas-region-cz nova-action-cz nova-cinema-cz nova-cz nova-fun-cz nova-gold-cz nova-krimi-cz
-    nova-lady-cz nova-sport-1-cz nova-sport-2-cz nova-sport-3-cz nova-sport-4-cz nova-sport-5-cz
-    nova-sport-6-cz ocko-black-cz ocko-cz ocko-expres-cz ocko-star-cz oneplay-sport-1-cz oneplay-sport-2-cz
-    oneplay-sport-3-cz oneplay-sport-4-cz oneplay-sport-4k-cz paramount-network-cz paramount-network-hz-cz
-    passion-xxx-cz polar-cz praha-tv-cz premier-sport-1-cz premier-sport-2-cz premier-sport-3-cz prima-cool-cz
-    prima-cz prima-krimi-cz prima-love-cz prima-max-cz prima-plus-cz prima-show-cz prima-star-cz prima-zoom-cz
-    rebel-cz regiony-plus-cz relax-cz retro-cz rtm-plus-cz seznam-tv-cz slagr-muzika-cz slagr-original-cz
-    slagr-premium-cz spektrum-cz spektrum-home-cz tv-brno-1-cz tv-noe-cz tv-paprika-cz tv-v1-cz tvs-cz`,
+    ct-sport-cz ct1-cz ct2-cz ct24-cz erox-cz eroxxx-cz extasy-cz film-europe-cz film-europe-plus-cz film-plus-cz
+    filmbox-cz filmbox-extra-cz filmbox-family-cz filmbox-premium-cz filmbox-stars-cz hbo-cz hbo2-cz hbo3-cz
+    hobby-tv-cz hustler-hd-cz inultra-cz joj-cinema-cz joj-cinema-plus-cz joj-family-cz joj-svet-cz jtv-cz
+    kanal1-cz lala-tv-cz leo-tv-cz leo-tv-gold-cz love-nature-4k-cz minimax-cz mnam-cz mnau-tv-cz nas-region-cz
+    nova-action-cz nova-cinema-cz nova-cz nova-fun-cz nova-gold-cz nova-krimi-cz nova-lady-cz nova-sport-1-cz
+    nova-sport-2-cz nova-sport-3-cz nova-sport-4-cz nova-sport-5-cz nova-sport-6-cz ocko-black-cz ocko-cz
+    ocko-expres-cz ocko-star-cz oneplay-sport-1-cz oneplay-sport-2-cz oneplay-sport-3-cz oneplay-sport-4-cz
+    oneplay-sport-4k-cz paramount-network-cz paramount-network-hz-cz passion-xxx-cz polar-cz praha-tv-cz
+    premier-sport-1-cz premier-sport-2-cz premier-sport-3-cz prima-cool-cz prima-cz prima-krimi-cz prima-love-cz
+    prima-max-cz prima-plus-cz prima-show-cz prima-star-cz prima-zoom-cz rebel-cz regiony-plus-cz relax-cz
+    retro-cz rtm-plus-cz seznam-tv-cz slagr-muzika-cz slagr-original-cz slagr-premium-cz spektrum-cz
+    spektrum-home-cz tv-brno-1-cz tv-noe-cz tv-paprika-cz tv-v1-cz tvs-cz`,
 }
 
 // A render error makes Vue replace the whole UI with an empty node (the "black screen").
@@ -1569,10 +1658,54 @@ const app = createApp({
     const MAPPING_KEY = 'iptv-confirmed-mappings'
     const LANG_KEY    = 'iptv-lang'
     const THEME_KEY   = 'iptv-theme'
+    const PROFILES_KEY = 'iptv-profiles'
+    // The default profile keeps the original key so existing libraries stay where they are
+    const channelsKey = profileId => profileId === 'default' ? STORAGE_KEY : `${STORAGE_KEY}:${profileId}`
 
     /* ── i18n ── */
     const messages = {
       sk: {
+        profile:          'Profil (knižnica)',
+        profileDefault:   'Hlavný',
+        profileNew:       'Nový',
+        profileRename:    'Premenovať',
+        profileNamePrompt:'Názov profilu (napr. TV, Mobil, Šport)',
+        profileSwitched:  'Profil: {name}',
+        profileDeleteConfirm:'Zmazať profil „{name}“ a jeho {n} kanálov?',
+        backup:           'Záloha',
+        backupExport:     'Zálohovať všetko',
+        backupExportHint: 'Všetky profily, párovania a nastavenia (JSON)',
+        backupImport:     'Obnoviť zo zálohy',
+        backupImportHint: 'Nahradí aktuálne profily',
+        backupExported:   'Záloha uložená: {p} profilov, {n} kanálov',
+        backupInvalid:    'Súbor nie je záloha IPTV Playlist Generator',
+        backupRestoreConfirm:'Obnoviť {p} profilov zo zálohy? Aktuálne knižnice sa nahradia.',
+        backupRestored:   'Záloha obnovená ({p} profilov)',
+        streamCheck:      'Skontrolovať streamy',
+        streamCheckStop:  'Zastaviť kontrolu streamov',
+        streamCheckHintSelected:'Vybrané kanály',
+        streamCheckHintVisible:'Zobrazené kanály',
+        streamCheckProgress:'Kontrolujem streamy: {done} / {total}',
+        streamCheckDone:  'Streamy: {ok} odpovedá · {fail} neodpovedá · {unknown} neoverené',
+        streamFilter:     'Stream',
+        streamFilterAll:  'Všetky',
+        streamStatus_ok:  'Odpovedá',
+        streamStatus_fail:'Neodpovedá',
+        streamStatus_unknown:'Neoverené (http alebo iný protokol)',
+        streamStatus_unchecked:'Nekontrolované',
+        bulkActions:      'Hromadné akcie',
+        bulkSelected:     '{n} vybraných',
+        bulkMoveTo:       'Presunúť do skupiny…',
+        bulkNoGroup:      'Bez skupiny',
+        bulkNewGroup:     'Nová skupina…',
+        bulkNewGroupPrompt:'Názov novej skupiny',
+        bulkEnable:       'Zapnúť',
+        bulkDisable:      'Vypnúť',
+        bulkExport:       'Export M3U',
+        bulkEnabled:      'Zapnutých {n} kanálov',
+        bulkDisabled:     'Vypnutých {n} kanálov',
+        bulkMoved:        'Presunutých {n} kanálov do: {g}',
+        clearSelection:   'Zrušiť výber',
         whySaved:         'Uložené párovanie (z predchádzajúceho použitia)',
         whyEpgId:         'Presné TVG-ID v EPG ({src})',
         whyApiName:       'Presný názov v iptv-org',
@@ -1787,6 +1920,47 @@ const app = createApp({
         channelsDeletedN:    'Vymazaných {n} kanálov',
       },
       en: {
+        profile:          'Profile (library)',
+        profileDefault:   'Main',
+        profileNew:       'New',
+        profileRename:    'Rename',
+        profileNamePrompt:'Profile name (e.g. TV, Mobile, Sport)',
+        profileSwitched:  'Profile: {name}',
+        profileDeleteConfirm:'Delete profile “{name}” and its {n} channels?',
+        backup:           'Backup',
+        backupExport:     'Back up everything',
+        backupExportHint: 'All profiles, mappings and settings (JSON)',
+        backupImport:     'Restore from backup',
+        backupImportHint: 'Replaces the current profiles',
+        backupExported:   'Backup saved: {p} profiles, {n} channels',
+        backupInvalid:    'The file is not an IPTV Playlist Generator backup',
+        backupRestoreConfirm:'Restore {p} profiles from the backup? Current libraries will be replaced.',
+        backupRestored:   'Backup restored ({p} profiles)',
+        streamCheck:      'Check streams',
+        streamCheckStop:  'Stop stream check',
+        streamCheckHintSelected:'Selected channels',
+        streamCheckHintVisible:'Visible channels',
+        streamCheckProgress:'Checking streams: {done} / {total}',
+        streamCheckDone:  'Streams: {ok} respond · {fail} do not respond · {unknown} not verifiable',
+        streamFilter:     'Stream',
+        streamFilterAll:  'All',
+        streamStatus_ok:  'Responds',
+        streamStatus_fail:'Does not respond',
+        streamStatus_unknown:'Not verifiable (http or other protocol)',
+        streamStatus_unchecked:'Not checked',
+        bulkActions:      'Bulk actions',
+        bulkSelected:     '{n} selected',
+        bulkMoveTo:       'Move to group…',
+        bulkNoGroup:      'No group',
+        bulkNewGroup:     'New group…',
+        bulkNewGroupPrompt:'New group name',
+        bulkEnable:       'Enable',
+        bulkDisable:      'Disable',
+        bulkExport:       'Export M3U',
+        bulkEnabled:      'Enabled {n} channels',
+        bulkDisabled:     'Disabled {n} channels',
+        bulkMoved:        'Moved {n} channels to: {g}',
+        clearSelection:   'Clear selection',
         whySaved:         'Saved mapping (from a previous apply)',
         whyEpgId:         'Exact TVG-ID in EPG ({src})',
         whyApiName:       'Exact name in iptv-org',
@@ -2013,6 +2187,9 @@ const app = createApp({
     const importFileRef = ref(null)
     const undoStack     = ref([])
     const confirmedMappings = ref({})
+    const profiles      = ref([{ id: 'default', name: '' }])
+    const activeProfile = ref('default')
+    const backupRef     = ref(null)
     const importedEpgXmlIndex = ref({})
     const importedEpgNameIndex = ref({})
 
@@ -2061,7 +2238,7 @@ const app = createApp({
     let manualSuggestionCache = new Map()
     let _fetchRunId = 0
 
-    const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
+    const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '', stream: '' })
     const sort       = reactive({ by: 'name', asc: true })
     const pagination    = reactive({ page: 1, limit: 100 })
     const selectedRows  = reactive(new Set())
@@ -2158,6 +2335,7 @@ const app = createApp({
         const cu = filters.country.toUpperCase()
         arr = arr.filter(c => (c.tvg_country || '').toUpperCase() === cu)
       }
+      if (filters.stream) arr = arr.filter(c => (c.stream_status || 'unchecked') === filters.stream)
 
       const fieldMap = { name: 'name', index: '_idx', group: 'group_title', quality: 'quality', country: 'tvg_country', status: 'is_active', tvg_id: 'tvg_id' }
       const f = fieldMap[sort.by] || 'name'
@@ -2230,7 +2408,7 @@ const app = createApp({
     })
 
     const hasActiveFilters = computed(() =>
-      !!(filters.search || filters.group || filters.quality || filters.country || filters.status !== 'all')
+      !!(filters.search || filters.group || filters.quality || filters.country || filters.stream || filters.status !== 'all')
     )
 
     const editIsDirty = computed(() => {
@@ -2292,7 +2470,7 @@ const app = createApp({
     /* ── Helpers ── */
     function persist() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value))
+        localStorage.setItem(channelsKey(activeProfile.value), JSON.stringify(channels.value))
         return true
       } catch {
         showToast('Unable to save data. Check available storage or export the playlist.')
@@ -2375,7 +2553,7 @@ const app = createApp({
     function nextPage() { if (pagination.page < totalPages.value) pagination.page++ }
 
     function resetFilters() {
-      Object.assign(filters, { search: '', group: '', quality: '', status: 'all', country: '' })
+      Object.assign(filters, { search: '', group: '', quality: '', status: 'all', country: '', stream: '' })
       pagination.page = 1
     }
 
@@ -2861,15 +3039,127 @@ const app = createApp({
       showToast(t('renderErrorRecovered'))
     }
 
+    /* ── Profiles (separate channel libraries) and full backup ── */
+    function loadProfileChannels(profileId) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(channelsKey(profileId)) || '[]')
+        return Array.isArray(parsed) ? parsed.map(ch => ch.is_active === undefined ? { ...ch, is_active: true } : ch) : []
+      } catch { return [] }
+    }
+
+    function saveProfiles() {
+      try { localStorage.setItem(PROFILES_KEY, JSON.stringify({ active: activeProfile.value, list: profiles.value })) } catch {}
+    }
+
+    function profileName(profile) {
+      return profile?.name || t('profileDefault')
+    }
+
+    function switchProfile(profileId) {
+      if (profileId === activeProfile.value || !profiles.value.some(p => p.id === profileId)) return
+      persist()
+      activeProfile.value = profileId
+      saveProfiles()
+      channels.value = loadProfileChannels(profileId)
+      selectedRows.clear()
+      undoStack.value = []
+      resetFilters()
+      showToast(t('profileSwitched').replace('{name}', profileName(profiles.value.find(p => p.id === profileId))))
+    }
+
+    function createProfile() {
+      const name = (prompt(t('profileNamePrompt')) || '').trim()
+      if (!name) return
+      const id = 'p' + Date.now().toString(36)
+      profiles.value = [...profiles.value, { id, name }]
+      saveProfiles()
+      switchProfile(id)
+    }
+
+    function renameProfile() {
+      const profile = profiles.value.find(p => p.id === activeProfile.value)
+      const name = (prompt(t('profileNamePrompt'), profileName(profile)) || '').trim()
+      if (!name || !profile) return
+      profile.name = name
+      saveProfiles()
+    }
+
+    function deleteProfile() {
+      const profile = profiles.value.find(p => p.id === activeProfile.value)
+      if (!profile || profile.id === 'default') return
+      if (!confirm(t('profileDeleteConfirm').replace('{name}', profileName(profile)).replace('{n}', channels.value.length))) return
+      try { localStorage.removeItem(channelsKey(profile.id)) } catch {}
+      profiles.value = profiles.value.filter(p => p.id !== profile.id)
+      // switch without persisting the deleted profile's channels back to storage
+      activeProfile.value = 'default'
+      saveProfiles()
+      channels.value = loadProfileChannels('default')
+      selectedRows.clear()
+      undoStack.value = []
+      resetFilters()
+      showToast(t('profileSwitched').replace('{name}', profileName(profiles.value[0])))
+    }
+
+    function exportBackup() {
+      persist()
+      const backup = {
+        app: 'iptv-playlist-generator',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        activeProfile: activeProfile.value,
+        profiles: profiles.value.map(p => ({ ...p, channels: p.id === activeProfile.value ? channels.value : loadProfileChannels(p.id) })),
+        confirmedMappings: confirmedMappings.value,
+        settings: { theme: theme.value, lang: lang.value },
+      }
+      downloadText(`iptv-backup-${backup.exportedAt.slice(0, 10)}.json`, JSON.stringify(backup, null, 2))
+      showToast(t('backupExported').replace('{p}', backup.profiles.length).replace('{n}', backup.profiles.reduce((sum, p) => sum + p.channels.length, 0)))
+    }
+
+    function importBackup(e) {
+      const file = e.target.files?.[0]
+      e.target.value = ''
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        let backup
+        try { backup = JSON.parse(reader.result) } catch { backup = null }
+        const valid = backup?.app === 'iptv-playlist-generator' && Array.isArray(backup.profiles)
+          && backup.profiles.every(p => p && typeof p.id === 'string' && Array.isArray(p.channels))
+        if (!valid) { showToast(t('backupInvalid')); return }
+        if (!confirm(t('backupRestoreConfirm').replace('{p}', backup.profiles.length))) return
+        try {
+          for (const p of profiles.value) localStorage.removeItem(channelsKey(p.id))
+          for (const p of backup.profiles) localStorage.setItem(channelsKey(p.id), JSON.stringify(p.channels))
+        } catch { showToast(t('backupInvalid')); return }
+        profiles.value = backup.profiles.map(({ id, name }) => ({ id, name: name || '' }))
+        if (!profiles.value.some(p => p.id === 'default')) profiles.value.unshift({ id: 'default', name: '' })
+        activeProfile.value = profiles.value.some(p => p.id === backup.activeProfile) ? backup.activeProfile : 'default'
+        saveProfiles()
+        channels.value = loadProfileChannels(activeProfile.value)
+        if (backup.confirmedMappings && typeof backup.confirmedMappings === 'object') {
+          confirmedMappings.value = backup.confirmedMappings
+          saveConfirmedMappings()
+        }
+        if (backup.settings?.theme) setTheme(backup.settings.theme)
+        if (backup.settings?.lang) setLang(backup.settings.lang)
+        selectedRows.clear()
+        undoStack.value = []
+        resetFilters()
+        showToast(t('backupRestored').replace('{p}', profiles.value.length))
+      }
+      reader.readAsText(file)
+    }
+
     /* ── Lifecycle ── */
     onMounted(() => {
       try {
-        const saved = localStorage.getItem(STORAGE_KEY)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          channels.value = parsed.map(ch => ch.is_active === undefined ? { ...ch, is_active: true } : ch)
+        const savedProfiles = JSON.parse(localStorage.getItem(PROFILES_KEY) || 'null')
+        if (savedProfiles?.list?.length) {
+          profiles.value = savedProfiles.list
+          if (savedProfiles.list.some(p => p.id === savedProfiles.active)) activeProfile.value = savedProfiles.active
         }
       } catch {}
+      channels.value = loadProfileChannels(activeProfile.value)
       try {
         const savedMappings = localStorage.getItem(MAPPING_KEY)
         if (savedMappings) confirmedMappings.value = JSON.parse(savedMappings)
@@ -4182,6 +4472,74 @@ const app = createApp({
       })
     }
 
+    /* ── Stream check ── */
+    // Cross-origin stream servers send no CORS headers, so the HTTP status is not readable;
+    // a no-cors request still tells "server answered" from "network error / timeout".
+    // http:// streams on an https page are blocked by the browser (mixed content): not verifiable.
+    const streamCheck = reactive({ running: false, done: 0, total: 0, cancelled: false })
+    const STREAM_CHECK_TIMEOUT = 8000
+
+    async function probeStream(url) {
+      if (!/^https?:\/\//i.test(url || '')) return 'unknown'
+      if (location.protocol === 'https:' && /^http:\/\//i.test(url)) return 'unknown'
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), STREAM_CHECK_TIMEOUT)
+      try {
+        await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+        return 'ok'
+      } catch {
+        return 'fail'
+      } finally {
+        clearTimeout(timer)
+        ctrl.abort()   // stop downloading the stream body
+      }
+    }
+
+    async function checkStreams() {
+      if (streamCheck.running) { streamCheck.cancelled = true; return }
+      const targets = selectedRows.size
+        ? channels.value.filter(c => selectedRows.has(c.id))
+        : filteredChannels.value.slice()
+      if (!targets.length) return
+      Object.assign(streamCheck, { running: true, done: 0, total: targets.length, cancelled: false })
+      const counts = { ok: 0, fail: 0, unknown: 0 }
+      let next = 0
+      const worker = async () => {
+        while (next < targets.length && !streamCheck.cancelled) {
+          const ch = targets[next++]
+          const status = await probeStream(ch.url)
+          ch.stream_status = status
+          ch.stream_checked_at = new Date().toISOString()
+          counts[status]++
+          streamCheck.done++
+        }
+      }
+      await Promise.all(Array.from({ length: 6 }, worker))
+      streamCheck.running = false
+      persist()
+      showToast(t('streamCheckDone').replace('{ok}', counts.ok).replace('{fail}', counts.fail).replace('{unknown}', counts.unknown))
+    }
+
+    function bulkSetActive(active) {
+      const n = selectedRows.size
+      if (!n) return
+      snapshot('bulkActive')
+      channels.value.forEach(c => { if (selectedRows.has(c.id)) c.is_active = active })
+      persist()
+      showToast(t(active ? 'bulkEnabled' : 'bulkDisabled').replace('{n}', n))
+    }
+
+    function bulkSetGroup(value) {
+      if (!value || !selectedRows.size) return
+      const group = value === '__none__' ? '' : value === '__new__' ? (prompt(t('bulkNewGroupPrompt')) || '').trim() : value
+      if (value === '__new__' && !group) return
+      const n = selectedRows.size
+      snapshot('bulkGroup')
+      channels.value.forEach(c => { if (selectedRows.has(c.id)) c.group_title = group })
+      persist()
+      showToast(t('bulkMoved').replace('{n}', n).replace('{g}', group || t('bulkNoGroup')))
+    }
+
     function deleteSelected() {
       const n = selectedRows.size
       if (n === 0) return
@@ -4205,7 +4563,8 @@ const app = createApp({
       undoLastChange, metadataScore, metadataTooltip,
       toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,
       removeChannel, confirmDelete, clearAll, triggerImport, importFromFile, importFromUrl,
-      toggleRowSelect, toggleSelectAll, deleteSelected,
+      toggleRowSelect, toggleSelectAll, deleteSelected, bulkSetActive, bulkSetGroup, checkStreams, streamCheck,
+      profiles, activeProfile, backupRef, profileName, switchProfile, createProfile, renameProfile, deleteProfile, exportBackup, importBackup,
       exportPlaylist, exportMetadataHealthReport, applyBulkMetadataRules,
       epgData, epgLoaded, epgRef, logoErrors,
       triggerEpgImport, importEpgFromFile, clearEpg, detachTvgUrls,

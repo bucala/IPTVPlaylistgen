@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tv generator-info-name="fixture (open-epg.com slovakia1 shape)">
+  <channel id="Markíza Klasik.sk"><display-name lang="sk">Markíza Klasik.sk</display-name></channel>
+  <channel id="Doma HD.sk"><display-name lang="sk">Doma HD.sk</display-name></channel>
+  <channel id="Dajto HD.sk"><display-name lang="sk">Dajto HD.sk</display-name></channel>
+  <channel id="JOJ Svet HD.sk"><display-name lang="sk">JOJ Svet HD.sk</display-name></channel>
+  <channel id="JOJ Sport 2.sk"><display-name lang="sk">JOJ Sport 2.sk</display-name></channel>
+  <channel id="Sport1.sk"><display-name lang="sk">Sport1.sk</display-name></channel>
+  <channel id="PREMIER SPORT 3.sk"><display-name lang="sk">PREMIER SPORT 3.sk</display-name></channel>
+  <channel id="Premier Sport 1.sk"><display-name lang="sk">Premier Sport 1.sk</display-name></channel>
+  <channel id="Nova Sport 1.sk"><display-name lang="sk">Nova Sport 1.sk</display-name></channel>
+  <channel id="HBO 2.sk"><display-name lang="sk">HBO 2.sk</display-name></channel>
+  <programme start="20261025060000 +0200" stop="20261025070000 +0200" channel="Sport1.sk"><title>Test</title></programme>
+</tv>

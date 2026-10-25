@@ -86,6 +86,7 @@ module.exports = {
   cleanDisplayNameQuality,
   strSimilarity,
   tvLogoFor,
+  channelNumbers,
 };
 `, sandbox, { filename: 'autodetect-regressions.vm.js' });
 
@@ -114,6 +115,7 @@ const {
   cleanDisplayNameQuality,
   strSimilarity,
   tvLogoFor,
+  channelNumbers,
 } = sandbox.module.exports;
 
 const dirtyNames = [
@@ -336,5 +338,7 @@ for (const [names, country, expected] of [
 ]) {
   assert(logo(names, country) === expected, `logo for ${JSON.stringify(names)} (${country}) is ${expected || 'none'} (got ${logo(names, country) || 'none'})`);
 }
+
+assert(channelNumbers('nova sport 3') === '3' && channelNumbers('ct1') === '1' && channelNumbers('markiza') === '', 'channelNumbers extracts channel numbers for the hard candidate filter');
 
 process.exit(failed ? 1 : 0);

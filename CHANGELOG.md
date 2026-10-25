@@ -24,7 +24,14 @@ Všetky významné zmeny v projekte sú dokumentované v tomto súbore.
 - **Autodetekcia „všetko alebo nič"** — jeden nedostupný zdroj (timeout, CORS, HTTP chyba) už nezruší celý beh; výsledky sa vytvoria z dostupných zdrojov a toast uvedie nedostupné. EPG XML má 20 s timeout a odpoveď sa overí, že je XMLTV (nie HTML stránka).
 - **open-epg.com cez proxy všade** — na webe same-origin `/epg-proxy`, v Android/desktop aplikácii a lokálne verejná proxy, nakoniec priamy request. Proxy funkcia posiela `Content-Type: application/xml`, ošetruje chyby upstreamu a CORS hlavičky má aj na chybových odpovediach.
 
+#### Added
+- **Prečo bola zhoda navrhnutá** — pri každom výsledku autodetekcie je uvedený pôvod (uložené párovanie, presné TVG-ID v EPG + súbor, presný názov v iptv-org, podobný názov + zdroj + %, EPG podľa názvu).
+- **Výber loga** — rozbalený riadok ukazuje náhľady všetkých nájdených log (tv-logos, iptv-org, zdroj playlistu, pôvodné); klik ho vyberie.
+- **Zabudnúť uložené párovanie** — tlačidlo v rozbalenom riadku.
+
 #### Changed
+- **Uložené párovania sa používajú doslova** — hodnoty potvrdené pri predchádzajúcom aplikovaní (TVG-ID, názov, logo, TVG URL) už neprepisujú ďalšie kroky autodetekcie.
+- **Filter čísla kanála** — kandidát s iným číslom kanála sa pri autodetekcii vôbec neporovnáva.
 - **Kompaktný horný panel** — tlačidlá sú zoskupené do menu **Import**, **Export** a **Úpravy** s ikonami a popismi; štatistiky sú v malom info paneli. Na mobile zaberá hlavička ~195 px namiesto ~800 px.
 - **Bez tab panelu a bočného panela** — záložky Knižnica / Obsah / Dizajn zrušené; filtre sú v okne **Filter** z horného panela (skupiny s počtami, lišta aktívneho filtra nad tabuľkou), hromadné pravidlá a report kvality v menu **Úpravy**.
 - **Jazyk a téma** v menu ⚙ vpravo hore.

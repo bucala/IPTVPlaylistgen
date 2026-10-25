@@ -85,6 +85,7 @@ module.exports = {
   detectQuality,
   cleanDisplayNameQuality,
   strSimilarity,
+  tvLogoFor,
 };
 `, sandbox, { filename: 'autodetect-regressions.vm.js' });
 
@@ -112,6 +113,7 @@ const {
   detectQuality,
   cleanDisplayNameQuality,
   strSimilarity,
+  tvLogoFor,
 } = sandbox.module.exports;
 
 const dirtyNames = [
@@ -313,5 +315,26 @@ for (const [a, b] of [['nova sport 1', 'nova sport 2'], ['premier sport 3', 'pre
   assert(strSimilarity(a, b) < 0.65, `"${a}" vs "${b}" stays below the match threshold (${strSimilarity(a, b).toFixed(2)})`);
 }
 assert(strSimilarity('premier sport 3', 'premier sport 3') === 1, 'identical numbered names still match');
+
+// SK/CZ logos are looked up by the full channel name, preferring the channel's country
+const logo = (names, country) => (tvLogoFor(names, country) || '').replace(/^.*\/countries\//, '');
+for (const [names, country, expected] of [
+  [['PREMIER SPORT 3.sk'], 'sk', 'czech-republic/premier-sport-3-cz.png'],
+  [['Premier Sport 1'], 'sk', 'czech-republic/premier-sport-1-cz.png'],
+  [['Sport 1 HD'], 'sk', 'slovakia/sport1-sk.png'],
+  [['Nova Sport 3'], 'sk', 'slovakia/nova-sport-3-sk-sk.png'],
+  [['Nova Sport 3'], 'cz', 'czech-republic/nova-sport-3-cz.png'],
+  [['Oneplay Sport 3'], 'sk', 'czech-republic/oneplay-sport-3-cz.png'],
+  [['JOJ Šport'], 'sk', 'slovakia/joj-sport-sk.png'],
+  [['TV JOJ HD'], 'sk', 'slovakia/joj-sk.png'],
+  [['Dajto'], 'sk', 'slovakia/markiza-dajto-sk.png'],
+  [['Canal+ Sport 2'], 'cz', 'czech-republic/canal-plus-sport-2-cz.png'],
+  [['ČT1 HD'], 'sk', 'czech-republic/ct1-cz.png'],
+  [['Bez názvu', 'PremierSport2.sk'], 'sk', 'czech-republic/premier-sport-2-cz.png'],
+  [['Nova Sport 7'], 'cz', ''],
+  [['Markíza Klasik'], 'sk', ''],
+]) {
+  assert(logo(names, country) === expected, `logo for ${JSON.stringify(names)} (${country}) is ${expected || 'none'} (got ${logo(names, country) || 'none'})`);
+}
 
 process.exit(failed ? 1 : 0);

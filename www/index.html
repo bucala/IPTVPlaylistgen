@@ -353,7 +353,17 @@
       margin-bottom: .75rem; padding: .45rem .5rem .45rem .85rem; border-radius: var(--radius-md);
       background: var(--primary-l); color: var(--primary); font-size: 13px; font-weight: 500;
     }
-    .filter-bar-text { flex: 1 1 10rem; }  /* buttons wrap below instead of squeezing the text */
+    .filter-bar-text { flex: 1 1 10rem; }
+
+    /* ── Autodetect: match origin and logo choices ── */
+    .why-line { font-size: 11px; color: var(--text3); margin-top: 1px; max-width: 32rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .logo-choice {
+      display: inline-flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 6px;
+      border: 1px solid var(--border); border-radius: 10px; background: var(--fill2);
+      color: var(--text3); font-size: 10px; cursor: pointer;
+    }
+    .logo-choice img { width: 40px; height: 40px; object-fit: contain; }
+    .logo-choice.active { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-l); color: var(--primary); }  /* buttons wrap below instead of squeezing the text */
 
     /* ── Table ── */
     .table-shell {
@@ -1267,6 +1277,7 @@
                           <div>
                             <div class="font-semibold text-sm">{{ r.suggestedName || r.editName }}</div>
                             <div class="text-xs mono" style="color:var(--text4)">{{ r.editId || '—' }}</div>
+                            <div v-if="r.why.length" class="why-line" :title="r.why.join(' · ')">{{ r.why[0] }}</div>
                           </div>
                         </div>
                       </template>
@@ -1315,6 +1326,20 @@
                           <input class="field flex-1" style="font-size:12px;padding:4px 7px" v-model="r.editTvgUrl"
                                  :placeholder="t('tvgUrl')" type="url" @click.stop @input="markAutoDetectManual(r)" />
                         </div>
+                      </div>
+                      <div v-if="r.logoOptions.length > 1" class="flex items-center gap-2 mt-2 flex-wrap" @click.stop>
+                        <span class="label" style="min-width:98px;margin:0;font-size:11px">{{ t('logoChoices') }}</span>
+                        <button v-for="opt in r.logoOptions" :key="opt.url" type="button" class="logo-choice" :class="{ active: r.editLogo === opt.url }"
+                                :title="opt.label + ' — ' + opt.url" :aria-pressed="String(r.editLogo === opt.url)"
+                                @click="r.editLogo = opt.url; markAutoDetectManual(r)">
+                          <img :src="opt.url" alt="" loading="lazy" @error="e => e.target.style.visibility = 'hidden'" />
+                          <span>{{ opt.label }}</span>
+                        </button>
+                      </div>
+                      <div v-if="r.why.length || r.savedMapping" class="flex items-center gap-2 mt-2 flex-wrap" @click.stop>
+                        <span class="label" style="min-width:98px;margin:0;font-size:11px">{{ t('whyTitle') }}</span>
+                        <span class="text-xs flex-1" style="color:var(--text3)">{{ r.why.join(' · ') }}</span>
+                        <button v-if="r.savedMapping" type="button" class="btn btn-ghost" style="font-size:11px;padding:3px 9px" @click="forgetMapping(r)">{{ t('forgetMapping') }}</button>
                       </div>
                       <div class="flex items-center gap-2 mt-2" @click.stop>
                         <span class="label" style="min-width:98px;margin:0;font-size:11px">{{ t('manualMatch') }}</span>
@@ -1548,6 +1573,19 @@ const app = createApp({
     /* ── i18n ── */
     const messages = {
       sk: {
+        whySaved:         'Uložené párovanie (z predchádzajúceho použitia)',
+        whyEpgId:         'Presné TVG-ID v EPG ({src})',
+        whyApiName:       'Presný názov v iptv-org',
+        whySimilar:       'Podobný názov v zdroji {src} ({pct} %)',
+        whyEpgCanonical:  'TVG-ID a názov podľa EPG ({src})',
+        whyEpgFallback:   'EPG podľa TVG-ID ({src})',
+        whyEpgName:       'EPG podľa názvu ({src})',
+        whyTitle:         'Prečo',
+        logoChoices:      'Logá',
+        logoSaved:        'uložené',
+        logoOriginal:     'pôvodné',
+        forgetMapping:    'Zabudnúť uložené',
+        mappingForgotten: 'Uložené párovanie odstránené',
         autoDetectShort:  'Detekcia',
         menuImport:       'Import',
         menuExport:       'Export',
@@ -1749,6 +1787,19 @@ const app = createApp({
         channelsDeletedN:    'Vymazaných {n} kanálov',
       },
       en: {
+        whySaved:         'Saved mapping (from a previous apply)',
+        whyEpgId:         'Exact TVG-ID in EPG ({src})',
+        whyApiName:       'Exact name in iptv-org',
+        whySimilar:       'Similar name in {src} ({pct} %)',
+        whyEpgCanonical:  'TVG-ID and name from EPG ({src})',
+        whyEpgFallback:   'EPG by TVG-ID ({src})',
+        whyEpgName:       'EPG by name ({src})',
+        whyTitle:         'Why',
+        logoChoices:      'Logos',
+        logoSaved:        'saved',
+        logoOriginal:     'original',
+        forgetMapping:    'Forget saved',
+        mappingForgotten: 'Saved mapping removed',
         autoDetectShort:  'Detect',
         menuImport:       'Import',
         menuExport:       'Export',
@@ -3608,6 +3659,11 @@ const app = createApp({
       return exportableTvgUrl(openCountry?.url || byCountry?.url || sources.find(s => /open-epg\.com\/files\//i.test(s.url || ''))?.url || sources[0]?.url || '')
     }
 
+    // Channel numbers in a normalized name: "nova sport 3" → "3"; they identify different channels
+    function channelNumbers(name) {
+      return ((name || '').match(/\d+/g) || []).join(' ')
+    }
+
     function strSimilarity(na, nb) {
       if (!na || !nb) return 0
       if (na === nb) return 1
@@ -3630,8 +3686,7 @@ const app = createApp({
       }
 
       // Channel numbers identify different channels: "Nova Sport 1" is not "Nova Sport 2"
-      const numbers = s => (s.match(/\d+/g) || []).join(' ')
-      const na_n = numbers(na), nb_n = numbers(nb)
+      const na_n = channelNumbers(na), nb_n = channelNumbers(nb)
       const numberFactor = na_n === nb_n ? 1 : (na_n && nb_n ? 0.2 : 0.7)
 
       // Penalize when the longer string has unmatched significant words
@@ -3762,6 +3817,10 @@ const app = createApp({
         return (id || name) ? { id, name } : null
       }
 
+      // Human-readable origin of a match: source labels and EPG file names
+      const sourceLabel = id => [...IPTV_SOURCES, ...ENRICHMENT_SOURCES, ...customEpgSources.value].find(src => src.id === id)?.label || id || ''
+      const epgFile = url => (url || '').split('/').pop() || ''
+
       // Look up ids in XML index, preferring URLs from the given country
       const xmlLookup = (ids, country) => {
         for (const id of ids) {
@@ -3782,9 +3841,11 @@ const app = createApp({
 
         // === STEP 1: IPTV search (confirmed mappings, iptv-org API, fuzzy M3U search) ===
         let best = null, bestScore = 0
+        const why = []   // how the suggestion was found, shown in the results table
 
         const confirmed = confirmedMappings.value[chNorm || normName(ch.name)]
         if (confirmed) { bestScore = 1; best = { ...confirmed, sourceId: 'confirmed' } }
+        if (confirmed) why.push(t('whySaved'))
 
         const directXmlHit = !best ? xmlLookup(chLookupIds, matchCountry) : null
         if (directXmlHit) {
@@ -3800,6 +3861,7 @@ const app = createApp({
             name: c?.name || c?.id || directXmlHit.id,
             sourceId: 'epg-exact',
           }
+          why.push(t('whyEpgId').replace('{src}', epgFile(directXmlHit.url)))
         }
 
         const apiHit = !best && (pickPreferredEntry(apiNormMap.value.get(chNorm))
@@ -3807,6 +3869,7 @@ const app = createApp({
         if (!best && apiHit) {
           bestScore = 0.95
           best = { tvg_id: apiHit.id, tvg_name: apiHit.name, tvg_logo: apiHit.logo, tvg_url: '', name: apiHit.name }
+          why.push(t('whyApiName'))
         }
 
         const sourceRank = s => {
@@ -3821,8 +3884,11 @@ const app = createApp({
           return sourceRank(s) + (s.tvg_id ? 1 : 0) + (s.tvg_logo ? 0.5 : 0) + (s.tvg_url ? 0.25 : 0)
             + (sc === 'sk' ? 0.1 : 0)
         }
+        const chNumbers = channelNumbers(chNorm)
         indexedCandidatesFor(chNorm).forEach(s => {
           if (isBadChannelLabel(s.name) || isBadChannelLabel(s.tvg_name)) return
+          // Hard filter: "Premier Sport 1" is never a candidate for "Premier Sport 3"
+          if (channelNumbers(s.nName) !== chNumbers && !(s.nId && channelNumbers(s.nId) === chNumbers)) return
           if (chCountry) {
             const candCountry = tvgCountry(s.exact_tvg_id || s.tvg_id || '')
             if (candCountry && candCountry !== chCountry) return
@@ -3834,6 +3900,9 @@ const app = createApp({
         })
 
         const matched = best && bestScore >= modeCfg.min && (!best.tvg_id || isPreferredTvgId(best.tvg_id))
+        if (matched && !why.length) {
+          why.push(t('whySimilar').replace('{src}', sourceLabel(best.sourceId)).replace('{pct}', Math.round(bestScore * 100)))
+        }
 
         // === STEP 2: Extract initial values from IPTV match ===
         let editId     = matched ? cleanTvgId(best.tvg_id || '') : (isPreferredTvgId(ch.tvg_id) ? cleanTvgId(ch.tvg_id) : '')
@@ -3865,6 +3934,7 @@ const app = createApp({
             // Update URL only if it's wrong/missing — don't downgrade a better URL
             if (!editTvgUrl || !urlMatchesCountry(editTvgUrl, chCountry)) editTvgUrl = xmlHit.url
             exactEpgApplied = true
+            if (!why.some(w => w.includes(epgFile(xmlHit.url)))) why.push(t('whyEpgCanonical').replace('{src}', epgFile(xmlHit.url)))
           }
         }
 
@@ -3884,6 +3954,7 @@ const app = createApp({
             if (c?.name) editName = c.name
             editTvgUrl = fallbackHit.url
             exactEpgApplied = !!epgXmlDisplayNameIndex.value[fallbackHit.key]
+            why.push(t('whyEpgFallback').replace('{src}', epgFile(fallbackHit.url)))
           }
         }
 
@@ -3892,6 +3963,7 @@ const app = createApp({
           const nameUrl = epgNameIndex.value[nameKey]
           if (nameUrl) {
             editTvgUrl = nameUrl
+            why.push(t('whyEpgName').replace('{src}', epgFile(nameUrl)))
             if (!editId) editId = epgNameChannelIdIndex.value[nameKey] || ''
             const rawName = epgNameDisplayNameIndex.value[nameKey]
             if (rawName) { editName = cleanDisplayNameQuality(rawName); exactEpgApplied = true }
@@ -3937,16 +4009,27 @@ const app = createApp({
           ...aliases, ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
         ].map(id => id.toLowerCase())
         const logoFromCandidateId = logoCandidateIds.find(id => logoChannelIndexById.value[id])
-        // Exact full-name match in the SK/CZ logo set first: "Premier Sport 3" must not get a "Sport" logo
-        const editLogo = tvLogoFor([ch.name, editName, ch.tvg_name, editId, ch.tvg_id], chCountry || tvgCountry(editId))
-          || (canonicalMeta?.logo || '')
-          || (logoFromCandidateId ? logoChannelIndexById.value[logoFromCandidateId] : '')
-          || logoChannelIndexById.value[fullIdLow]
-          || logoChannelIndexById.value[cleanIdLow]
-          || logoChannelIndexById.value[origTvgIdLow]
-          || logoChannelIndex.value[normName(editName || ch.name)]
-          || (matched ? (best.tvg_logo || '') : (ch.tvg_logo || ''))
-          || ''
+        // Every logo found, best first: exact full-name match in the SK/CZ logo set leads
+        // ("Premier Sport 3" must not get a "Sport" logo); the user can pick another one.
+        const logoOptions = []
+        const addLogo = (url, label) => { if (url && !logoOptions.some(o => o.url === url)) logoOptions.push({ url, label }) }
+        if (confirmed?.tvg_logo) addLogo(confirmed.tvg_logo, t('logoSaved'))
+        addLogo(tvLogoFor([ch.name, editName, ch.tvg_name, editId, ch.tvg_id], chCountry || tvgCountry(editId)), 'tv-logos')
+        addLogo(canonicalMeta?.logo, 'iptv-org')
+        addLogo(logoFromCandidateId ? logoChannelIndexById.value[logoFromCandidateId] : '', 'iptv-org')
+        for (const id of [fullIdLow, cleanIdLow, origTvgIdLow]) addLogo(logoChannelIndexById.value[id], 'iptv-org')
+        addLogo(logoChannelIndex.value[normName(editName || ch.name)], 'iptv-org')
+        if (matched) addLogo(best.tvg_logo, sourceLabel(best.sourceId))
+        addLogo(ch.tvg_logo, t('logoOriginal'))
+        let editLogo = logoOptions[0]?.url || ''
+
+        // A saved mapping is what the user confirmed: use it verbatim, later steps must not rewrite it
+        if (confirmed) {
+          editId     = confirmed.tvg_id   || editId
+          editName   = confirmed.tvg_name || editName
+          editTvgUrl = confirmed.tvg_url  || editTvgUrl
+          editLogo   = confirmed.tvg_logo || editLogo
+        }
 
         return {
           ch,
@@ -3957,10 +4040,22 @@ const app = createApp({
           score:           resultScore,
           selected:        (!alreadyVerified && resultScore >= modeCfg.auto) || xmlConfirmed,
           reason:          alreadyVerified ? t('autoDetectAlreadyVerified') : (resultScore > 0 ? '' : t('autoDetectNoMatch')),
+          why:             confirmed ? [t('whySaved')] : (resultScore > 0 && !alreadyVerified ? why : []),
+          savedMapping:    !!confirmed,
+          logoOptions,
           alreadyVerified,
           editId, editName, editLogo, editTvgUrl,
         }
       }).sort((a, b) => b.score - a.score)
+    }
+
+    // Drop a saved mapping (made by applying autodetect) and recompute the suggestions
+    function forgetMapping(result) {
+      const key = normName(result.ch.name) || normName(result.ch.tvg_name)
+      delete confirmedMappings.value[key]
+      saveConfirmedMappings()
+      runAutoDetect()
+      showToast(t('mappingForgotten'))
     }
 
     function toggleExpand(id) {
@@ -4124,7 +4219,7 @@ const app = createApp({
       filteredAutoDetectResults, autoDetectSummary, autoDetectAllSelected, autoDetectFieldStats,
       openAutoDetect, applyAutoDetect, runAutoDetect, toggleAllAutoDetect,
       fetchAndRunAutoDetect, toggleAutoDetectSource, toggleEnrichmentSource, epgXmlSourceCount, addCustomEpgUrl, manualSuggestionsFor, applyManualSuggestion, toggleExpand,
-      toggleSourcesPanel, markAutoDetectManual, canApplyAutoDetectResult,
+      toggleSourcesPanel, markAutoDetectManual, canApplyAutoDetectResult, forgetMapping,
     }
   }
 })

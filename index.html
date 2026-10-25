@@ -354,6 +354,10 @@
       background: var(--primary-l); color: var(--primary); font-size: 13px; font-weight: 500;
     }
     .filter-bar-text { flex: 1 1 10rem; }
+    .stream-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .stream-ok { background: var(--success); }
+    .stream-fail { background: var(--danger); }
+    .stream-unknown { background: var(--text4); }
 
     /* ── Autodetect: match origin and logo choices ── */
     .why-line { font-size: 11px; color: var(--text3); margin-top: 1px; max-width: 32rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -727,6 +731,10 @@
               <span class="mi-icon" v-html="icon('fileText', 16)"></span>
               <span class="mi-text">{{ t('metadataHealthReport') }}</span>
             </button>
+            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="closeMenu(); checkStreams()">
+              <span class="mi-icon" v-html="icon('refresh', 16)"></span>
+              <span class="mi-text">{{ streamCheck.running ? t('streamCheckStop') : t('streamCheck') }}<small class="mi-hint">{{ t(selectedRowsCount ? 'streamCheckHintSelected' : 'streamCheckHintVisible') }}</small></span>
+            </button>
             <div class="menu-sep" role="separator"></div>
             <button type="button" class="menu-item danger" role="menuitem" :disabled="selectedRowsCount === 0" @click="closeMenu(); deleteSelected()">
               <span class="mi-icon" v-html="icon('trash', 16)"></span>
@@ -763,6 +771,12 @@
           <div class="mb-4">
             <div class="sec-label">{{ t('tabLibrary') }}</div>
             <h2 class="text-[1.3rem] font-bold tracking-[-0.03em]">{{ t('libraryHeading') }}</h2>
+          </div>
+
+          <div v-if="streamCheck.running" class="filter-bar" role="status">
+            <span v-html="icon('refresh', 14)"></span>
+            <span class="filter-bar-text">{{ t('streamCheckProgress').replace('{done}', streamCheck.done).replace('{total}', streamCheck.total) }}</span>
+            <button type="button" class="btn btn-ghost" style="padding:4px 10px" @click="checkStreams()">{{ t('streamCheckStop') }}</button>
           </div>
 
           <!-- Active filter summary -->
@@ -804,7 +818,7 @@
                     </div>
                   </td>
                   <td>
-                    <div class="font-semibold">{{ ch.name || t('untitled') }}</div>
+                    <div class="font-semibold"><span v-if="ch.stream_status" class="stream-dot" :class="'stream-' + ch.stream_status" :title="t('streamStatus_' + ch.stream_status)" role="img" :aria-label="t('streamStatus_' + ch.stream_status)"></span>{{ ch.name || t('untitled') }}</div>
                     <div class="text-xs muted">{{ ch.tvg_name || t('noTvgName') }}</div>
                     <div v-if="epgLoaded && getCurrentProgram(ch)" class="epg-tag now">{{ t('nowPlaying') }}: {{ getCurrentProgram(ch).title }}</div>
                     <div v-else-if="epgLoaded && getNextProgram(ch)" class="epg-tag nxt">{{ t('nextProgram') }}: {{ getNextProgram(ch).title }}</div>
@@ -925,6 +939,16 @@
               <button type="button" class="seg-btn" :class="{ active: filters.status === 'active' }"   @click="filters.status = 'active'"   :aria-pressed="String(filters.status === 'active')">{{ t('activeLabel') }}</button>
               <button type="button" class="seg-btn" :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'" :aria-pressed="String(filters.status === 'inactive')">{{ t('offLabel') }}</button>
             </div>
+          </div>
+          <div>
+            <label class="label" for="filter-stream">{{ t('streamFilter') }}</label>
+            <select id="filter-stream" class="select" v-model="filters.stream">
+              <option value="">{{ t('streamFilterAll') }}</option>
+              <option value="ok">{{ t('streamStatus_ok') }}</option>
+              <option value="fail">{{ t('streamStatus_fail') }}</option>
+              <option value="unknown">{{ t('streamStatus_unknown') }}</option>
+              <option value="unchecked">{{ t('streamStatus_unchecked') }}</option>
+            </select>
           </div>
           <div>
             <label class="label" for="filter-limit">{{ t('perPage') }}</label>
@@ -1610,6 +1634,18 @@ const app = createApp({
     /* ── i18n ── */
     const messages = {
       sk: {
+        streamCheck:      'Skontrolovať streamy',
+        streamCheckStop:  'Zastaviť kontrolu streamov',
+        streamCheckHintSelected:'Vybrané kanály',
+        streamCheckHintVisible:'Zobrazené kanály',
+        streamCheckProgress:'Kontrolujem streamy: {done} / {total}',
+        streamCheckDone:  'Streamy: {ok} odpovedá · {fail} neodpovedá · {unknown} neoverené',
+        streamFilter:     'Stream',
+        streamFilterAll:  'Všetky',
+        streamStatus_ok:  'Odpovedá',
+        streamStatus_fail:'Neodpovedá',
+        streamStatus_unknown:'Neoverené (http alebo iný protokol)',
+        streamStatus_unchecked:'Nekontrolované',
         bulkActions:      'Hromadné akcie',
         bulkSelected:     '{n} vybraných',
         bulkMoveTo:       'Presunúť do skupiny…',
@@ -1837,6 +1873,18 @@ const app = createApp({
         channelsDeletedN:    'Vymazaných {n} kanálov',
       },
       en: {
+        streamCheck:      'Check streams',
+        streamCheckStop:  'Stop stream check',
+        streamCheckHintSelected:'Selected channels',
+        streamCheckHintVisible:'Visible channels',
+        streamCheckProgress:'Checking streams: {done} / {total}',
+        streamCheckDone:  'Streams: {ok} respond · {fail} do not respond · {unknown} not verifiable',
+        streamFilter:     'Stream',
+        streamFilterAll:  'All',
+        streamStatus_ok:  'Responds',
+        streamStatus_fail:'Does not respond',
+        streamStatus_unknown:'Not verifiable (http or other protocol)',
+        streamStatus_unchecked:'Not checked',
         bulkActions:      'Bulk actions',
         bulkSelected:     '{n} selected',
         bulkMoveTo:       'Move to group…',
@@ -2124,7 +2172,7 @@ const app = createApp({
     let manualSuggestionCache = new Map()
     let _fetchRunId = 0
 
-    const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '' })
+    const filters    = reactive({ search: '', group: '', quality: '', status: 'all', country: '', stream: '' })
     const sort       = reactive({ by: 'name', asc: true })
     const pagination    = reactive({ page: 1, limit: 100 })
     const selectedRows  = reactive(new Set())
@@ -2221,6 +2269,7 @@ const app = createApp({
         const cu = filters.country.toUpperCase()
         arr = arr.filter(c => (c.tvg_country || '').toUpperCase() === cu)
       }
+      if (filters.stream) arr = arr.filter(c => (c.stream_status || 'unchecked') === filters.stream)
 
       const fieldMap = { name: 'name', index: '_idx', group: 'group_title', quality: 'quality', country: 'tvg_country', status: 'is_active', tvg_id: 'tvg_id' }
       const f = fieldMap[sort.by] || 'name'
@@ -2293,7 +2342,7 @@ const app = createApp({
     })
 
     const hasActiveFilters = computed(() =>
-      !!(filters.search || filters.group || filters.quality || filters.country || filters.status !== 'all')
+      !!(filters.search || filters.group || filters.quality || filters.country || filters.stream || filters.status !== 'all')
     )
 
     const editIsDirty = computed(() => {
@@ -2438,7 +2487,7 @@ const app = createApp({
     function nextPage() { if (pagination.page < totalPages.value) pagination.page++ }
 
     function resetFilters() {
-      Object.assign(filters, { search: '', group: '', quality: '', status: 'all', country: '' })
+      Object.assign(filters, { search: '', group: '', quality: '', status: 'all', country: '', stream: '' })
       pagination.page = 1
     }
 
@@ -4245,6 +4294,54 @@ const app = createApp({
       })
     }
 
+    /* ── Stream check ── */
+    // Cross-origin stream servers send no CORS headers, so the HTTP status is not readable;
+    // a no-cors request still tells "server answered" from "network error / timeout".
+    // http:// streams on an https page are blocked by the browser (mixed content): not verifiable.
+    const streamCheck = reactive({ running: false, done: 0, total: 0, cancelled: false })
+    const STREAM_CHECK_TIMEOUT = 8000
+
+    async function probeStream(url) {
+      if (!/^https?:\/\//i.test(url || '')) return 'unknown'
+      if (location.protocol === 'https:' && /^http:\/\//i.test(url)) return 'unknown'
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), STREAM_CHECK_TIMEOUT)
+      try {
+        await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+        return 'ok'
+      } catch {
+        return 'fail'
+      } finally {
+        clearTimeout(timer)
+        ctrl.abort()   // stop downloading the stream body
+      }
+    }
+
+    async function checkStreams() {
+      if (streamCheck.running) { streamCheck.cancelled = true; return }
+      const targets = selectedRows.size
+        ? channels.value.filter(c => selectedRows.has(c.id))
+        : filteredChannels.value.slice()
+      if (!targets.length) return
+      Object.assign(streamCheck, { running: true, done: 0, total: targets.length, cancelled: false })
+      const counts = { ok: 0, fail: 0, unknown: 0 }
+      let next = 0
+      const worker = async () => {
+        while (next < targets.length && !streamCheck.cancelled) {
+          const ch = targets[next++]
+          const status = await probeStream(ch.url)
+          ch.stream_status = status
+          ch.stream_checked_at = new Date().toISOString()
+          counts[status]++
+          streamCheck.done++
+        }
+      }
+      await Promise.all(Array.from({ length: 6 }, worker))
+      streamCheck.running = false
+      persist()
+      showToast(t('streamCheckDone').replace('{ok}', counts.ok).replace('{fail}', counts.fail).replace('{unknown}', counts.unknown))
+    }
+
     function bulkSetActive(active) {
       const n = selectedRows.size
       if (!n) return
@@ -4288,7 +4385,7 @@ const app = createApp({
       undoLastChange, metadataScore, metadataTooltip,
       toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,
       removeChannel, confirmDelete, clearAll, triggerImport, importFromFile, importFromUrl,
-      toggleRowSelect, toggleSelectAll, deleteSelected, bulkSetActive, bulkSetGroup,
+      toggleRowSelect, toggleSelectAll, deleteSelected, bulkSetActive, bulkSetGroup, checkStreams, streamCheck,
       exportPlaylist, exportMetadataHealthReport, applyBulkMetadataRules,
       epgData, epgLoaded, epgRef, logoErrors,
       triggerEpgImport, importEpgFromFile, clearEpg, detachTvgUrls,

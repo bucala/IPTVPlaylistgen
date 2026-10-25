@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { templateBindings, setupBindings } = require('./template-bindings');
+const { inlineScriptUndefinedIdentifiers } = require('./undefined-identifiers');
 
 const root = path.resolve(__dirname, '..');
 const vendorFiles = fs.readdirSync(path.join(root, 'vendor')).filter((name) => name.endsWith('.js'));
@@ -137,6 +138,12 @@ for (const rel of ['index.html', 'www/index.html']) {
   if (templateNames.size < 50) fail(`${rel} template binding scan found only ${templateNames.size} names; scanner is broken`);
   else if (missingBindings.length) fail(`${rel} template reads bindings that setup() does not return: ${missingBindings.join(', ')}`);
   else ok(`${rel} template reads only bindings returned from setup() (${templateNames.size})`);
+
+  // Guard: names read by the inline scripts must be declared somewhere (a leftover `isFiltered`
+  // broke Export for months because only clicking the button ran that line)
+  const undeclared = [...inlineScriptUndefinedIdentifiers(html).keys()];
+  if (undeclared.length) fail(`${rel} inline scripts read undeclared identifiers: ${undeclared.join(', ')}`);
+  else ok(`${rel} inline scripts read no undeclared identifiers`);
 
   // Vue must be the vendored, pinned build: a CDN can be offline or silently ship a new release
   if (/<script[^>]+src=["']https?:\/\//i.test(html)) fail(`${rel} loads a script from a remote origin`);

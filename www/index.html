@@ -1515,7 +1515,7 @@ const CHANNEL_TVG_ALIASES = [
 
 // Snapshot of github.com/tv-logo/tv-logos countries/slovakia and countries/czech-republic (2026-10-25):
 // transparent PNGs named after the full channel name, e.g. premier-sport-3-cz.png. Files are served by jsDelivr.
-// To refresh, copy the file names (without .png) from those two GitHub folders.
+// Refreshed weekly by .github/workflows/update-tv-logos.yml (node scripts/update-tv-logos.js).
 const TV_LOGOS_BASE = 'https://cdn.jsdelivr.net/gh/tv-logo/tv-logos@main/countries/'
 const TV_LOGOS = {
   slovakia: `
@@ -1523,24 +1523,24 @@ const TV_LOGOS = {
     cs-history-sk cs-horror-sk cs-mystery-sk dvojka-sk folklorika-sk jednotka-sk joj-24-sk joj-cinema-plus-sk
     joj-cinema-sk joj-plus-sk joj-sk joj-sport-2-sk joj-sport-sk joj-svet-sk joj-wau-sk jojko-sk kanal1-sk
     markiza-dajto-sk markiza-doma-sk markiza-krimi-sk markiza-sk nova-international-sk nova-sport-1-sk
-    nova-sport-2-sk nova-sport-3-sk-sk nova-sport-4-sk-sk park-tv-sk prima-cool-sk prima-krimi-sk
-    prima-love-sk prima-sk rtvs-24-sk rtvs-sport-sk senzi-sk skylink-7-sk sport1-sk sport2-sk ta3-sk
-    tuki-tv-sk tv-lux-sk tv-osem-sk`,
+    nova-sport-2-sk nova-sport-3-sk-sk nova-sport-4-sk-sk park-tv-sk prima-cool-sk prima-krimi-sk prima-love-sk
+    prima-sk rtvs-24-sk rtvs-sport-sk senzi-sk skylink-7-sk sport1-sk sport2-sk ta3-sk tuki-tv-sk tv-lux-sk
+    tv-osem-sk`,
   'czech-republic': `
     amc-cz axn-black-cz axn-cz axn-white-cz barrandov-kino-cz barrandov-krimi-cz barrandov-tv-cz
     canal-plus-sport-2-cz cnn-prima-news-cz cs-history-cz cs-mystery-cz ct-art-cz ct-d-ct-art-cz ct-d-cz
-    ct-sport-cz ct1-cz ct2-cz ct24-cz erox-cz eroxxx-cz extasy-cz film-europe-cz film-europe-plus-cz
-    film-plus-cz filmbox-cz filmbox-extra-cz filmbox-family-cz filmbox-premium-cz filmbox-stars-cz hbo-cz
-    hbo2-cz hbo3-cz hobby-tv-cz hustler-hd-cz inultra-cz joj-cinema-cz joj-cinema-plus-cz joj-family-cz
-    joj-svet-cz jtv-cz kanal1-cz lala-tv-cz leo-tv-cz leo-tv-gold-cz love-nature-4k-cz minimax-cz mnam-cz
-    mnau-tv-cz nas-region-cz nova-action-cz nova-cinema-cz nova-cz nova-fun-cz nova-gold-cz nova-krimi-cz
-    nova-lady-cz nova-sport-1-cz nova-sport-2-cz nova-sport-3-cz nova-sport-4-cz nova-sport-5-cz
-    nova-sport-6-cz ocko-black-cz ocko-cz ocko-expres-cz ocko-star-cz oneplay-sport-1-cz oneplay-sport-2-cz
-    oneplay-sport-3-cz oneplay-sport-4-cz oneplay-sport-4k-cz paramount-network-cz paramount-network-hz-cz
-    passion-xxx-cz polar-cz praha-tv-cz premier-sport-1-cz premier-sport-2-cz premier-sport-3-cz prima-cool-cz
-    prima-cz prima-krimi-cz prima-love-cz prima-max-cz prima-plus-cz prima-show-cz prima-star-cz prima-zoom-cz
-    rebel-cz regiony-plus-cz relax-cz retro-cz rtm-plus-cz seznam-tv-cz slagr-muzika-cz slagr-original-cz
-    slagr-premium-cz spektrum-cz spektrum-home-cz tv-brno-1-cz tv-noe-cz tv-paprika-cz tv-v1-cz tvs-cz`,
+    ct-sport-cz ct1-cz ct2-cz ct24-cz erox-cz eroxxx-cz extasy-cz film-europe-cz film-europe-plus-cz film-plus-cz
+    filmbox-cz filmbox-extra-cz filmbox-family-cz filmbox-premium-cz filmbox-stars-cz hbo-cz hbo2-cz hbo3-cz
+    hobby-tv-cz hustler-hd-cz inultra-cz joj-cinema-cz joj-cinema-plus-cz joj-family-cz joj-svet-cz jtv-cz
+    kanal1-cz lala-tv-cz leo-tv-cz leo-tv-gold-cz love-nature-4k-cz minimax-cz mnam-cz mnau-tv-cz nas-region-cz
+    nova-action-cz nova-cinema-cz nova-cz nova-fun-cz nova-gold-cz nova-krimi-cz nova-lady-cz nova-sport-1-cz
+    nova-sport-2-cz nova-sport-3-cz nova-sport-4-cz nova-sport-5-cz nova-sport-6-cz ocko-black-cz ocko-cz
+    ocko-expres-cz ocko-star-cz oneplay-sport-1-cz oneplay-sport-2-cz oneplay-sport-3-cz oneplay-sport-4-cz
+    oneplay-sport-4k-cz paramount-network-cz paramount-network-hz-cz passion-xxx-cz polar-cz praha-tv-cz
+    premier-sport-1-cz premier-sport-2-cz premier-sport-3-cz prima-cool-cz prima-cz prima-krimi-cz prima-love-cz
+    prima-max-cz prima-plus-cz prima-show-cz prima-star-cz prima-zoom-cz rebel-cz regiony-plus-cz relax-cz
+    retro-cz rtm-plus-cz seznam-tv-cz slagr-muzika-cz slagr-original-cz slagr-premium-cz spektrum-cz
+    spektrum-home-cz tv-brno-1-cz tv-noe-cz tv-paprika-cz tv-v1-cz tvs-cz`,
 }
 
 // A render error makes Vue replace the whole UI with an empty node (the "black screen").

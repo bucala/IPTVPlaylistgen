@@ -399,6 +399,17 @@
       padding: 1.5rem;
       animation: slideUp .22s ease;
     }
+    /* Autodetect: full-screen window, the results table takes all remaining height */
+    .modal-overlay.modal-fullscreen { padding: 0; }
+    .modal-overlay.modal-fullscreen > .modal-card {
+      width: 100%; max-width: none; height: 100dvh; max-height: none; border-radius: 0;
+      display: flex; flex-direction: column; overflow: hidden;
+      padding: max(1rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+    }
+    .modal-fullscreen .auto-detect-table { max-height: none; }
+    @media (max-width: 640px) {
+      .modal-overlay.modal-fullscreen > .modal-card { padding: max(.75rem, env(safe-area-inset-top)) .75rem max(.75rem, env(safe-area-inset-bottom)); }
+    }
     @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideUp { from { transform: translateY(24px); opacity:0; } to { transform: none; opacity:1; } }
 
@@ -410,7 +421,7 @@
       z-index: 90; border-radius: var(--radius-sm);
       padding: 10px 20px; font-size: 14px; font-weight: 500; color: #fff;
       background: rgba(28,28,30,.94); box-shadow: var(--shadow-lg);
-      white-space: nowrap; pointer-events: none;
+      width: max-content; max-width: calc(100vw - 2rem); text-align: center; pointer-events: none;
     }
     [data-theme="dark"] .toast { background: rgba(72,72,74,.94); }
 
@@ -518,11 +529,9 @@
       .modal-overlay { align-items: center; padding: max(1rem, env(safe-area-inset-top)) .75rem max(1rem, env(safe-area-inset-bottom)); }
       .modal-card { width: min(100%, 560px); max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem)); padding: 1rem; border-radius: 22px; }
       .modal-card.mobile-sheet { border-radius: 22px; max-height: 88dvh; }
-      .auto-detect-card { width: min(100%, 560px) !important; max-height: 88dvh !important; padding: .85rem !important; }
       .auto-detect-bar { align-items: stretch; }
       .auto-detect-bar-sources { max-height: 20dvh; overflow-y: auto; }
       .auto-detect-card h2 { font-size: 1.12rem; line-height: 1.25; }
-      .auto-detect-table { max-height: 40dvh; }
       .auto-detect-table table { min-width: 560px; }
       .auto-detect-bar .seg { width: 100%; }
       .auto-detect-stats { flex-wrap: wrap; }
@@ -1041,9 +1050,9 @@
     </div>
 
     <!-- Autodetect Modal -->
-    <div v-if="modal.autoDetect" class="modal-overlay" @mousedown.self="modal.autoDetect = false"
+    <div v-if="modal.autoDetect" class="modal-overlay modal-fullscreen"
          role="dialog" aria-modal="true" :aria-label="t('autoDetectTitle')">
-      <div class="modal-card glass-s auto-detect-card mobile-sheet" style="width:min(1060px,100%);max-height:96vh;display:flex;flex-direction:column;overflow:hidden">
+      <div class="modal-card glass-s auto-detect-card">
 
         <!-- ── Header ── -->
         <div class="flex items-start justify-between mb-3" style="flex-shrink:0">

@@ -309,7 +309,10 @@
       border: none; border-radius: var(--radius-sm); background: transparent; color: var(--text);
       font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;
     }
-    .menu-item:hover:not(:disabled), .menu-item:focus-visible { background: var(--fill); outline: none; }
+    .menu-item:hover:not(:disabled) { background: var(--fill); }
+    .menu-item:focus-visible { outline: none; background: var(--fill); box-shadow: inset 0 0 0 2px var(--primary); }
+    .tool-btn:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .filter-card:focus { outline: none; }
     .menu-item:disabled { opacity: .38; cursor: not-allowed; }
     .menu-item .mi-icon {
       width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
@@ -347,12 +350,13 @@
       margin-bottom: .75rem; padding: .45rem .5rem .45rem .85rem; border-radius: var(--radius-md);
       background: var(--primary-l); color: var(--primary); font-size: 13px; font-weight: 500;
     }
+    .filter-bar-text { flex: 1 1 10rem; }  /* buttons wrap below instead of squeezing the text */
 
     /* ── Table ── */
     .table-shell {
       border-radius: var(--radius-md); border: 1px solid var(--border);
       background: var(--surface); box-shadow: var(--shadow-sm);
-      overflow-x: auto; overflow-y: auto; max-height: min(62vh, calc(100dvh - 360px));
+      overflow-x: auto; overflow-y: auto; max-height: max(320px, min(62vh, calc(100dvh - 300px)));
       max-width: 100%; overscroll-behavior: contain;
       backdrop-filter: blur(20px);
     }
@@ -470,6 +474,11 @@
 
     /* ── Responsive (mobile-first) ── */
     main, section { min-width: 0; }
+    /* Touch screens (incl. phones in landscape and tablets): the page scrolls, not the table.
+       A nested scroller with overscroll-behavior: contain swallowed swipes started on it. */
+    @media (pointer: coarse) {
+      .table-shell:not(.auto-detect-table) { max-height: none; overflow-y: visible; overscroll-behavior: auto; }
+    }
     @media (max-width: 640px) {
       body { overflow-x: hidden; }
       #app { padding-left: max(.75rem, env(safe-area-inset-left)); padding-right: max(.75rem, env(safe-area-inset-right)); }
@@ -593,18 +602,18 @@
 
       <!-- Settings: language + skin (top-right) -->
       <div class="hdr-settings menu-wrap">
-        <button type="button" class="icon-btn" @click="toggleMenu('settings')" aria-haspopup="menu"
+        <button type="button" class="icon-btn" @click="toggleMenu('settings', $event)" aria-haspopup="dialog"
                 :aria-expanded="String(openMenu === 'settings')" :aria-label="t('settings')" :title="t('settings')"
                 v-html="icon('settings', 19)"></button>
-        <div v-if="openMenu === 'settings'" class="menu-pop menu-pop-right" role="menu" :aria-label="t('settings')">
+        <div v-if="openMenu === 'settings'" class="menu-pop menu-pop-right" role="dialog" :aria-label="t('settings')" @keydown="menuKeydown">
           <div class="menu-label">{{ t('language') }}</div>
           <div class="seg menu-seg" role="group" :aria-label="t('langLabel')">
             <button type="button" class="seg-btn" :class="{ active: lang === 'sk' }" @click="setLang('sk')" :aria-pressed="String(lang === 'sk')">Slovenčina</button>
             <button type="button" class="seg-btn" :class="{ active: lang === 'en' }" @click="setLang('en')" :aria-pressed="String(lang === 'en')">English</button>
           </div>
           <div class="menu-label">{{ t('theme') }}</div>
-          <button v-for="opt in themeOptions" :key="opt.id" type="button" class="menu-item" role="menuitemradio"
-                  :aria-checked="String(theme === opt.id)" @click="setTheme(opt.id)">
+          <button v-for="opt in themeOptions" :key="opt.id" type="button" class="menu-item"
+                  :aria-pressed="String(theme === opt.id)" @click="setTheme(opt.id)">
             <span class="skin-dot" :class="'skin-' + opt.id" aria-hidden="true"></span>
             <span class="mi-text">{{ t(opt.labelKey) }}</span>
             <span v-if="theme === opt.id" class="mi-check" v-html="icon('check', 15)"></span>
@@ -615,19 +624,19 @@
       <!-- Toolbar: Import / Export / Edit menus + Filter -->
       <div class="hdr-tools" role="toolbar" :aria-label="t('toolbar')">
         <div class="menu-wrap">
-          <button type="button" class="tool-btn" @click="toggleMenu('import')" aria-haspopup="menu" :aria-expanded="String(openMenu === 'import')">
+          <button type="button" class="tool-btn" @click="toggleMenu('import', $event)" aria-haspopup="menu" :aria-expanded="String(openMenu === 'import')">
             <span v-html="icon('download', 17)"></span><span>{{ t('menuImport') }}</span><span class="chev" v-html="icon('chevDown', 13)"></span>
           </button>
-          <div v-if="openMenu === 'import'" class="menu-pop" role="menu" :aria-label="t('menuImport')">
-            <button type="button" class="menu-item" role="menuitem" @click="openMenu = null; triggerImport()">
+          <div v-if="openMenu === 'import'" class="menu-pop" role="menu" :aria-label="t('menuImport')" @keydown="menuKeydown">
+            <button type="button" class="menu-item" role="menuitem" @click="closeMenu(); triggerImport()">
               <span class="mi-icon" v-html="icon('list', 16)"></span>
               <span class="mi-text">{{ t('menuImportPlaylist') }}<small class="mi-hint">M3U · M3U8 · XSPF</small></span>
             </button>
-            <button type="button" class="menu-item" role="menuitem" :title="t('epgImportHint')" @click="openMenu = null; triggerEpgImport()">
+            <button type="button" class="menu-item" role="menuitem" :title="t('epgImportHint')" @click="closeMenu(); triggerEpgImport()">
               <span class="mi-icon" v-html="icon('antenna', 16)"></span>
               <span class="mi-text">{{ t('menuImportEpg') }}<small class="mi-hint">XMLTV</small></span>
             </button>
-            <button v-if="epgLoaded" type="button" class="menu-item danger" role="menuitem" @click="openMenu = null; clearEpg()">
+            <button v-if="epgLoaded" type="button" class="menu-item danger" role="menuitem" @click="closeMenu(); clearEpg()">
               <span class="mi-icon" v-html="icon('x', 16)"></span>
               <span class="mi-text">{{ t('clearEpg') }}</span>
             </button>
@@ -635,12 +644,12 @@
         </div>
 
         <div class="menu-wrap">
-          <button type="button" class="tool-btn" @click="toggleMenu('export')" aria-haspopup="menu" :aria-expanded="String(openMenu === 'export')">
+          <button type="button" class="tool-btn" @click="toggleMenu('export', $event)" aria-haspopup="menu" :aria-expanded="String(openMenu === 'export')">
             <span v-html="icon('upload', 17)"></span><span>{{ t('menuExport') }}</span><span class="chev" v-html="icon('chevDown', 13)"></span>
           </button>
-          <div v-if="openMenu === 'export'" class="menu-pop" role="menu" :aria-label="t('menuExport')">
+          <div v-if="openMenu === 'export'" class="menu-pop" role="menu" :aria-label="t('menuExport')" @keydown="menuKeydown">
             <button v-for="fmt in exportFormats" :key="fmt.id" type="button" class="menu-item" role="menuitem"
-                    :disabled="stats.total === 0" @click="openMenu = null; exportPlaylist(fmt.id)">
+                    :disabled="stats.total === 0" @click="closeMenu(); exportPlaylist(fmt.id)">
               <span class="mi-icon" v-html="icon(fmt.icon, 16)"></span>
               <span class="mi-text">{{ fmt.label }}<small class="mi-hint">{{ t(fmt.hintKey) }}</small></span>
             </button>
@@ -648,38 +657,38 @@
         </div>
 
         <div class="menu-wrap">
-          <button type="button" class="tool-btn" @click="toggleMenu('edit')" aria-haspopup="menu" :aria-expanded="String(openMenu === 'edit')">
+          <button type="button" class="tool-btn" @click="toggleMenu('edit', $event)" aria-haspopup="menu" :aria-expanded="String(openMenu === 'edit')">
             <span v-html="icon('edit', 17)"></span><span>{{ t('menuEdit') }}</span><span class="chev" v-html="icon('chevDown', 13)"></span>
             <span v-if="selectedRowsCount > 0" class="tool-badge" :aria-label="selectedRowsCount + ' ' + t('selectedCount')">{{ selectedRowsCount }}</span>
           </button>
-          <div v-if="openMenu === 'edit'" class="menu-pop" role="menu" :aria-label="t('menuEdit')">
-            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="openMenu = null; openAutoDetect()">
+          <div v-if="openMenu === 'edit'" class="menu-pop" role="menu" :aria-label="t('menuEdit')" @keydown="menuKeydown">
+            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="closeMenu(); openAutoDetect()">
               <span class="mi-icon" v-html="icon('search', 16)"></span>
               <span class="mi-text">{{ t('autoDetectBtn') }}<small class="mi-hint">{{ t('menuAutoDetectHint') }}</small></span>
             </button>
-            <button type="button" class="menu-item" role="menuitem" @click="openMenu = null; openAddChannel()">
+            <button type="button" class="menu-item" role="menuitem" @click="closeMenu(); openAddChannel()">
               <span class="mi-icon" v-html="icon('plus', 16)"></span>
               <span class="mi-text">{{ t('addChannel') }}</span>
             </button>
-            <button type="button" class="menu-item" role="menuitem" :disabled="undoStack.length === 0" @click="openMenu = null; undoLastChange()">
+            <button type="button" class="menu-item" role="menuitem" :disabled="undoStack.length === 0" @click="closeMenu(); undoLastChange()">
               <span class="mi-icon" v-html="icon('undo', 16)"></span>
               <span class="mi-text">{{ t('undo') }}</span>
             </button>
             <div class="menu-sep" role="separator"></div>
-            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="openMenu = null; applyBulkMetadataRules()">
+            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="closeMenu(); applyBulkMetadataRules()">
               <span class="mi-icon" v-html="icon('sparkles', 16)"></span>
               <span class="mi-text">{{ t('bulkMetadataRules') }}</span>
             </button>
-            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="openMenu = null; detachTvgUrls()">
+            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="closeMenu(); detachTvgUrls()">
               <span class="mi-icon" v-html="icon('unlink', 16)"></span>
               <span class="mi-text">{{ t('detachTvgUrl') }}</span>
             </button>
-            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="openMenu = null; exportMetadataHealthReport()">
+            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="closeMenu(); exportMetadataHealthReport()">
               <span class="mi-icon" v-html="icon('fileText', 16)"></span>
               <span class="mi-text">{{ t('metadataHealthReport') }}</span>
             </button>
             <div class="menu-sep" role="separator"></div>
-            <button type="button" class="menu-item danger" role="menuitem" :disabled="selectedRowsCount === 0" @click="openMenu = null; deleteSelected()">
+            <button type="button" class="menu-item danger" role="menuitem" :disabled="selectedRowsCount === 0" @click="closeMenu(); deleteSelected()">
               <span class="mi-icon" v-html="icon('trash', 16)"></span>
               <span class="mi-text">{{ t('deleteSelectedMenu') }}{{ selectedRowsCount > 0 ? ' (' + selectedRowsCount + ')' : '' }}</span>
             </button>
@@ -690,7 +699,7 @@
           <span v-html="icon('filter', 17)"></span><span>{{ t('filterSet') }}</span>
           <span v-if="hasActiveFilters" class="tool-dot" aria-hidden="true"></span>
         </button>
-        <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" multiple class="sr-only" @change="importEpgFromFile" />
+        <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" multiple class="sr-only" tabindex="-1" aria-hidden="true" @change="importEpgFromFile" />
       </div>
 
       <!-- Info panel -->
@@ -716,7 +725,7 @@
           <!-- Active filter summary -->
           <div v-if="hasActiveFilters" class="filter-bar" role="status">
             <span v-html="icon('filter', 14)"></span>
-            <span class="flex-1">{{ t('filteredInfo').replace('{n}', filteredChannels.length).replace('{total}', stats.total) }}</span>
+            <span class="filter-bar-text">{{ t('filteredInfo').replace('{n}', filteredChannels.length).replace('{total}', stats.total) }}</span>
             <button type="button" class="btn btn-ghost" style="padding:4px 10px" @click="modal.filter = true">{{ t('edit') }}</button>
             <button type="button" class="btn btn-ghost" style="padding:4px 10px" @click="resetFilters">{{ t('resetFilters') }}</button>
           </div>
@@ -833,7 +842,7 @@
     <!-- Filter Modal -->
     <div v-if="modal.filter" class="modal-overlay" @mousedown.self="modal.filter = false"
          role="dialog" aria-modal="true" :aria-label="t('filterSet')">
-      <div class="modal-card glass-s mobile-sheet filter-card">
+      <div class="modal-card glass-s mobile-sheet filter-card" tabindex="-1">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-bold">{{ t('filterSet') }}</h2>
           <button type="button" class="btn btn-ghost" style="padding:6px 10px" @click="modal.filter = false" :aria-label="t('close')" v-html="icon('x', 16)"></button>
@@ -1394,7 +1403,7 @@ window.addEventListener('error', e => {
 </script>
 
 <script>
-const { createApp, ref, computed, reactive, watch, onMounted, onUnmounted } = Vue
+const { createApp, ref, computed, reactive, watch, nextTick, onMounted, onUnmounted } = Vue
 
 const IPTV_SOURCES = [
   { id: 'iptv-sk',  label: 'SK',      detail: 'iptv-org',        url: 'https://iptv-org.github.io/iptv/countries/sk.m3u' },
@@ -2543,11 +2552,11 @@ const app = createApp({
     function exportPlaylist(fmt) {
       const selected = channels.value.filter(c => selectedRows.has(c.id) && c.is_active)
       const visible = filteredChannels.value.filter(c => c.is_active)
-      const active = selected.length ? selected : (isFiltered.value ? visible : channels.value.filter(c => c.is_active))
+      const active = selected.length ? selected : (hasActiveFilters.value ? visible : channels.value.filter(c => c.is_active))
       if (!active.length) return
 
       let content, filename, type
-      const baseName = selected.length ? 'playlist-selected' : (isFiltered.value ? 'playlist-filtered' : 'playlist')
+      const baseName = selected.length ? 'playlist-selected' : (hasActiveFilters.value ? 'playlist-filtered' : 'playlist')
       if (fmt === 'm3u') {
         const epgUrls = [...new Set(active.map(c => exportableTvgUrl(c.tvg_url)).filter(Boolean))]
         const epgHeader = epgUrls.length ? ` url-tvg="${xmlEsc(epgUrls.join(','))}" x-tvg-url="${xmlEsc(epgUrls.join(','))}"` : ''
@@ -2635,7 +2644,7 @@ const app = createApp({
       const a    = document.createElement('a')
       a.href = url; a.download = filename; a.click()
       URL.revokeObjectURL(url)
-      showToast(`${selected.length ? t('exportSelected') : isFiltered.value ? t('exportFiltered') : t('exported')} (${active.length})`)
+      showToast(`${selected.length ? t('exportSelected') : hasActiveFilters.value ? t('exportFiltered') : t('exported')} (${active.length})`)
     }
 
     function downloadText(filename, content, type = 'application/json') {
@@ -2696,17 +2705,51 @@ const app = createApp({
     }
 
     /* ── Keyboard ── */
-    function toggleMenu(name) {
+    // Header menus: focus moves into the menu on open and back to its button on close
+    let menuTrigger = null
+
+    function toggleMenu(name, e) {
       openMenu.value = openMenu.value === name ? null : name
+      if (!openMenu.value) return
+      menuTrigger = e?.currentTarget || null
+      nextTick(() => document.querySelector('.menu-pop button:not(:disabled)')?.focus())
+    }
+
+    function closeMenu(restoreFocus = true) {
+      openMenu.value = null
+      if (restoreFocus) menuTrigger?.focus()
+    }
+
+    function menuKeydown(e) {
+      const items = [...e.currentTarget.querySelectorAll('button:not(:disabled)')]
+      const i = items.indexOf(document.activeElement)
+      const target = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: items.length - 1 }[e.key]
+      if (target !== undefined && items.length) {
+        e.preventDefault()
+        items[(target + items.length) % items.length].focus()
+      } else if (e.key === 'Tab') {
+        closeMenu(false)
+      }
     }
 
     function closeMenuOnOutsideClick(e) {
       if (openMenu.value && !e.target.closest?.('.menu-wrap')) openMenu.value = null
     }
 
+    // Filter window: focus the dialog on open (no keyboard pop-up on phones), restore on close
+    let filterTrigger = null
+    watch(() => modal.filter, open => {
+      if (open) {
+        filterTrigger = document.activeElement
+        nextTick(() => document.querySelector('.filter-card')?.focus())
+      } else {
+        filterTrigger?.focus?.()
+      }
+    })
+
     function handleKeydown(e) {
       if (e.key !== 'Escape') return
-      if (openMenu.value)     { openMenu.value = null; return }
+      if (openMenu.value)     { closeMenu(); return }
       if (modal.filter)       { modal.filter = false; return }
       if (modal.unsaved)      { modal.unsaved = false; return }
       if (modal.deleteConfirm){ modal.deleteConfirm = false; return }
@@ -2845,7 +2888,7 @@ const app = createApp({
     function detachTvgUrls() {
       const target = selectedRows.size
         ? channels.value.filter(ch => selectedRows.has(ch.id))
-        : (isFiltered.value ? filteredChannels.value : channels.value)
+        : (hasActiveFilters.value ? filteredChannels.value : channels.value)
       if (!target.length) return
       snapshot('detachTvgUrl')
       let changed = 0
@@ -3971,7 +4014,7 @@ const app = createApp({
       channels, lang, theme, selectedId,
       importMode, importUrl, importLoading, importFileRef,
       filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,
-      openMenu, toggleMenu, exportFormats, hasActiveFilters, undoStack, themeOptions,
+      openMenu, toggleMenu, closeMenu, menuKeydown, exportFormats, hasActiveFilters, undoStack, themeOptions,
       metadataHealth, confirmedMappings, stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, groupFilterOptions,
       selectedRows, selectedRowsCount, allPageSelected,
       t, setTheme, toggleTheme, setLang, setSort, prevPage, nextPage, resetFilters,

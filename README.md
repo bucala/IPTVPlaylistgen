@@ -115,7 +115,7 @@ https://iptvplaylistgen.pages.dev
 
 1. Klikni **Import → Playlist** → vyber `.m3u` alebo `.m3u8` súbor
 2. Kanály sa zobrazia v tabuľke s automaticky detegovanými kvalitami
-3. Voliteľne načítaj EPG metadáta cez **Obohatiť metadáta** (EPG Enrichment)
+3. Voliteľne načítaj EPG program cez **Import → EPG program** (XMLTV)
 4. Spusti **Úpravy → Autodetekcia** pre priradenie TVG metadát
 5. Exportuj upravený playlist cez **Export → M3U** alebo **Export → XSPF**
 

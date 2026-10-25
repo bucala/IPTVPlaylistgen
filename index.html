@@ -346,6 +346,12 @@
     .info-chip strong { color: var(--text); font-weight: 600; }
     .info-chip .q-badge { padding: 0 5px; font-size: 10px; }
     .dot-active { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+    .info-chip-profile { background: var(--primary-l); color: var(--primary); }
+    .info-chip-profile strong { color: var(--primary); }
+    .profile-row { padding: 0 6px 6px; }
+    .profile-row .select { padding-top: 7px; padding-bottom: 7px; }
+    .profile-actions { display: flex; gap: 6px; padding: 0 6px 6px; }
+    .profile-actions .btn { flex: 1; padding: 6px 8px; font-size: 12px; }
 
     /* ── Active filter summary ── */
     .filter-bar {
@@ -659,6 +665,27 @@
             <button type="button" class="seg-btn" :class="{ active: lang === 'sk' }" @click="setLang('sk')" :aria-pressed="String(lang === 'sk')">Slovenčina</button>
             <button type="button" class="seg-btn" :class="{ active: lang === 'en' }" @click="setLang('en')" :aria-pressed="String(lang === 'en')">English</button>
           </div>
+          <div class="menu-label">{{ t('profile') }}</div>
+          <div class="profile-row">
+            <select class="select" :aria-label="t('profile')" :value="activeProfile" @change="switchProfile($event.target.value)">
+              <option v-for="p in profiles" :key="p.id" :value="p.id">{{ profileName(p) }}</option>
+            </select>
+          </div>
+          <div class="profile-actions">
+            <button type="button" class="btn btn-secondary" @click="createProfile">{{ t('profileNew') }}</button>
+            <button type="button" class="btn btn-secondary" @click="renameProfile">{{ t('profileRename') }}</button>
+            <button type="button" class="btn btn-danger" :disabled="activeProfile === 'default'" @click="deleteProfile">{{ t('delete') }}</button>
+          </div>
+          <div class="menu-label">{{ t('backup') }}</div>
+          <button type="button" class="menu-item" @click="exportBackup">
+            <span class="mi-icon" v-html="icon('download', 16)"></span>
+            <span class="mi-text">{{ t('backupExport') }}<small class="mi-hint">{{ t('backupExportHint') }}</small></span>
+          </button>
+          <button type="button" class="menu-item" @click="backupRef?.click()">
+            <span class="mi-icon" v-html="icon('upload', 16)"></span>
+            <span class="mi-text">{{ t('backupImport') }}<small class="mi-hint">{{ t('backupImportHint') }}</small></span>
+          </button>
+          <input ref="backupRef" type="file" accept=".json,application/json" class="sr-only" tabindex="-1" aria-hidden="true" @change="importBackup" />
           <div class="menu-label">{{ t('theme') }}</div>
           <button v-for="opt in themeOptions" :key="opt.id" type="button" class="menu-item"
                   :aria-pressed="String(theme === opt.id)" @click="setTheme(opt.id)">
@@ -755,6 +782,7 @@
 
       <!-- Info panel -->
       <div class="hdr-stats" role="status" aria-live="polite">
+        <span v-if="profiles.length > 1" class="info-chip info-chip-profile"><span v-html="icon('folder', 13)"></span><strong>{{ profileName(profiles.find(p => p.id === activeProfile)) }}</strong></span>
         <span class="info-chip"><span v-html="icon('tv', 13)"></span><strong>{{ stats.total }}</strong> {{ t('total') }}</span>
         <span class="info-chip"><span class="dot-active" aria-hidden="true"></span><strong>{{ stats.active }}</strong> {{ t('active') }}</span>
         <span class="info-chip"><span v-html="icon('folder', 13)"></span><strong>{{ stats.groups }}</strong> {{ t('groups') }}</span>
@@ -1630,10 +1658,29 @@ const app = createApp({
     const MAPPING_KEY = 'iptv-confirmed-mappings'
     const LANG_KEY    = 'iptv-lang'
     const THEME_KEY   = 'iptv-theme'
+    const PROFILES_KEY = 'iptv-profiles'
+    // The default profile keeps the original key so existing libraries stay where they are
+    const channelsKey = profileId => profileId === 'default' ? STORAGE_KEY : `${STORAGE_KEY}:${profileId}`
 
     /* ── i18n ── */
     const messages = {
       sk: {
+        profile:          'Profil (knižnica)',
+        profileDefault:   'Hlavný',
+        profileNew:       'Nový',
+        profileRename:    'Premenovať',
+        profileNamePrompt:'Názov profilu (napr. TV, Mobil, Šport)',
+        profileSwitched:  'Profil: {name}',
+        profileDeleteConfirm:'Zmazať profil „{name}“ a jeho {n} kanálov?',
+        backup:           'Záloha',
+        backupExport:     'Zálohovať všetko',
+        backupExportHint: 'Všetky profily, párovania a nastavenia (JSON)',
+        backupImport:     'Obnoviť zo zálohy',
+        backupImportHint: 'Nahradí aktuálne profily',
+        backupExported:   'Záloha uložená: {p} profilov, {n} kanálov',
+        backupInvalid:    'Súbor nie je záloha IPTV Playlist Generator',
+        backupRestoreConfirm:'Obnoviť {p} profilov zo zálohy? Aktuálne knižnice sa nahradia.',
+        backupRestored:   'Záloha obnovená ({p} profilov)',
         streamCheck:      'Skontrolovať streamy',
         streamCheckStop:  'Zastaviť kontrolu streamov',
         streamCheckHintSelected:'Vybrané kanály',
@@ -1873,6 +1920,22 @@ const app = createApp({
         channelsDeletedN:    'Vymazaných {n} kanálov',
       },
       en: {
+        profile:          'Profile (library)',
+        profileDefault:   'Main',
+        profileNew:       'New',
+        profileRename:    'Rename',
+        profileNamePrompt:'Profile name (e.g. TV, Mobile, Sport)',
+        profileSwitched:  'Profile: {name}',
+        profileDeleteConfirm:'Delete profile “{name}” and its {n} channels?',
+        backup:           'Backup',
+        backupExport:     'Back up everything',
+        backupExportHint: 'All profiles, mappings and settings (JSON)',
+        backupImport:     'Restore from backup',
+        backupImportHint: 'Replaces the current profiles',
+        backupExported:   'Backup saved: {p} profiles, {n} channels',
+        backupInvalid:    'The file is not an IPTV Playlist Generator backup',
+        backupRestoreConfirm:'Restore {p} profiles from the backup? Current libraries will be replaced.',
+        backupRestored:   'Backup restored ({p} profiles)',
         streamCheck:      'Check streams',
         streamCheckStop:  'Stop stream check',
         streamCheckHintSelected:'Selected channels',
@@ -2124,6 +2187,9 @@ const app = createApp({
     const importFileRef = ref(null)
     const undoStack     = ref([])
     const confirmedMappings = ref({})
+    const profiles      = ref([{ id: 'default', name: '' }])
+    const activeProfile = ref('default')
+    const backupRef     = ref(null)
     const importedEpgXmlIndex = ref({})
     const importedEpgNameIndex = ref({})
 
@@ -2404,7 +2470,7 @@ const app = createApp({
     /* ── Helpers ── */
     function persist() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(channels.value))
+        localStorage.setItem(channelsKey(activeProfile.value), JSON.stringify(channels.value))
         return true
       } catch {
         showToast('Unable to save data. Check available storage or export the playlist.')
@@ -2973,15 +3039,127 @@ const app = createApp({
       showToast(t('renderErrorRecovered'))
     }
 
+    /* ── Profiles (separate channel libraries) and full backup ── */
+    function loadProfileChannels(profileId) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(channelsKey(profileId)) || '[]')
+        return Array.isArray(parsed) ? parsed.map(ch => ch.is_active === undefined ? { ...ch, is_active: true } : ch) : []
+      } catch { return [] }
+    }
+
+    function saveProfiles() {
+      try { localStorage.setItem(PROFILES_KEY, JSON.stringify({ active: activeProfile.value, list: profiles.value })) } catch {}
+    }
+
+    function profileName(profile) {
+      return profile?.name || t('profileDefault')
+    }
+
+    function switchProfile(profileId) {
+      if (profileId === activeProfile.value || !profiles.value.some(p => p.id === profileId)) return
+      persist()
+      activeProfile.value = profileId
+      saveProfiles()
+      channels.value = loadProfileChannels(profileId)
+      selectedRows.clear()
+      undoStack.value = []
+      resetFilters()
+      showToast(t('profileSwitched').replace('{name}', profileName(profiles.value.find(p => p.id === profileId))))
+    }
+
+    function createProfile() {
+      const name = (prompt(t('profileNamePrompt')) || '').trim()
+      if (!name) return
+      const id = 'p' + Date.now().toString(36)
+      profiles.value = [...profiles.value, { id, name }]
+      saveProfiles()
+      switchProfile(id)
+    }
+
+    function renameProfile() {
+      const profile = profiles.value.find(p => p.id === activeProfile.value)
+      const name = (prompt(t('profileNamePrompt'), profileName(profile)) || '').trim()
+      if (!name || !profile) return
+      profile.name = name
+      saveProfiles()
+    }
+
+    function deleteProfile() {
+      const profile = profiles.value.find(p => p.id === activeProfile.value)
+      if (!profile || profile.id === 'default') return
+      if (!confirm(t('profileDeleteConfirm').replace('{name}', profileName(profile)).replace('{n}', channels.value.length))) return
+      try { localStorage.removeItem(channelsKey(profile.id)) } catch {}
+      profiles.value = profiles.value.filter(p => p.id !== profile.id)
+      // switch without persisting the deleted profile's channels back to storage
+      activeProfile.value = 'default'
+      saveProfiles()
+      channels.value = loadProfileChannels('default')
+      selectedRows.clear()
+      undoStack.value = []
+      resetFilters()
+      showToast(t('profileSwitched').replace('{name}', profileName(profiles.value[0])))
+    }
+
+    function exportBackup() {
+      persist()
+      const backup = {
+        app: 'iptv-playlist-generator',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        activeProfile: activeProfile.value,
+        profiles: profiles.value.map(p => ({ ...p, channels: p.id === activeProfile.value ? channels.value : loadProfileChannels(p.id) })),
+        confirmedMappings: confirmedMappings.value,
+        settings: { theme: theme.value, lang: lang.value },
+      }
+      downloadText(`iptv-backup-${backup.exportedAt.slice(0, 10)}.json`, JSON.stringify(backup, null, 2))
+      showToast(t('backupExported').replace('{p}', backup.profiles.length).replace('{n}', backup.profiles.reduce((sum, p) => sum + p.channels.length, 0)))
+    }
+
+    function importBackup(e) {
+      const file = e.target.files?.[0]
+      e.target.value = ''
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        let backup
+        try { backup = JSON.parse(reader.result) } catch { backup = null }
+        const valid = backup?.app === 'iptv-playlist-generator' && Array.isArray(backup.profiles)
+          && backup.profiles.every(p => p && typeof p.id === 'string' && Array.isArray(p.channels))
+        if (!valid) { showToast(t('backupInvalid')); return }
+        if (!confirm(t('backupRestoreConfirm').replace('{p}', backup.profiles.length))) return
+        try {
+          for (const p of profiles.value) localStorage.removeItem(channelsKey(p.id))
+          for (const p of backup.profiles) localStorage.setItem(channelsKey(p.id), JSON.stringify(p.channels))
+        } catch { showToast(t('backupInvalid')); return }
+        profiles.value = backup.profiles.map(({ id, name }) => ({ id, name: name || '' }))
+        if (!profiles.value.some(p => p.id === 'default')) profiles.value.unshift({ id: 'default', name: '' })
+        activeProfile.value = profiles.value.some(p => p.id === backup.activeProfile) ? backup.activeProfile : 'default'
+        saveProfiles()
+        channels.value = loadProfileChannels(activeProfile.value)
+        if (backup.confirmedMappings && typeof backup.confirmedMappings === 'object') {
+          confirmedMappings.value = backup.confirmedMappings
+          saveConfirmedMappings()
+        }
+        if (backup.settings?.theme) setTheme(backup.settings.theme)
+        if (backup.settings?.lang) setLang(backup.settings.lang)
+        selectedRows.clear()
+        undoStack.value = []
+        resetFilters()
+        showToast(t('backupRestored').replace('{p}', profiles.value.length))
+      }
+      reader.readAsText(file)
+    }
+
     /* ── Lifecycle ── */
     onMounted(() => {
       try {
-        const saved = localStorage.getItem(STORAGE_KEY)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          channels.value = parsed.map(ch => ch.is_active === undefined ? { ...ch, is_active: true } : ch)
+        const savedProfiles = JSON.parse(localStorage.getItem(PROFILES_KEY) || 'null')
+        if (savedProfiles?.list?.length) {
+          profiles.value = savedProfiles.list
+          if (savedProfiles.list.some(p => p.id === savedProfiles.active)) activeProfile.value = savedProfiles.active
         }
       } catch {}
+      channels.value = loadProfileChannels(activeProfile.value)
       try {
         const savedMappings = localStorage.getItem(MAPPING_KEY)
         if (savedMappings) confirmedMappings.value = JSON.parse(savedMappings)
@@ -4386,6 +4564,7 @@ const app = createApp({
       toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,
       removeChannel, confirmDelete, clearAll, triggerImport, importFromFile, importFromUrl,
       toggleRowSelect, toggleSelectAll, deleteSelected, bulkSetActive, bulkSetGroup, checkStreams, streamCheck,
+      profiles, activeProfile, backupRef, profileName, switchProfile, createProfile, renameProfile, deleteProfile, exportBackup, importBackup,
       exportPlaylist, exportMetadataHealthReport, applyBulkMetadataRules,
       epgData, epgLoaded, epgRef, logoErrors,
       triggerEpgImport, importEpgFromFile, clearEpg, detachTvgUrls,

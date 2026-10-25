@@ -437,6 +437,26 @@
       width: max-content; max-width: calc(100vw - 2rem); text-align: center; pointer-events: none;
     }
     [data-theme="dark"] .toast { background: rgba(72,72,74,.94); }
+    .toast.above-bar { bottom: calc(max(24px, env(safe-area-inset-bottom, 24px)) + 76px); }
+
+    /* ── Bulk actions bar (selected channels) ── */
+    .bulk-bar {
+      position: fixed; left: 50%; transform: translateX(-50%); z-index: 45;
+      bottom: max(14px, env(safe-area-inset-bottom)); width: max-content; max-width: calc(100vw - 1.5rem);
+      display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; justify-content: center;
+      padding: .55rem .6rem .55rem .9rem; border-radius: var(--radius-lg); animation: slideUp .2s ease;
+    }
+    .bulk-bar .btn { padding: 7px 11px; font-size: 13px; }
+    .bulk-count { font-size: 13px; margin-right: .2rem; white-space: nowrap; }
+    .bulk-group { width: auto; padding-top: 7px; padding-bottom: 7px; font-size: 13px; max-width: 12rem; }
+    main { padding-bottom: 5rem; }
+    @media (max-width: 640px) {
+      .bulk-bar { left: .75rem; right: .75rem; transform: none; width: auto; max-width: none; flex-wrap: nowrap; padding: .5rem; gap: .3rem; }
+      .bulk-bar .bulk-label { display: none; }
+      .bulk-count { min-width: 1.6rem; height: 1.6rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: var(--primary); color: #fff; margin: 0; }
+      .bulk-bar .btn { padding: 8px 9px; }
+      .bulk-group { flex: 1; min-width: 0; max-width: none; }
+    }
 
     /* ── Empty state ── */
     .empty-state { padding: 64px 24px; text-align: center; color: var(--text3); }
@@ -1404,9 +1424,26 @@
       </div>
     </div>
 
+    <!-- Bulk actions for selected channels -->
+    <div v-if="selectedRowsCount > 0" class="bulk-bar glass-s" role="toolbar" :aria-label="t('bulkActions')">
+      <strong class="bulk-count" :title="t('bulkSelected').replace('{n}', selectedRowsCount)">{{ selectedRowsCount }}<span class="bulk-label">{{ t('bulkSelected').replace('{n}', '') }}</span></strong>
+      <select class="select bulk-group" :aria-label="t('bulkMoveTo')" @change="bulkSetGroup($event.target.value); $event.target.value = ''">
+        <option value="">{{ t('bulkMoveTo') }}</option>
+        <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
+        <option value="__none__">{{ t('bulkNoGroup') }}</option>
+        <option value="__new__">{{ t('bulkNewGroup') }}</option>
+      </select>
+      <button type="button" class="btn btn-secondary" @click="bulkSetActive(true)" :title="t('bulkEnable')" :aria-label="t('bulkEnable')"><span v-html="icon('circle', 10)" style="color:var(--success)"></span><span class="bulk-label">{{ t('bulkEnable') }}</span></button>
+      <button type="button" class="btn btn-secondary" @click="bulkSetActive(false)" :title="t('bulkDisable')" :aria-label="t('bulkDisable')"><span v-html="icon('circleOff', 10)"></span><span class="bulk-label">{{ t('bulkDisable') }}</span></button>
+      <button type="button" class="btn btn-secondary" @click="exportPlaylist('m3u')" :title="t('bulkExport')" :aria-label="t('bulkExport')"><span v-html="icon('upload', 14)"></span><span class="bulk-label">{{ t('bulkExport') }}</span></button>
+      <button type="button" class="btn btn-secondary" @click="openAutoDetect()" :title="t('autoDetectShort')" :aria-label="t('autoDetectShort')"><span v-html="icon('search', 14)"></span><span class="bulk-label">{{ t('autoDetectShort') }}</span></button>
+      <button type="button" class="btn btn-danger" @click="deleteSelected" :title="t('delete')" :aria-label="t('delete')"><span v-html="icon('trash', 14)"></span><span class="bulk-label">{{ t('delete') }}</span></button>
+      <button type="button" class="btn btn-ghost bulk-close" @click="selectedRows.clear()" :aria-label="t('clearSelection')" :title="t('clearSelection')" v-html="icon('x', 16)"></button>
+    </div>
+
     <!-- Toast -->
     <transition name="fade">
-      <div v-if="toast.show" class="toast" role="status" aria-live="polite" aria-atomic="true">{{ toast.message }}</div>
+      <div v-if="toast.show" class="toast" :class="{ 'above-bar': selectedRowsCount > 0 }" role="status" aria-live="polite" aria-atomic="true">{{ toast.message }}</div>
     </transition>
 
   </div><!-- /max-w -->
@@ -1573,6 +1610,19 @@ const app = createApp({
     /* ── i18n ── */
     const messages = {
       sk: {
+        bulkActions:      'Hromadné akcie',
+        bulkSelected:     '{n} vybraných',
+        bulkMoveTo:       'Presunúť do skupiny…',
+        bulkNoGroup:      'Bez skupiny',
+        bulkNewGroup:     'Nová skupina…',
+        bulkNewGroupPrompt:'Názov novej skupiny',
+        bulkEnable:       'Zapnúť',
+        bulkDisable:      'Vypnúť',
+        bulkExport:       'Export M3U',
+        bulkEnabled:      'Zapnutých {n} kanálov',
+        bulkDisabled:     'Vypnutých {n} kanálov',
+        bulkMoved:        'Presunutých {n} kanálov do: {g}',
+        clearSelection:   'Zrušiť výber',
         whySaved:         'Uložené párovanie (z predchádzajúceho použitia)',
         whyEpgId:         'Presné TVG-ID v EPG ({src})',
         whyApiName:       'Presný názov v iptv-org',
@@ -1787,6 +1837,19 @@ const app = createApp({
         channelsDeletedN:    'Vymazaných {n} kanálov',
       },
       en: {
+        bulkActions:      'Bulk actions',
+        bulkSelected:     '{n} selected',
+        bulkMoveTo:       'Move to group…',
+        bulkNoGroup:      'No group',
+        bulkNewGroup:     'New group…',
+        bulkNewGroupPrompt:'New group name',
+        bulkEnable:       'Enable',
+        bulkDisable:      'Disable',
+        bulkExport:       'Export M3U',
+        bulkEnabled:      'Enabled {n} channels',
+        bulkDisabled:     'Disabled {n} channels',
+        bulkMoved:        'Moved {n} channels to: {g}',
+        clearSelection:   'Clear selection',
         whySaved:         'Saved mapping (from a previous apply)',
         whyEpgId:         'Exact TVG-ID in EPG ({src})',
         whyApiName:       'Exact name in iptv-org',
@@ -4182,6 +4245,26 @@ const app = createApp({
       })
     }
 
+    function bulkSetActive(active) {
+      const n = selectedRows.size
+      if (!n) return
+      snapshot('bulkActive')
+      channels.value.forEach(c => { if (selectedRows.has(c.id)) c.is_active = active })
+      persist()
+      showToast(t(active ? 'bulkEnabled' : 'bulkDisabled').replace('{n}', n))
+    }
+
+    function bulkSetGroup(value) {
+      if (!value || !selectedRows.size) return
+      const group = value === '__none__' ? '' : value === '__new__' ? (prompt(t('bulkNewGroupPrompt')) || '').trim() : value
+      if (value === '__new__' && !group) return
+      const n = selectedRows.size
+      snapshot('bulkGroup')
+      channels.value.forEach(c => { if (selectedRows.has(c.id)) c.group_title = group })
+      persist()
+      showToast(t('bulkMoved').replace('{n}', n).replace('{g}', group || t('bulkNoGroup')))
+    }
+
     function deleteSelected() {
       const n = selectedRows.size
       if (n === 0) return
@@ -4205,7 +4288,7 @@ const app = createApp({
       undoLastChange, metadataScore, metadataTooltip,
       toggleChannel, editChannel, openAddChannel, closeEditSafe, forceCloseEdit, saveEdit,
       removeChannel, confirmDelete, clearAll, triggerImport, importFromFile, importFromUrl,
-      toggleRowSelect, toggleSelectAll, deleteSelected,
+      toggleRowSelect, toggleSelectAll, deleteSelected, bulkSetActive, bulkSetGroup,
       exportPlaylist, exportMetadataHealthReport, applyBulkMetadataRules,
       epgData, epgLoaded, epgRef, logoErrors,
       triggerEpgImport, importEpgFromFile, clearEpg, detachTvgUrls,

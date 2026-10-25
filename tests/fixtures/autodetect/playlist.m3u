@@ -1,0 +1,25 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="markizaklasik.sk" tvg-name="Markiza Klasik" group-title="SK",Markíza Klasik
+https://stream.test/markiza-klasik.m3u8
+#EXTINF:-1 tvg-id="Doma.sk" tvg-name="Doma HD.sk" group-title="SK",Doma HD
+https://stream.test/doma.m3u8
+#EXTINF:-1 group-title="SK",DAJTO
+https://stream.test/dajto.m3u8
+#EXTINF:-1 group-title="SK",JOJ Svet HD
+https://stream.test/joj-svet.m3u8
+#EXTINF:-1 group-title="Šport",JOJ Sport 2
+https://stream.test/joj-sport-2.m3u8
+#EXTINF:-1 group-title="Šport",Premier Sport 1
+https://stream.test/premier-sport-1.m3u8
+#EXTINF:-1 group-title="Šport",PREMIER SPORT 3
+https://stream.test/premier-sport-3.m3u8
+#EXTINF:-1 group-title="Šport",Oneplay Sport 1
+https://stream.test/oneplay-sport-1.m3u8
+#EXTINF:-1 group-title="Šport",NOVA SPORT 2
+https://stream.test/nova-sport-2.m3u8
+#EXTINF:-1 group-title="Šport",Sport 1 HD
+https://stream.test/sport-1.m3u8
+#EXTINF:-1 group-title="CZ",ČT1 HD
+https://stream.test/ct1.m3u8
+#EXTINF:-1 group-title="Filmy",HBO 2
+https://stream.test/hbo2.m3u8

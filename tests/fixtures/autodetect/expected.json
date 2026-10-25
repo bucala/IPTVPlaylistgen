@@ -1,0 +1,15 @@
+{
+  "_comment": "Expected autodetect result per channel name. tvgId null = must not be matched; logo = tv-logos file or null.",
+  "Markíza Klasik":  { "tvgId": "Markíza Klasik.sk",  "logo": null },
+  "Doma":            { "tvgId": "Doma.sk",            "logo": "slovakia/markiza-doma-sk.png" },
+  "DAJTO":           { "tvgId": "Dajto.sk",           "logo": "slovakia/markiza-dajto-sk.png" },
+  "JOJ Svet":        { "tvgId": "JOJ Svet.sk",        "logo": "slovakia/joj-svet-sk.png" },
+  "JOJ Sport 2":     { "tvgId": "JOJ Sport 2.sk",     "logo": "slovakia/joj-sport-2-sk.png" },
+  "Premier Sport 1": { "tvgId": "Premier Sport 1.sk", "logo": "czech-republic/premier-sport-1-cz.png" },
+  "PREMIER SPORT 3": { "tvgId": "PREMIER SPORT 3.sk", "logo": "czech-republic/premier-sport-3-cz.png" },
+  "Oneplay Sport 1": { "tvgId": "Oneplay Sport 1.cz", "logo": "czech-republic/oneplay-sport-1-cz.png" },
+  "NOVA SPORT 2":    { "tvgId": null },
+  "Sport 1":         { "tvgId": "Sport1.sk",          "logo": "slovakia/sport1-sk.png" },
+  "ČT1":             { "tvgId": "ČT1.cz",             "logo": "czech-republic/ct1-cz.png" },
+  "HBO 2":           { "tvgId": "HBO 2.sk",           "logo": "czech-republic/hbo2-cz.png" }
+}

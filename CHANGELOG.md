@@ -12,6 +12,10 @@ Všetky významné zmeny v projekte sú dokumentované v tomto súbore.
 ### Spoľahlivý štart — žiadna čierna obrazovka
 
 #### Fixed
+- **Export bez vybraných kanálov** — Export (M3U/XSPF/JSON/Enigma2) a „Odpojiť TVG URL" padali s `ReferenceError: isFiltered is not defined`, keď nebol vybraný žiadny riadok.
+- **Autodetekcia na celú obrazovku** — tabuľka výsledkov využíva celú výšku, tlačidlá Zrušiť/Aplikovať sú vždy viditeľné (na nízkych obrazovkách boli orezané).
+- **Telefón na šírku a tablet** — zoznam kanálov sa na šírku zrútil na 0 px a pohlcoval swipe; na dotykových zariadeniach sa posúva stránka.
+- **Bezpečnostný audit** — `npm audit` hlásil 12 zraniteľností (10 high, 2 critical) vo vývojových a Capacitor závislostiach; lockfile aktualizovaný (len minor/patch verzie), `compression` cez `overrides` na 1.8.2.
 - **Posúvanie prstom na mobile** — zoznam kanálov bol vnorený scroll kontajner s `overscroll-behavior: contain`, ktorý pohltil swipe začatý na karte; stránka sa teraz posúva odkiaľkoľvek.
 - **Opravy sa nedostali k používateľom** — Service Worker (v1–v4) servíroval `index.html` cache-first, takže prehliadač s nainštalovaným SW zostal navždy na starej (pokazenej) verzii aj po deployi opravy. `sw.js` v5 načítava `index.html` network-first (cache len ako offline záloha) a stránky otvorené pod starým SW pri aktualizácii raz automaticky obnoví.
 - **Čierna obrazovka po páde renderu** — chyba v šablóne (napr. chýbajúca väzba zo `setup()`) už nezanechá prázdnu stránku: aplikácia zavrie dialógy a pokračuje, a ak to nepomôže, zobrazí panel s textom chyby a tlačidlom *Obnoviť stránku*. To isté platí, ak sa nenačíta Vue runtime.

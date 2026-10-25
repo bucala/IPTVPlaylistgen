@@ -29,7 +29,7 @@ function extract(start, end) {
   return html.slice(from, to);
 }
 
-const aliasBlock = extract('const ALLOWED_TVG_URLS = new Set([', 'createApp({');
+const aliasBlock = extract('const ALLOWED_TVG_URLS = new Set([', 'const app = createApp({');
 const autodetectFunctions = extract('function stripChannelDecorations', 'function strSimilarity');
 const parseFunctions = extract('function parseExtinf', 'function detectQuality');
 const detectQualityBlock = extract('function detectQuality', 'function exportPlaylist');

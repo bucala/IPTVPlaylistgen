@@ -7,6 +7,26 @@ Všetky významné zmeny v projekte sú dokumentované v tomto súbore.
 
 ---
 
+## [Unreleased]
+
+### Spoľahlivý štart — žiadna čierna obrazovka
+
+#### Fixed
+- **Posúvanie prstom na mobile** — zoznam kanálov bol vnorený scroll kontajner s `overscroll-behavior: contain`, ktorý pohltil swipe začatý na karte; stránka sa teraz posúva odkiaľkoľvek.
+- **Opravy sa nedostali k používateľom** — Service Worker (v1–v4) servíroval `index.html` cache-first, takže prehliadač s nainštalovaným SW zostal navždy na starej (pokazenej) verzii aj po deployi opravy. `sw.js` v5 načítava `index.html` network-first (cache len ako offline záloha) a stránky otvorené pod starým SW pri aktualizácii raz automaticky obnoví.
+- **Čierna obrazovka po páde renderu** — chyba v šablóne (napr. chýbajúca väzba zo `setup()`) už nezanechá prázdnu stránku: aplikácia zavrie dialógy a pokračuje, a ak to nepomôže, zobrazí panel s textom chyby a tlačidlom *Obnoviť stránku*. To isté platí, ak sa nenačíta Vue runtime.
+- **Autodetekcia „všetko alebo nič"** — jeden nedostupný zdroj (timeout, CORS, HTTP chyba) už nezruší celý beh; výsledky sa vytvoria z dostupných zdrojov a toast uvedie nedostupné. EPG XML má 20 s timeout a odpoveď sa overí, že je XMLTV (nie HTML stránka).
+- **open-epg.com cez proxy všade** — na webe same-origin `/epg-proxy`, v Android/desktop aplikácii a lokálne verejná proxy, nakoniec priamy request. Proxy funkcia posiela `Content-Type: application/xml`, ošetruje chyby upstreamu a CORS hlavičky má aj na chybových odpovediach.
+
+#### Changed
+- **Kompaktný horný panel** — tlačidlá sú zoskupené do menu **Import**, **Export** a **Úpravy** s ikonami a popismi; štatistiky sú v malom info paneli. Na mobile zaberá hlavička ~195 px namiesto ~800 px.
+- **Bez tab panelu a bočného panela** — záložky Knižnica / Obsah / Dizajn zrušené; filtre sú v okne **Filter** z horného panela (skupiny s počtami, lišta aktívneho filtra nad tabuľkou), hromadné pravidlá a report kvality v menu **Úpravy**.
+- **Jazyk a téma** v menu ⚙ vpravo hore.
+- **Vue 3.5.44 je vendorovaný** v `vendor/` (overená npm integrita) namiesto plávajúceho `unpkg.com/vue@3` — aplikácia štartuje offline a nová verzia Vue ju nezmení bez commitu. CSP už nepovoľuje skripty z `unpkg.com`.
+- `npm test` kontroluje, že šablóna číta len väzby vrátené zo `setup()`, že `index.html` nenačítava skripty z cudzích domén a že SW servíruje shell network-first.
+
+---
+
 ## [2.6.0] — 2026-06-15
 
 ### UI polish + Autodetekcia metadát z EPG

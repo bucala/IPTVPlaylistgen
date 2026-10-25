@@ -253,38 +253,99 @@
     }
     .stat-pill strong { color: var(--text); font-weight: 600; }
 
-    /* ── Sidebar tab ── */
-    .sidebar-tab {
-      width: 100%; text-align: left; border: none; border-radius: var(--radius-md);
-      padding: .85rem 1rem; background: transparent;
-      color: var(--text3); font-size: 14px; font-weight: 500;
-      transition: .18s ease; display: flex; align-items: center; gap: .75rem;
-      user-select: none; -webkit-user-select: none;
+    /* ── Header: brand · settings · toolbar menus · info ── */
+    .app-header {
+      position: relative; z-index: 30;  /* menus overlay the content below */
+      display: grid; grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "brand settings" "tools tools" "stats stats";
+      gap: .85rem 1rem; align-items: center;
     }
-    .sidebar-tab:hover { background: var(--fill2); color: var(--text2); }
-    .sidebar-tab.active { background: var(--primary); color: #fff; }
-    .sidebar-tab .tab-icon {
-      width: 30px; height: 30px; border-radius: 7px;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    .hdr-brand    { grid-area: brand; }
+    .hdr-settings { grid-area: settings; align-self: start; }
+    .hdr-tools    { grid-area: tools; display: flex; flex-wrap: wrap; gap: .5rem; }
+    .hdr-stats    { grid-area: stats; display: flex; flex-wrap: wrap; gap: .35rem; }
+    @media (min-width: 1025px) {
+      .app-header { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "brand tools settings" "stats stats stats"; }
+      .hdr-settings { align-self: center; }
     }
-    .sidebar-tab:not(.active) .tab-icon { background: var(--fill); }
-    .sidebar-tab.active .tab-icon { background: rgba(255,255,255,.2); }
+    .tool-btn {
+      position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 9px 14px; border: none; border-radius: var(--radius-sm);
+      background: var(--fill); color: var(--text); font-size: 14px; font-weight: 600; line-height: 1;
+      white-space: nowrap; cursor: pointer; transition: all var(--ease);
+      -webkit-user-select: none; user-select: none;
+    }
+    .tool-btn:hover { filter: brightness(.93); }
+    .tool-btn:active { transform: scale(.97); }
+    .tool-btn[aria-expanded="true"] { background: var(--primary); color: #fff; filter: none; }
+    .tool-btn .chev { display: inline-flex; opacity: .55; }
+    .tool-badge {
+      position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 999px; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700;
+    }
+    .tool-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 2px var(--surface-s); }
+    .icon-btn {
+      display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+      border: none; border-radius: 999px; background: var(--fill); color: var(--text2);
+      cursor: pointer; transition: all var(--ease);
+    }
+    .icon-btn:hover { color: var(--text); }
+    .icon-btn[aria-expanded="true"] { background: var(--primary); color: #fff; }
 
-    /* ── Language switcher ── */
-    .lang-sw {
-      display: inline-flex; padding: 3px; border-radius: 999px;
-      background: var(--surface-s); border: 1px solid var(--border);
-      gap: 2px;
+    /* ── Dropdown menus ── */
+    .menu-wrap { position: relative; }
+    .menu-pop {
+      position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+      min-width: 250px; max-width: min(340px, calc(100vw - 2rem)); padding: 6px;
+      /* opaque: a backdrop-filter nested in the glass header cannot blur the page behind it */
+      border-radius: var(--radius-lg); background: var(--bg2); border: 1px solid var(--border-s);
+      box-shadow: var(--shadow-lg);
+      animation: menuIn .14s ease;
     }
-    .lang-sw button {
-      border: none; background: transparent; color: var(--text3);
-      padding: 5px 12px; border-radius: 999px;
-      font-size: 12px; font-weight: 700; letter-spacing: .06em;
-      cursor: pointer; transition: .18s ease; user-select: none;
+    .menu-pop-right { left: auto; right: 0; }
+    .menu-item {
+      width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+      border: none; border-radius: var(--radius-sm); background: transparent; color: var(--text);
+      font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;
     }
-    .lang-sw button.active {
-      background: var(--primary); color: #fff;
-      box-shadow: 0 2px 8px rgba(0,122,255,.28);
+    .menu-item:hover:not(:disabled), .menu-item:focus-visible { background: var(--fill); outline: none; }
+    .menu-item:disabled { opacity: .38; cursor: not-allowed; }
+    .menu-item .mi-icon {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--primary-l); color: var(--primary);
+    }
+    .menu-item .mi-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .menu-item .mi-hint { font-size: 11.5px; font-weight: 400; color: var(--text3); }
+    .menu-item .mi-check { color: var(--primary); display: inline-flex; }
+    .menu-item.danger { color: var(--danger); }
+    .menu-item.danger .mi-icon { background: rgba(255,59,48,.12); color: var(--danger); }
+    .menu-sep { height: 1px; margin: 5px 8px; background: var(--sep); }
+    .menu-label { padding: 8px 10px 5px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); }
+    .menu-seg { display: flex; margin: 0 6px 6px; }
+    .skin-dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; border: 1px solid var(--border-s); }
+    .skin-light  { background: linear-gradient(135deg, #f2f2f7 50%, #007aff 50%); }
+    .skin-dark   { background: linear-gradient(135deg, #000000 50%, #0a84ff 50%); }
+    .skin-aurora { background: linear-gradient(135deg, #030712 50%, #38bdf8 50%); }
+    .skin-grape  { background: linear-gradient(135deg, #120717 50%, #c084fc 50%); }
+    .skin-forest { background: linear-gradient(135deg, #020d08 50%, #22c55e 50%); }
+    @keyframes menuIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+    /* ── Info panel ── */
+    .info-chip {
+      display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px;
+      border-radius: 999px; background: var(--fill2); color: var(--text3); font-size: 12px; line-height: 1.4;
+    }
+    .info-chip strong { color: var(--text); font-weight: 600; }
+    .info-chip .q-badge { padding: 0 5px; font-size: 10px; }
+    .dot-active { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+
+    /* ── Active filter summary ── */
+    .filter-bar {
+      display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
+      margin-bottom: .75rem; padding: .45rem .5rem .45rem .85rem; border-radius: var(--radius-md);
+      background: var(--primary-l); color: var(--primary); font-size: 13px; font-weight: 500;
     }
 
     /* ── Table ── */
@@ -318,25 +379,6 @@
     tbody tr.selected { background: var(--primary-l); }
     td { padding: 9px 12px; font-size: 13px; vertical-align: middle; user-select: none; -webkit-user-select: none; }
     td.muted { color: var(--text3); }
-
-    /* ── Design row ── */
-    .design-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: .85rem 1rem; border-radius: var(--radius-md);
-      background: var(--surface-s); border: 1px solid var(--border);
-      margin-top: .5rem;
-    }
-    .design-row:first-of-type { margin-top: 0; }
-
-    /* ── Group item ── */
-    .group-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: .78rem 1rem; border-radius: var(--radius-md);
-      background: var(--surface-s); border: 1px solid var(--border);
-      transition: background .15s ease; margin-top: .4rem;
-    }
-    .group-item:first-child { margin-top: 0; }
-    .group-item:hover { background: var(--surface-m); }
 
     /* ── Modal ── */
     .modal-overlay {
@@ -422,51 +464,28 @@
     }
     .stat-card .num { font-size: 2rem; font-weight: 800; }
     .stat-card .lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
-    .roadmap-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:.75rem; }
-    .roadmap-card { background:var(--surface-s); border:1px solid var(--border); border-radius:var(--radius-md); padding:1rem; }
-    .roadmap-card h3 { font-size:1rem; font-weight:700; margin:.35rem 0; }
-    .roadmap-card p { color:var(--text3); font-size:.875rem; }
-    .roadmap-priority { display:inline-flex; align-items:center; border-radius:999px; padding:2px 8px; font-size:11px; font-weight:800; letter-spacing:.06em; background:var(--primary-l); color:var(--primary); }
-
     /* ── Vue transitions ── */
     .fade-enter-active, .fade-leave-active { transition: opacity .2s ease, margin-bottom .2s ease; }
     .fade-enter-from, .fade-leave-to { opacity: 0; margin-bottom: -8px; }
 
-    /* ── Mobile tab bar ── */
-    .mob-tabs {
-      display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
-      scrollbar-width: none; gap: 6px;
-    }
-    .mob-tabs::-webkit-scrollbar { display: none; }
-    .mob-tab {
-      display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
-      border: none; border-radius: var(--radius-sm);
-      padding: 9px 15px; font-size: 14px; font-weight: 600;
-      white-space: nowrap; cursor: pointer;
-      background: var(--fill); color: var(--text3); transition: all var(--ease);
-    }
-    .mob-tab:active { transform: scale(0.97); }
-    .mob-tab.active { background: var(--primary); color: #fff; }
-    .mob-badge { font-size: 11px; opacity: .7; margin-left: 2px; }
-
     /* ── Responsive (mobile-first) ── */
-    .app-grid { grid-template-columns: 1fr; align-items: start; min-width: 0; }
-    .app-grid > *, main, section { min-width: 0; }
-    .app-sidebar { display: none; }
-    @media (min-width: 1025px) {
-      .app-grid { grid-template-columns: minmax(240px, 280px) minmax(0, 1fr); }
-      .app-sidebar { display: block; }
-      .mob-tabs { display: none; }
-    }
+    main, section { min-width: 0; }
     @media (max-width: 640px) {
       body { overflow-x: hidden; }
       #app { padding-left: max(.75rem, env(safe-area-inset-left)); padding-right: max(.75rem, env(safe-area-inset-right)); }
-      .hdr-actions { flex-direction: column; width: 100%; }
-      .hdr-btns { flex-wrap: wrap; width: 100%; }
-      .hdr-btns .btn { flex: 1 1 calc(50% - .5rem); min-width: 0; padding-left: 10px; padding-right: 10px; }
-      header .app-icon { width: 40px; height: 40px; }
-      header h1 { font-size: 1.65rem !important; }
-      .table-shell:not(.auto-detect-table) { max-height: none; overflow-x: visible; }
+      .app-header { padding: .9rem 1rem !important; gap: .75rem; border-radius: 22px !important; }
+      header .hdr-kicker, header .hdr-subtitle { display: none; }
+      header .app-icon { width: 38px; height: 38px; border-radius: 11px; }
+      header h1 { font-size: 1.3rem !important; }
+      .hdr-tools { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; }
+      .hdr-tools .menu-wrap { position: static; }  /* menus span the whole toolbar width */
+      .hdr-tools .menu-pop { left: 0; right: 0; min-width: 0; max-width: none; }
+      .tool-btn { width: 100%; flex-direction: column; gap: 4px; padding: 9px 4px; font-size: 12px; }
+      .tool-btn .chev { display: none; }
+      .icon-btn { width: 38px; height: 38px; }
+      /* Cards are not a scroll container: a nested scroller with overscroll-behavior: contain
+         swallowed finger swipes that started on a card, so the page could not be scrolled */
+      .table-shell:not(.auto-detect-table) { max-height: none; overflow: visible; overscroll-behavior: auto; }
       .table-shell:not(.auto-detect-table) table { min-width: 0; border-collapse: separate; border-spacing: 0 .65rem; }
       .table-shell:not(.auto-detect-table) thead { display: none; }
       .table-shell:not(.auto-detect-table) tbody tr { display: grid; grid-template-columns: auto 1fr auto; gap: .25rem .7rem; align-items: center; margin: 0 .6rem; padding: .85rem; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-s); cursor: default; }
@@ -535,8 +554,17 @@
     [v-cloak] ~ #app-loader { display: flex; }
     .app-loader-ring { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--primary); animation: app-spin .75s linear infinite; }
     @keyframes app-spin { to { transform: rotate(360deg); } }
+
+    /* ── Fatal error panel (rendered outside Vue instead of a blank screen) ── */
+    #app-fatal { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: var(--bg); color: var(--text); }
+    #app-fatal[hidden] { display: none; }
+    .app-fatal-card { width: 100%; max-width: 520px; padding: 1.5rem; border-radius: var(--radius-xl); background: var(--surface-s); border: 1px solid var(--border-s); box-shadow: var(--shadow-lg); }
+    .app-fatal-card h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; }
+    .app-fatal-card p { color: var(--text2); font-size: .9rem; margin-bottom: .75rem; }
+    .app-fatal-card code { display: block; max-height: 8rem; overflow: auto; margin-bottom: 1rem; padding: .6rem .75rem; border-radius: var(--radius-sm); background: var(--fill2); color: var(--text3); font-size: .75rem; white-space: pre-wrap; word-break: break-word; -webkit-user-select: text; user-select: text; }
   </style>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Vue is vendored and pinned (see vendor/README.md) so the app starts offline and never changes under us -->
+  <script src="./vendor/vue-3.5.44.global.prod.js"></script>
 </head>
 <body>
 <noscript><style>body{display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#000;color:#fff;text-align:center;padding:2rem}</style><p>IPTV Playlist Generator requires JavaScript to run.</p></noscript>
@@ -544,257 +572,153 @@
   <div class="max-w-[1720px] mx-auto pt-4 md:pt-5">
 
     <!-- ══════════════════════ HEADER ══════════════════════ -->
-    <header class="glass-s rounded-[28px] px-5 md:px-7 py-4 md:py-5 mb-4">
-      <div class="flex flex-wrap gap-4 items-start md:items-center justify-between">
+    <header class="app-header glass-s rounded-[28px] px-5 md:px-7 py-4 md:py-5 mb-4">
 
-        <!-- Brand -->
-        <div class="flex items-center gap-4 min-w-0">
-          <div class="app-icon" aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-              <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-              <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-              <path d="M17 14v3m-3-3h6m-3 3v3"/>
-            </svg>
-          </div>
-          <div>
-            <div class="text-[0.7rem] font-bold tracking-[.16em] uppercase" style="color:var(--text3)">Simple Apple Style</div>
-            <h1 class="text-[1.9rem] md:text-[2.2rem] leading-tight font-extrabold tracking-[-0.04em]">IPTV Playlist Generator</h1>
-            <p class="text-sm mt-0.5" style="color:var(--text3)">{{ t('appSubtitle') }}</p>
-          </div>
+      <!-- Brand -->
+      <div class="hdr-brand flex items-center gap-4 min-w-0">
+        <div class="app-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            <path d="M17 14v3m-3-3h6m-3 3v3"/>
+          </svg>
         </div>
-
-        <!-- Controls -->
-        <div class="flex flex-col gap-2.5 items-stretch md:items-end hdr-actions">
-          <!-- Action buttons -->
-          <div class="flex flex-wrap gap-2 justify-start md:justify-end hdr-btns">
-            <button class="btn btn-primary"    @click="triggerImport">{{ t('importPlaylist') }}</button>
-            <button class="btn btn-secondary"  @click="exportPlaylist('m3u')"     :disabled="stats.total === 0">{{ t('exportM3U') }}</button>
-            <button class="btn btn-secondary"  @click="exportPlaylist('xspf')"    :disabled="stats.total === 0">{{ t('exportXSPF') }}</button>
-            <button class="btn btn-secondary"  @click="exportPlaylist('json')"    :disabled="stats.total === 0">{{ t('exportJSON') }}</button>
-            <button class="btn btn-secondary"  @click="exportPlaylist('enigma2')" :disabled="stats.total === 0">{{ t('exportEnigma2') }}</button>
-            <button class="btn btn-secondary"  @click="undoLastChange" :disabled="undoStack.length === 0">{{ t('undo') }}</button>
-            <button class="btn btn-secondary" @click="triggerEpgImport" :title="t('epgImportHint')"><span v-html="icon('antenna', 15)"></span>{{ t('epgImport') }}</button>
-            <button v-if="epgLoaded" class="btn btn-secondary" @click="clearEpg" style="color:var(--success)">{{ t('clearEpg') }}</button>
-            <button class="btn btn-secondary" @click="detachTvgUrls" :disabled="stats.total === 0">{{ t('detachTvgUrl') }}</button>
-            <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" multiple class="sr-only" @change="importEpgFromFile" />
-            <button class="btn btn-secondary"  @click="openAutoDetect" :disabled="stats.total === 0"><span v-html="icon('search', 15)"></span>{{ t('autoDetectBtn') }}</button>
-            <button class="btn btn-ghost"      @click="openAddChannel"><span class="inline-flex items-center gap-1.5"><span v-html="icon('plus', 14)"></span>{{ t('addChannel') }}</span></button>
-            <button class="btn btn-danger"     @click="deleteSelected" :disabled="selectedRowsCount === 0">{{ t('deleteSelected') }}{{ selectedRowsCount > 0 ? ' (' + selectedRowsCount + ')' : '' }}</button>
-          </div>
+        <div class="min-w-0">
+          <div class="hdr-kicker text-[0.7rem] font-bold tracking-[.16em] uppercase" style="color:var(--text3)">Simple Apple Style</div>
+          <h1 class="text-[1.9rem] md:text-[2.2rem] leading-tight font-extrabold tracking-[-0.04em]">IPTV Playlist Generator</h1>
+          <p class="hdr-subtitle text-sm mt-0.5" style="color:var(--text3)">{{ t('appSubtitle') }}</p>
         </div>
       </div>
 
-      <!-- Stats bar -->
-      <div class="flex flex-wrap gap-2 mt-3" role="status" aria-live="polite">
-        <div class="stat-pill"><strong>{{ stats.total }}</strong> {{ t('total') }}</div>
-        <div class="stat-pill"><strong>{{ stats.active }}</strong> {{ t('active') }}</div>
-        <div class="stat-pill"><strong>{{ stats.groups }}</strong> {{ t('groups') }}</div>
-        <template v-for="(count, quality) in stats.qualities" :key="quality">
-          <div class="stat-pill" v-if="count">
-            <span class="q-badge" :class="'q-' + quality">{{ quality }}</span>
-            <span>{{ count }}</span>
+      <!-- Settings: language + skin (top-right) -->
+      <div class="hdr-settings menu-wrap">
+        <button type="button" class="icon-btn" @click="toggleMenu('settings')" aria-haspopup="menu"
+                :aria-expanded="String(openMenu === 'settings')" :aria-label="t('settings')" :title="t('settings')"
+                v-html="icon('settings', 19)"></button>
+        <div v-if="openMenu === 'settings'" class="menu-pop menu-pop-right" role="menu" :aria-label="t('settings')">
+          <div class="menu-label">{{ t('language') }}</div>
+          <div class="seg menu-seg" role="group" :aria-label="t('langLabel')">
+            <button type="button" class="seg-btn" :class="{ active: lang === 'sk' }" @click="setLang('sk')" :aria-pressed="String(lang === 'sk')">Slovenčina</button>
+            <button type="button" class="seg-btn" :class="{ active: lang === 'en' }" @click="setLang('en')" :aria-pressed="String(lang === 'en')">English</button>
           </div>
+          <div class="menu-label">{{ t('theme') }}</div>
+          <button v-for="opt in themeOptions" :key="opt.id" type="button" class="menu-item" role="menuitemradio"
+                  :aria-checked="String(theme === opt.id)" @click="setTheme(opt.id)">
+            <span class="skin-dot" :class="'skin-' + opt.id" aria-hidden="true"></span>
+            <span class="mi-text">{{ t(opt.labelKey) }}</span>
+            <span v-if="theme === opt.id" class="mi-check" v-html="icon('check', 15)"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Toolbar: Import / Export / Edit menus + Filter -->
+      <div class="hdr-tools" role="toolbar" :aria-label="t('toolbar')">
+        <div class="menu-wrap">
+          <button type="button" class="tool-btn" @click="toggleMenu('import')" aria-haspopup="menu" :aria-expanded="String(openMenu === 'import')">
+            <span v-html="icon('download', 17)"></span><span>{{ t('menuImport') }}</span><span class="chev" v-html="icon('chevDown', 13)"></span>
+          </button>
+          <div v-if="openMenu === 'import'" class="menu-pop" role="menu" :aria-label="t('menuImport')">
+            <button type="button" class="menu-item" role="menuitem" @click="openMenu = null; triggerImport()">
+              <span class="mi-icon" v-html="icon('list', 16)"></span>
+              <span class="mi-text">{{ t('menuImportPlaylist') }}<small class="mi-hint">M3U · M3U8 · XSPF</small></span>
+            </button>
+            <button type="button" class="menu-item" role="menuitem" :title="t('epgImportHint')" @click="openMenu = null; triggerEpgImport()">
+              <span class="mi-icon" v-html="icon('antenna', 16)"></span>
+              <span class="mi-text">{{ t('menuImportEpg') }}<small class="mi-hint">XMLTV</small></span>
+            </button>
+            <button v-if="epgLoaded" type="button" class="menu-item danger" role="menuitem" @click="openMenu = null; clearEpg()">
+              <span class="mi-icon" v-html="icon('x', 16)"></span>
+              <span class="mi-text">{{ t('clearEpg') }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="menu-wrap">
+          <button type="button" class="tool-btn" @click="toggleMenu('export')" aria-haspopup="menu" :aria-expanded="String(openMenu === 'export')">
+            <span v-html="icon('upload', 17)"></span><span>{{ t('menuExport') }}</span><span class="chev" v-html="icon('chevDown', 13)"></span>
+          </button>
+          <div v-if="openMenu === 'export'" class="menu-pop" role="menu" :aria-label="t('menuExport')">
+            <button v-for="fmt in exportFormats" :key="fmt.id" type="button" class="menu-item" role="menuitem"
+                    :disabled="stats.total === 0" @click="openMenu = null; exportPlaylist(fmt.id)">
+              <span class="mi-icon" v-html="icon(fmt.icon, 16)"></span>
+              <span class="mi-text">{{ fmt.label }}<small class="mi-hint">{{ t(fmt.hintKey) }}</small></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="menu-wrap">
+          <button type="button" class="tool-btn" @click="toggleMenu('edit')" aria-haspopup="menu" :aria-expanded="String(openMenu === 'edit')">
+            <span v-html="icon('edit', 17)"></span><span>{{ t('menuEdit') }}</span><span class="chev" v-html="icon('chevDown', 13)"></span>
+            <span v-if="selectedRowsCount > 0" class="tool-badge" :aria-label="selectedRowsCount + ' ' + t('selectedCount')">{{ selectedRowsCount }}</span>
+          </button>
+          <div v-if="openMenu === 'edit'" class="menu-pop" role="menu" :aria-label="t('menuEdit')">
+            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="openMenu = null; openAutoDetect()">
+              <span class="mi-icon" v-html="icon('search', 16)"></span>
+              <span class="mi-text">{{ t('autoDetectBtn') }}<small class="mi-hint">{{ t('menuAutoDetectHint') }}</small></span>
+            </button>
+            <button type="button" class="menu-item" role="menuitem" @click="openMenu = null; openAddChannel()">
+              <span class="mi-icon" v-html="icon('plus', 16)"></span>
+              <span class="mi-text">{{ t('addChannel') }}</span>
+            </button>
+            <button type="button" class="menu-item" role="menuitem" :disabled="undoStack.length === 0" @click="openMenu = null; undoLastChange()">
+              <span class="mi-icon" v-html="icon('undo', 16)"></span>
+              <span class="mi-text">{{ t('undo') }}</span>
+            </button>
+            <div class="menu-sep" role="separator"></div>
+            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="openMenu = null; applyBulkMetadataRules()">
+              <span class="mi-icon" v-html="icon('sparkles', 16)"></span>
+              <span class="mi-text">{{ t('bulkMetadataRules') }}</span>
+            </button>
+            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="openMenu = null; detachTvgUrls()">
+              <span class="mi-icon" v-html="icon('unlink', 16)"></span>
+              <span class="mi-text">{{ t('detachTvgUrl') }}</span>
+            </button>
+            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="openMenu = null; exportMetadataHealthReport()">
+              <span class="mi-icon" v-html="icon('fileText', 16)"></span>
+              <span class="mi-text">{{ t('metadataHealthReport') }}</span>
+            </button>
+            <div class="menu-sep" role="separator"></div>
+            <button type="button" class="menu-item danger" role="menuitem" :disabled="selectedRowsCount === 0" @click="openMenu = null; deleteSelected()">
+              <span class="mi-icon" v-html="icon('trash', 16)"></span>
+              <span class="mi-text">{{ t('deleteSelectedMenu') }}{{ selectedRowsCount > 0 ? ' (' + selectedRowsCount + ')' : '' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <button type="button" class="tool-btn" @click="openMenu = null; modal.filter = true" :aria-label="t('filterSet') + (hasActiveFilters ? ' (' + t('filterActive') + ')' : '')">
+          <span v-html="icon('filter', 17)"></span><span>{{ t('filterSet') }}</span>
+          <span v-if="hasActiveFilters" class="tool-dot" aria-hidden="true"></span>
+        </button>
+        <input ref="epgRef" type="file" accept=".xml,.xmltv,text/xml,application/xml" multiple class="sr-only" @change="importEpgFromFile" />
+      </div>
+
+      <!-- Info panel -->
+      <div class="hdr-stats" role="status" aria-live="polite">
+        <span class="info-chip"><span v-html="icon('tv', 13)"></span><strong>{{ stats.total }}</strong> {{ t('total') }}</span>
+        <span class="info-chip"><span class="dot-active" aria-hidden="true"></span><strong>{{ stats.active }}</strong> {{ t('active') }}</span>
+        <span class="info-chip"><span v-html="icon('folder', 13)"></span><strong>{{ stats.groups }}</strong> {{ t('groups') }}</span>
+        <template v-for="(count, quality) in stats.qualities" :key="quality">
+          <span v-if="count" class="info-chip"><span class="q-badge" :class="'q-' + quality">{{ quality }}</span>{{ count }}</span>
         </template>
       </div>
     </header>
 
-    <!-- Mobile tab bar (hidden on ≥1024px by .mob-tabs CSS) -->
-    <div class="mob-tabs glass rounded-[18px] px-4 py-3 mb-4" role="tablist" :aria-label="t('workspace')">
-      <button
-        v-for="tab in visibleTabs" :key="tab.id"
-        class="mob-tab" :class="{ active: activeTab === tab.id }"
-        @click="activeTab = tab.id; mobFilterOpen = false"
-        :aria-current="activeTab === tab.id ? 'page' : undefined"
-        role="tab"
-      >
-        <span aria-hidden="true" v-html="icon(tab.svgKey, 16)"></span>
-        {{ t(tab.labelKey) }}
-        <span v-if="tab.id === 'library' && stats.total" class="mob-badge">{{ stats.total }}</span>
-      </button>
-    </div>
+    <main class="space-y-4">
 
-    <!-- ══════════════════════ GRID ══════════════════════ -->
-    <div class="grid gap-4 app-grid">
-
-      <!-- ──────────── SIDEBAR ──────────── -->
-      <aside class="app-sidebar space-y-3" style="position:sticky; top:16px;">
-
-        <!-- Nav -->
-        <nav class="glass rounded-[22px] p-3" aria-label="Navigation">
-          <div class="sec-label px-1">{{ t('workspace') }}</div>
-          <div class="space-y-1 mt-2" role="list">
-            <button
-              v-for="tab in visibleTabs" :key="tab.id"
-              class="sidebar-tab"
-              :class="{ active: activeTab === tab.id }"
-              @click="activeTab = tab.id"
-              :aria-current="activeTab === tab.id ? 'page' : undefined"
-              role="listitem"
-            >
-              <span class="tab-icon" aria-hidden="true" v-html="icon(tab.svgKey, 18)"></span>
-              <div class="leading-tight">
-                <div class="text-sm font-semibold">{{ t(tab.labelKey) }}</div>
-                <div class="text-[11px]" style="color:inherit; opacity:.7">{{ t(tab.descKey) }}</div>
-              </div>
-              <span v-if="tab.id === 'library' && stats.total > 0" style="margin-left:auto; font-size:11px; font-weight:700; opacity:.75" aria-hidden="true">{{ stats.total }}</span>
-            </button>
-          </div>
-        </nav>
-
-        <!-- Filter panel (Library only) -->
-        <section class="glass rounded-[22px] p-4" v-if="activeTab === 'library'" aria-label="Filters">
-          <div class="sec-label">{{ t('filterSet') }}</div>
-          <div class="space-y-3 mt-2">
-            <div>
-              <label class="label" for="filter-search">{{ t('search') }}</label>
-              <input id="filter-search" class="field" v-model.trim="filters.search" :placeholder="t('searchPlaceholder')" />
-            </div>
-            <div>
-              <label class="label" for="filter-group">{{ t('group') }}</label>
-              <select id="filter-group" class="select" v-model="filters.group">
-                <option value="">{{ t('allGroups') }}</option>
-                <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="label" for="filter-quality">{{ t('quality') }}</label>
-              <select id="filter-quality" class="select" v-model="filters.quality">
-                <option value="">{{ t('allQuality') }}</option>
-                <option value="4K">4K</option>
-                <option value="FHD">FHD</option>
-                <option value="HD">HD</option>
-                <option value="SD">SD</option>
-              </select>
-            </div>
-            <div>
-              <label class="label">{{ t('status') }}</label>
-              <div class="seg" style="width:100%" role="group" :aria-label="t('status')">
-                <button class="seg-btn" :class="{ active: filters.status === 'all' }"      @click="filters.status = 'all'"      :aria-pressed="(filters.status === 'all').toString()">{{ t('all') }}</button>
-                <button class="seg-btn" :class="{ active: filters.status === 'active' }"   @click="filters.status = 'active'"   :aria-pressed="(filters.status === 'active').toString()">{{ t('activeLabel') }}</button>
-                <button class="seg-btn" :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'" :aria-pressed="(filters.status === 'inactive').toString()">{{ t('offLabel') }}</button>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="label" for="filter-country">{{ t('country') }}</label>
-                <input id="filter-country" class="field" v-model.trim="filters.country" placeholder="SK, CZ…" />
-              </div>
-              <div>
-                <label class="label" for="filter-limit">{{ t('perPage') }}</label>
-                <select id="filter-limit" class="select" v-model.number="pagination.limit">
-                  <option :value="50">50</option>
-                  <option :value="100">100</option>
-                  <option :value="200">200</option>
-                  <option :value="500">500</option>
-                </select>
-              </div>
-            </div>
-            <button class="btn btn-ghost" style="width:100%" @click="resetFilters">{{ t('resetFilters') }}</button>
-          </div>
-        </section>
-
-        <!-- Quick stats sidebar (Content tab) -->
-        <section class="glass rounded-[22px] p-4" v-if="activeTab === 'content'" aria-label="Quick stats">
-          <div class="sec-label">{{ t('quickStats') }}</div>
-          <div class="space-y-2 mt-2">
-            <div class="design-row">
-              <span class="text-sm" style="color:var(--text3)">{{ t('totalChannels') }}</span>
-              <strong>{{ stats.total }}</strong>
-            </div>
-            <div class="design-row">
-              <span class="text-sm" style="color:var(--text3)">{{ t('activeChannels') }}</span>
-              <strong style="color:var(--success)">{{ stats.active }}</strong>
-            </div>
-            <div class="design-row">
-              <span class="text-sm" style="color:var(--text3)">{{ t('groups') }}</span>
-              <strong>{{ stats.groups }}</strong>
-            </div>
-          </div>
-        </section>
-
-        <!-- Design info sidebar -->
-        <section class="glass rounded-[22px] p-4" v-if="activeTab === 'design'">
-          <div class="sec-label">{{ t('designInfo') }}</div>
-          <div class="space-y-2 mt-2">
-            <div class="design-row">
-              <span class="text-xs" style="color:var(--text3)">{{ t('language') }}</span>
-              <strong class="text-xs">{{ lang.toUpperCase() }}</strong>
-            </div>
-            <div class="design-row">
-              <span class="text-xs" style="color:var(--text3)">{{ t('theme') }}</span>
-              <strong class="text-xs">{{ theme === 'dark' ? t('dark') : t('light') }}</strong>
-            </div>
-          </div>
-        </section>
-      </aside>
-
-      <!-- ──────────── MAIN ──────────── -->
-      <main class="space-y-4">
-
-        <!-- ══ LIBRARY TAB ══ -->
-        <section v-if="activeTab === 'library'" class="glass rounded-[24px] p-4 md:p-5" aria-label="Channel library">
+        <!-- ══ LIBRARY ══ -->
+        <section class="glass rounded-[24px] p-4 md:p-5" aria-label="Channel library">
           <div class="mb-4">
             <div class="sec-label">{{ t('tabLibrary') }}</div>
             <h2 class="text-[1.3rem] font-bold tracking-[-0.03em]">{{ t('libraryHeading') }}</h2>
           </div>
 
-          <!-- Mobile filter toggle (hidden on ≥1024px via Tailwind lg:hidden) -->
-          <div class="mb-3 lg:hidden">
-            <button
-              class="btn btn-secondary" style="width:100%; justify-content:space-between"
-              @click="mobFilterOpen = !mobFilterOpen"
-              :aria-expanded="mobFilterOpen.toString()"
-              aria-controls="mob-filter-panel"
-            >
-              <span>{{ t('filterSet') }}<span v-if="hasActiveFilters" style="color:var(--primary);margin-left:5px">●</span></span>
-              <span aria-hidden="true" v-html="mobFilterOpen ? icon('chevUp', 14) : icon('chevDown', 14)"></span>
-            </button>
-            <div v-if="mobFilterOpen" id="mob-filter-panel" class="glass rounded-[16px] p-4 mt-2 space-y-3">
-              <div>
-                <label class="label" for="mob-search">{{ t('search') }}</label>
-                <input id="mob-search" class="field" v-model.trim="filters.search" :placeholder="t('searchPlaceholder')" />
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="label" for="mob-group">{{ t('group') }}</label>
-                  <select id="mob-group" class="select" v-model="filters.group">
-                    <option value="">{{ t('allGroups') }}</option>
-                    <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="label" for="mob-quality">{{ t('quality') }}</label>
-                  <select id="mob-quality" class="select" v-model="filters.quality">
-                    <option value="">{{ t('allQuality') }}</option>
-                    <option value="4K">4K</option>
-                    <option value="FHD">FHD</option>
-                    <option value="HD">HD</option>
-                    <option value="SD">SD</option>
-                  </select>
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="label" for="mob-country">{{ t('country') }}</label>
-                  <input id="mob-country" class="field" v-model.trim="filters.country" placeholder="SK, CZ…" />
-                </div>
-                <div>
-                  <label class="label" for="mob-limit">{{ t('perPage') }}</label>
-                  <select id="mob-limit" class="select" v-model.number="pagination.limit">
-                    <option :value="50">50</option>
-                    <option :value="100">100</option>
-                    <option :value="200">200</option>
-                  </select>
-                </div>
-              </div>
-              <div class="seg" style="width:100%" role="group" :aria-label="t('status')">
-                <button class="seg-btn" :class="{ active: filters.status === 'all' }"      @click="filters.status='all'">{{ t('all') }}</button>
-                <button class="seg-btn" :class="{ active: filters.status === 'active' }"   @click="filters.status='active'">{{ t('activeLabel') }}</button>
-                <button class="seg-btn" :class="{ active: filters.status === 'inactive' }" @click="filters.status='inactive'">{{ t('offLabel') }}</button>
-              </div>
-              <button class="btn btn-ghost" style="width:100%" @click="resetFilters; mobFilterOpen = false">{{ t('resetFilters') }}</button>
-            </div>
+          <!-- Active filter summary -->
+          <div v-if="hasActiveFilters" class="filter-bar" role="status">
+            <span v-html="icon('filter', 14)"></span>
+            <span class="flex-1">{{ t('filteredInfo').replace('{n}', filteredChannels.length).replace('{total}', stats.total) }}</span>
+            <button type="button" class="btn btn-ghost" style="padding:4px 10px" @click="modal.filter = true">{{ t('edit') }}</button>
+            <button type="button" class="btn btn-ghost" style="padding:4px 10px" @click="resetFilters">{{ t('resetFilters') }}</button>
           </div>
 
           <div class="table-shell" role="region" aria-label="Channels table">
@@ -902,95 +826,70 @@
           </div>
         </section>
 
-        <!-- ══ CONTENT TAB ══ -->
-        <section v-if="activeTab === 'content'" class="space-y-4" aria-label="Content overview">
-          <div class="glass rounded-[24px] p-4 md:p-5">
-            <div class="sec-label">{{ t('tabContent') }}</div>
-            <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-4">{{ t('contentHeading') }}</h2>
-            <div class="flex flex-wrap gap-2 mb-4">
-              <button class="btn btn-secondary" @click="applyBulkMetadataRules" :disabled="stats.total === 0">{{ t('bulkMetadataRules') }}</button>
-              <button class="btn btn-secondary" @click="exportMetadataHealthReport" :disabled="stats.total === 0">{{ t('metadataHealthReport') }}</button>
-            </div>
-
-            <!-- Quality stat cards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-              <div class="stat-card">
-                <div class="num" style="color:var(--purple)">{{ stats.qualities['4K'] }}</div>
-                <div class="lbl">4K</div>
-              </div>
-              <div class="stat-card">
-                <div class="num" style="color:var(--primary)">{{ stats.qualities['FHD'] }}</div>
-                <div class="lbl">FHD</div>
-              </div>
-              <div class="stat-card">
-                <div class="num" style="color:var(--success)">{{ stats.qualities['HD'] }}</div>
-                <div class="lbl">HD</div>
-              </div>
-              <div class="stat-card">
-                <div class="num" style="color:var(--gray)">{{ stats.qualities['SD'] }}</div>
-                <div class="lbl">SD</div>
-              </div>
-            </div>
-
-            <!-- Groups list -->
-            <div class="sec-label mb-2">{{ t('groupsOverview') }}</div>
-            <div v-if="groupList.length" class="space-y-1" role="list">
-              <div class="group-item" v-for="[g, count] in groupList" :key="g || '__nogroup__'" role="listitem">
-                <span class="font-medium text-sm">{{ g || '—' }}</span>
-                <div class="flex items-center gap-2">
-                  <span class="stat-pill"><strong>{{ count }}</strong></span>
-                  <button
-                    class="btn btn-ghost" style="padding:4px 10px"
-                    @click="filters.group = g; activeTab = 'library'"
-                    :aria-label="t('filterByGroup') + ': ' + (g || t('noGroup'))"
-                    v-html="icon('arrowUR', 14)"></button>
-                </div>
-              </div>
-            </div>
-            <div v-else class="empty-state">
-              <div class="icon" aria-hidden="true" v-html="icon('barChart', 44)"></div>
-              <h3>{{ t('noGroups') }}</h3>
-              <p>{{ t('noGroupsDesc') }}</p>
-            </div>
-          </div>
-        </section>
-
-        <!-- ══ DESIGN TAB ══ -->
-        <section v-if="activeTab === 'design'" class="glass rounded-[24px] p-4 md:p-5" aria-label="Design settings">
-          <div class="sec-label">{{ t('tabDesign') }}</div>
-          <h2 class="text-[1.3rem] font-bold tracking-[-0.03em] mb-5">{{ t('designHeading') }}</h2>
-
-          <!-- Language -->
-          <div class="sec-label mb-2">{{ t('langLabel') }}</div>
-          <div class="design-row">
-            <span class="text-sm" style="color:var(--text3)">{{ t('language') }}</span>
-            <div class="lang-sw" role="group" :aria-label="t('langLabel')">
-              <span style="padding:2px 4px 2px 6px; opacity:.55; display:inline-flex; align-items:center" aria-hidden="true" v-html="icon('globe', 14)"></span>
-              <button :class="{ active: lang === 'sk' }" @click="setLang('sk')" aria-label="Slovenčina" :aria-pressed="(lang === 'sk').toString()">SK</button>
-              <button :class="{ active: lang === 'en' }" @click="setLang('en')" aria-label="English" :aria-pressed="(lang === 'en').toString()">EN</button>
-            </div>
-          </div>
-
-          <!-- Theme -->
-          <div class="sec-label mb-2 mt-4">{{ t('theme') }}</div>
-          <div class="design-row">
-            <span class="text-sm" style="color:var(--text3)">{{ t('theme') }}</span>
-            <div class="flex flex-wrap gap-1 justify-end">
-              <button v-for="opt in themeOptions" :key="opt.id" class="btn" :class="theme === opt.id ? 'btn-primary' : 'btn-secondary'" style="padding:6px 10px;font-size:12px" @click="setTheme(opt.id)">{{ t(opt.labelKey) }}</button>
-            </div>
-          </div>
-
-          <!-- About -->
-          <div class="mt-5 p-4 rounded-[var(--radius-md)]" style="background:var(--fill);border:1px solid var(--border)">
-            <p class="text-sm" style="color:var(--text3)">{{ t('designInfoDesc') }}</p>
-          </div>
-        </section>
-
-
-      </main>
-    </div><!-- /grid -->
+    </main>
 
     <!-- ══════════════════════ MODALS ══════════════════════ -->
+
+    <!-- Filter Modal -->
+    <div v-if="modal.filter" class="modal-overlay" @mousedown.self="modal.filter = false"
+         role="dialog" aria-modal="true" :aria-label="t('filterSet')">
+      <div class="modal-card glass-s mobile-sheet filter-card">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold">{{ t('filterSet') }}</h2>
+          <button type="button" class="btn btn-ghost" style="padding:6px 10px" @click="modal.filter = false" :aria-label="t('close')" v-html="icon('x', 16)"></button>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="label" for="filter-search">{{ t('search') }}</label>
+            <input id="filter-search" class="field" v-model.trim="filters.search" :placeholder="t('searchPlaceholder')" />
+          </div>
+          <div>
+            <label class="label" for="filter-group">{{ t('group') }}</label>
+            <select id="filter-group" class="select" v-model="filters.group">
+              <option value="">{{ t('allGroups') }}</option>
+              <option v-for="g in groupFilterOptions" :key="g.name" :value="g.name">{{ g.name }} ({{ g.count }})</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="label" for="filter-quality">{{ t('quality') }}</label>
+              <select id="filter-quality" class="select" v-model="filters.quality">
+                <option value="">{{ t('allQuality') }}</option>
+                <option value="4K">4K</option>
+                <option value="FHD">FHD</option>
+                <option value="HD">HD</option>
+                <option value="SD">SD</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="filter-country">{{ t('country') }}</label>
+              <input id="filter-country" class="field" v-model.trim="filters.country" placeholder="SK, CZ…" />
+            </div>
+          </div>
+          <div>
+            <label class="label">{{ t('status') }}</label>
+            <div class="seg" style="width:100%" role="group" :aria-label="t('status')">
+              <button type="button" class="seg-btn" :class="{ active: filters.status === 'all' }"      @click="filters.status = 'all'"      :aria-pressed="String(filters.status === 'all')">{{ t('all') }}</button>
+              <button type="button" class="seg-btn" :class="{ active: filters.status === 'active' }"   @click="filters.status = 'active'"   :aria-pressed="String(filters.status === 'active')">{{ t('activeLabel') }}</button>
+              <button type="button" class="seg-btn" :class="{ active: filters.status === 'inactive' }" @click="filters.status = 'inactive'" :aria-pressed="String(filters.status === 'inactive')">{{ t('offLabel') }}</button>
+            </div>
+          </div>
+          <div>
+            <label class="label" for="filter-limit">{{ t('perPage') }}</label>
+            <select id="filter-limit" class="select" v-model.number="pagination.limit">
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+              <option :value="200">200</option>
+              <option :value="500">500</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-5">
+          <button type="button" class="btn btn-secondary flex-1" @click="resetFilters" :disabled="!hasActiveFilters">{{ t('resetFilters') }}</button>
+          <button type="button" class="btn btn-primary flex-1" @click="modal.filter = false">{{ t('filterShow').replace('{n}', filteredChannels.length) }}</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Import Modal -->
     <div v-if="modal.import" class="modal-overlay" @mousedown.self="modal.import = false"
@@ -1466,6 +1365,33 @@
   </div><!-- /max-w -->
 </div><!-- /app -->
 <div id="app-loader"><div class="app-loader-ring"></div></div>
+<div id="app-fatal" role="alert" hidden>
+  <div class="app-fatal-card">
+    <h2 data-i18n="title"></h2>
+    <p data-i18n="body"></p>
+    <code id="app-fatal-detail"></code>
+    <button type="button" class="btn btn-primary" data-i18n="reload" onclick="location.reload()"></button>
+  </div>
+</div>
+
+<script>
+// Shown instead of a blank page when the app cannot render; works without Vue
+function showAppFatal(error) {
+  const panel = document.getElementById('app-fatal')
+  if (!panel || !panel.hidden) return
+  const text = document.documentElement.lang === 'en'
+    ? { title: 'The app could not be displayed', body: 'Your channels are still saved in this browser. Reload the page; if it happens again, send the text below.', reload: 'Reload page' }
+    : { title: 'Aplikáciu sa nepodarilo zobraziť', body: 'Kanály zostali uložené v prehliadači. Obnovte stránku; ak sa chyba opakuje, pošlite text nižšie.', reload: 'Obnoviť stránku' }
+  panel.querySelectorAll('[data-i18n]').forEach(node => { node.textContent = text[node.dataset.i18n] })
+  document.getElementById('app-fatal-detail').textContent = String(error?.stack || error?.message || error || '')
+  panel.hidden = false
+}
+
+// Errors before Vue has mounted (e.g. the runtime failed to load) would otherwise leave the spinner forever
+window.addEventListener('error', e => {
+  if (!document.getElementById('app')?.hasAttribute('data-v-app')) showAppFatal(e.error || e.message)
+})
+</script>
 
 <script>
 const { createApp, ref, computed, reactive, watch, onMounted, onUnmounted } = Vue
@@ -1540,7 +1466,27 @@ const CHANNEL_TVG_ALIASES = [
   { re: /\bsport\s*5\b/i, ids: ['Sport5.sk'] },
 ]
 
-createApp({
+// A render error makes Vue replace the whole UI with an empty node (the "black screen").
+// setup() registers a recovery that closes dialogs; if the UI stays empty, #app-fatal is shown.
+let recoverUiAfterRenderError = null
+let lastUiRecovery = 0
+
+function handleAppError(err, instance, info) {
+  console.error(`[IPTV] Vue error (${info}):`, err)
+  setTimeout(() => {
+    const root = document.getElementById('app')
+    if (!root || root.firstElementChild) return
+    if (recoverUiAfterRenderError && Date.now() - lastUiRecovery > 3000) {
+      lastUiRecovery = Date.now()
+      recoverUiAfterRenderError()
+      setTimeout(() => { if (!root.firstElementChild) showAppFatal(err) }, 500)
+    } else {
+      showAppFatal(err)
+    }
+  })
+}
+
+const app = createApp({
   setup() {
     const STORAGE_KEY = 'iptv-channels'
     const MAPPING_KEY = 'iptv-confirmed-mappings'
@@ -1550,12 +1496,25 @@ createApp({
     /* ── i18n ── */
     const messages = {
       sk: {
+        menuImport:       'Import',
+        menuExport:       'Export',
+        menuEdit:         'Úpravy',
+        menuImportPlaylist:'Playlist',
+        menuImportEpg:    'EPG program',
+        menuAutoDetectHint:'Doplniť TVG-ID, názvy, logá a EPG',
+        exportHintM3U:    'Pre IPTV prehrávače',
+        exportHintXSPF:   'Playlist pre VLC',
+        exportHintJSON:   'Záloha všetkých údajov',
+        exportHintEnigma2:'Bouquet pre satelitný prijímač',
+        deleteSelectedMenu:'Vymazať vybrané',
+        selectedCount:    'vybraných',
+        settings:         'Nastavenia',
+        toolbar:          'Nástroje',
+        filterActive:     'aktívny',
+        filterShow:       'Zobraziť {n}',
+        filteredInfo:     'Filter: {n} z {total} kanálov',
         appSubtitle:      'Importuj, upravuj a exportuj M3U / XSPF playlisty',
         importPlaylist:   'Import Playlist',
-        exportM3U:        'Export M3U',
-        exportXSPF:       'Export XSPF',
-        exportJSON:       'Export JSON',
-        exportEnigma2:    'Export Enigma2',
         undo:             'Späť',
         undoDone:         'Zmena vrátená späť',
         exportSelected:   'Exportujem vybrané kanály',
@@ -1570,15 +1529,7 @@ createApp({
         total:            'kanálov',
         active:           'aktívnych',
         groups:           'skupín',
-        workspace:        'Pracovný priestor',
         tabLibrary:       'Knižnica',
-        tabLibraryDesc:   'Kanály a playlist',
-        tabContent:       'Obsah',
-        tabContentDesc:   'Skupiny a štatistiky',
-        tabDesign:        'Dizajn',
-        tabDesignDesc:    'Vzhľad aplikácie',
-        tabRoadmap:       'Plán',
-        tabRoadmapDesc:   'Nové funkcie',
         filterSet:        'Filter',
         search:           'Hľadať',
         searchPlaceholder:'Názov kanálu alebo URL…',
@@ -1595,11 +1546,6 @@ createApp({
         country:          'Krajina',
         perPage:          'Na stránku',
         resetFilters:     'Resetovať filtre',
-        quickStats:       'Rýchle štatistiky',
-        totalChannels:    'Celkový počet',
-        activeChannels:   'Aktívne',
-        designInfo:       'O dizajne',
-        designInfoDesc:   'Aplikácia používa Apple HIG dizajn systém s dynamickými farbami, skleným efektom a plynulými animáciami.',
         libraryHeading:   'Moje kanály',
         sortLabel:        'Zoradiť podľa',
         sortName:         'Názov',
@@ -1622,60 +1568,11 @@ createApp({
         page:             'Strana',
         emptyLibraryTitle:'Playlist je prázdny',
         emptyLibraryDesc: 'Importuj M3U alebo XSPF súbor pre začatie',
-        contentHeading:   'Skupiny kanálov',
         bulkMetadataRules:'Použiť pravidlá metadát',
         metadataHealthReport:'Exportovať report kvality',
         metadataReportExported:'Report kvality metadát exportovaný',
         bulkMetadataApplied:'Pravidlá metadát upravili {n} kanálov',
-        noGroups:         'Žiadne skupiny',
-        noGroupsDesc:     'Importuj playlist pre zobrazenie skupín',
-        noGroup:          'Bez skupiny',
         channels:         'kanálov',
-        filterByGroup:    'Filtrovať skupinu',
-        groupsOverview:   'Prehľad skupín',
-        designHeading:    'Nastavenia dizajnu',
-        roadmapHeading:   'Plán nových funkcií',
-        roadmapIntro:     'Prehľad navrhovaných funkcií a technických vylepšení priamo v aplikácii.',
-        roadmapMappingTitle:'Inteligentné mapovania kanálov',
-        roadmapMappingDesc:'Zapamätanie ručne potvrdených väzieb medzi názvom z playlistu a TVG-ID.',
-        roadmapPreviewTitle:'Náhľad zmien autodetekcie',
-        roadmapPreviewDesc:'Diff pôvodné vs. navrhnuté s možnosťou aplikovať iba vybrané polia.',
-        roadmapEpgCountryTitle:'Kontrola EPG krajiny',
-        roadmapEpgCountryDesc:'Preferencia SK/CZ EPG a varovanie pri .pl/.uk/.us fallbackoch.',
-        roadmapImportTitle:'Import wizard',
-        roadmapImportDesc:'Krokový import s náhľadom, duplicitami, čistením názvov a autodetekciou.',
-        roadmapStreamTitle:'Validátor streamov',
-        roadmapStreamDesc:'Kontrola URL, timeoutov, CORS stavu a export reportu nefunkčných streamov.',
-        roadmapProfilesTitle:'Profily playlistov',
-        roadmapProfilesDesc:'Samostatné knižnice pre TV, mobil, deti, šport alebo testovanie.',
-        roadmapExportTitle:'Export presety',
-        roadmapExportDesc:'Predvoľby pre VLC, Kodi, TiviMate, IPTV Smarters, Enigma2 a vlastné formáty.',
-        roadmapPanelTitle:'Detail kanála v paneli',
-        roadmapPanelDesc:'Bočný panel na desktope a spodný sheet na mobile namiesto veľkých modalov.',
-        roadmapMobileTitle:'Mobilný action bar',
-        roadmapMobileDesc:'Spodná lišta pre hromadné akcie nad označenými kanálmi.',
-        roadmapAndroidTitle:'Android offline-first',
-        roadmapAndroidDesc:'Capacitor Storage, zálohy, share intent a Android share sheet export.',
-        roadmapCacheTitle:'Cache metadát s TTL',
-        roadmapCacheDesc:'Rýchlejšia autodetekcia vďaka cache EPG, logo a M3U indexov.',
-        roadmapBuildTitle:'Build krok bez unsafe-eval',
-        roadmapBuildDesc:'Prechod na prekompilované šablóny a prísnejšiu CSP politiku.',
-        roadmapEngineTitle:'Testovateľný autodetect engine',
-        roadmapEngineDesc:'Samostatný modul s fixtures, snapshot testami a benchmarkom veľkých playlistov.',
-        roadmapEpgCoverageTitle:'EPG Coverage Dashboard',
-        roadmapEpgCoverageDesc:'Prehľad kanálov s TVG-ID, TVG URL, dnešným programom a rizikovou krajinou EPG.',
-        roadmapEpgTimelineTitle:'EPG timeline náhľad',
-        roadmapEpgTimelineDesc:'Aktuálny a nasledujúce programy s detekciou časového posunu a porovnaním kandidátov.',
-        roadmapTvgDictionaryTitle:'TVG-ID kanonický slovník',
-        roadmapTvgDictionaryDesc:'Lokálny slovník CZ/SK aliasov, kanonických ID, log a preferovaných EPG URL.',
-        roadmapLogoQualityTitle:'Logo Quality Checker',
-        roadmapLogoQualityDesc:'Kontrola neplatných, malých, nečitateľných alebo duplicitných log.',
-        roadmapLogoPreviewTitle:'Logo background preview',
-        roadmapLogoPreviewDesc:'Náhľad loga na tmavom, svetlom a transparentnom pozadí aj v malej ikone.',
-        roadmapBulkRulesTitle:'Bulk metadata rules',
-        roadmapBulkRulesDesc:'Hromadné pravidlá pre opravu TVG-ID, TVG-Name, Logo URL a TVG URL.',
-        roadmapHealthReportTitle:'Metadata health report',
-        roadmapHealthReportDesc:'Export CSV/JSON reportu kvality metadát, chýbajúcich log a rizikových EPG krajín.',
         theme:            'Téma',
         language:         'Jazyk',
         importMode:       'Spôsob importu',
@@ -1731,7 +1628,6 @@ createApp({
         importError:      'Chyba importu',
         fetchTimeout:     'Vypršal časový limit sieťového požiadavku',
         imported:         'Importovaných',
-        epgImport:        'Import EPG (XMLTV)',
         openFile:         'Otvoriť súbor',
         epgLoadedMsg:     'EPG načítané',
         epgPrograms:      'programov',
@@ -1772,6 +1668,9 @@ createApp({
         autoDetectFetching:      'Načítavam zdroje...',
         autoDetectNoSources:     'Vyber aspoň jeden zdroj',
         autoDetectSourcesLoaded: 'Načítaných {n} kanálov zo zdrojov',
+        autoDetectSourcesPartial: 'Načítaných {n} kanálov · nedostupné zdroje: {failed}',
+        autoDetectFailed:        'Autodetekcia zlyhala (detail v konzole F12)',
+        renderErrorRecovered:    'Nastala chyba zobrazenia — dialóg bol zatvorený (detail v konzole F12)',
         autoDetectMatched:   'Nájdených',
         autoDetectSelected:  'Vybraných',
         autoDetectMatchedOnly:'Len nájdené',
@@ -1797,12 +1696,25 @@ createApp({
         channelsDeletedN:    'Vymazaných {n} kanálov',
       },
       en: {
+        menuImport:       'Import',
+        menuExport:       'Export',
+        menuEdit:         'Edit',
+        menuImportPlaylist:'Playlist',
+        menuImportEpg:    'EPG guide',
+        menuAutoDetectHint:'Fill in TVG-IDs, names, logos and EPG',
+        exportHintM3U:    'For IPTV players',
+        exportHintXSPF:   'Playlist for VLC',
+        exportHintJSON:   'Backup of all data',
+        exportHintEnigma2:'Bouquet for satellite receivers',
+        deleteSelectedMenu:'Delete selected',
+        selectedCount:    'selected',
+        settings:         'Settings',
+        toolbar:          'Tools',
+        filterActive:     'active',
+        filterShow:       'Show {n}',
+        filteredInfo:     'Filter: {n} of {total} channels',
         appSubtitle:      'Import, edit and export M3U / XSPF playlists',
         importPlaylist:   'Import Playlist',
-        exportM3U:        'Export M3U',
-        exportXSPF:       'Export XSPF',
-        exportJSON:       'Export JSON',
-        exportEnigma2:    'Export Enigma2',
         undo:             'Undo',
         undoDone:         'Change undone',
         exportSelected:   'Exporting selected channels',
@@ -1817,15 +1729,7 @@ createApp({
         total:            'channels',
         active:           'active',
         groups:           'groups',
-        workspace:        'Workspace',
         tabLibrary:       'Library',
-        tabLibraryDesc:   'Channels & playlist',
-        tabContent:       'Content',
-        tabContentDesc:   'Groups & statistics',
-        tabDesign:        'Design',
-        tabDesignDesc:    'App appearance',
-        tabRoadmap:       'Roadmap',
-        tabRoadmapDesc:   'New features',
         filterSet:        'Filters',
         search:           'Search',
         searchPlaceholder:'Channel name or URL…',
@@ -1842,11 +1746,6 @@ createApp({
         country:          'Country',
         perPage:          'Per page',
         resetFilters:     'Reset filters',
-        quickStats:       'Quick stats',
-        totalChannels:    'Total channels',
-        activeChannels:   'Active',
-        designInfo:       'About design',
-        designInfoDesc:   'The app uses Apple HIG design system with dynamic colors, glass effects, and smooth animations.',
         libraryHeading:   'My Channels',
         sortLabel:        'Sort by',
         sortName:         'Name',
@@ -1869,60 +1768,11 @@ createApp({
         page:             'Page',
         emptyLibraryTitle:'Playlist is empty',
         emptyLibraryDesc: 'Import an M3U or XSPF file to get started',
-        contentHeading:   'Channel Groups',
         bulkMetadataRules:'Apply metadata rules',
         metadataHealthReport:'Export health report',
         metadataReportExported:'Metadata health report exported',
         bulkMetadataApplied:'Metadata rules updated {n} channels',
-        noGroups:         'No groups',
-        noGroupsDesc:     'Import a playlist to see groups',
-        noGroup:          'No group',
         channels:         'channels',
-        filterByGroup:    'Filter by group',
-        groupsOverview:   'Groups overview',
-        designHeading:    'Design Settings',
-        roadmapHeading:   'New feature roadmap',
-        roadmapIntro:     'Overview of proposed product and technical improvements directly inside the app.',
-        roadmapMappingTitle:'Smart channel mappings',
-        roadmapMappingDesc:'Remember manually confirmed links between playlist names and canonical TVG IDs.',
-        roadmapPreviewTitle:'Autodetect change preview',
-        roadmapPreviewDesc:'Original vs suggested diff with per-field apply controls.',
-        roadmapEpgCountryTitle:'EPG country guard',
-        roadmapEpgCountryDesc:'Prefer SK/CZ EPG and warn on .pl/.uk/.us fallbacks.',
-        roadmapImportTitle:'Import wizard',
-        roadmapImportDesc:'Step-by-step import with preview, duplicates, name cleanup and autodetect.',
-        roadmapStreamTitle:'Stream validator',
-        roadmapStreamDesc:'Check URL availability, timeouts, CORS state and export broken stream reports.',
-        roadmapProfilesTitle:'Playlist profiles',
-        roadmapProfilesDesc:'Separate libraries for TV, mobile, kids, sport or testing.',
-        roadmapExportTitle:'Export presets',
-        roadmapExportDesc:'Presets for VLC, Kodi, TiviMate, IPTV Smarters, Enigma2 and custom formats.',
-        roadmapPanelTitle:'Channel detail panel',
-        roadmapPanelDesc:'Desktop side panel and mobile bottom sheet instead of large modals.',
-        roadmapMobileTitle:'Mobile action bar',
-        roadmapMobileDesc:'Bottom bar for bulk actions on selected channels.',
-        roadmapAndroidTitle:'Android offline-first',
-        roadmapAndroidDesc:'Capacitor Storage, backups, share intent and Android share sheet export.',
-        roadmapCacheTitle:'Metadata cache with TTL',
-        roadmapCacheDesc:'Faster autodetect using cached EPG, logo and M3U indexes.',
-        roadmapBuildTitle:'Build step without unsafe-eval',
-        roadmapBuildDesc:'Move to precompiled templates and stricter CSP.',
-        roadmapEngineTitle:'Testable autodetect engine',
-        roadmapEngineDesc:'Separate module with fixtures, snapshot tests and large-playlist benchmarks.',
-        roadmapEpgCoverageTitle:'EPG Coverage Dashboard',
-        roadmapEpgCoverageDesc:'Overview of channels with TVG-ID, TVG URL, today schedule and risky EPG country.',
-        roadmapEpgTimelineTitle:'EPG timeline preview',
-        roadmapEpgTimelineDesc:'Current and next programmes with time-shift detection and candidate comparison.',
-        roadmapTvgDictionaryTitle:'Canonical TVG-ID dictionary',
-        roadmapTvgDictionaryDesc:'Local CZ/SK alias dictionary with canonical IDs, logos and preferred EPG URLs.',
-        roadmapLogoQualityTitle:'Logo Quality Checker',
-        roadmapLogoQualityDesc:'Detect invalid, tiny, unreadable or duplicated logos.',
-        roadmapLogoPreviewTitle:'Logo background preview',
-        roadmapLogoPreviewDesc:'Preview logos on dark, light and transparent backgrounds plus small table icons.',
-        roadmapBulkRulesTitle:'Bulk metadata rules',
-        roadmapBulkRulesDesc:'Batch rules for fixing TVG-ID, TVG-Name, Logo URL and TVG URL.',
-        roadmapHealthReportTitle:'Metadata health report',
-        roadmapHealthReportDesc:'Export CSV/JSON metadata quality report with missing logos and risky EPG countries.',
         theme:            'Theme',
         language:         'Language',
         importMode:       'Import mode',
@@ -1978,7 +1828,6 @@ createApp({
         importError:      'Import error',
         fetchTimeout:     'Network request timed out',
         imported:         'Imported',
-        epgImport:        'Import EPG (XMLTV)',
         openFile:         'Open file',
         epgLoadedMsg:     'EPG loaded',
         epgPrograms:      'programs',
@@ -2019,6 +1868,9 @@ createApp({
         autoDetectFetching:      'Loading sources...',
         autoDetectNoSources:     'Select at least one source',
         autoDetectSourcesLoaded: 'Loaded {n} channels from sources',
+        autoDetectSourcesPartial: 'Loaded {n} channels · unavailable sources: {failed}',
+        autoDetectFailed:        'Auto-detect failed (details in the F12 console)',
+        renderErrorRecovered:    'A display error occurred — the dialog was closed (details in the F12 console)',
         autoDetectMatched:   'Matched',
         autoDetectSelected:  'Selected',
         autoDetectMatchedOnly:'Matched only',
@@ -2049,7 +1901,6 @@ createApp({
     const channels      = ref([])
     const lang          = ref('sk')
     const theme         = ref('dark')
-    const activeTab     = ref('library')
     const selectedId    = ref(null)
     const importMode    = ref('file')
     const importUrl     = ref('')
@@ -2060,7 +1911,7 @@ createApp({
     const importedEpgXmlIndex = ref({})
     const importedEpgNameIndex = ref({})
 
-    const mobFilterOpen = ref(false)
+    const openMenu      = ref(null)   // 'import' | 'export' | 'edit' | 'settings'
     const epgRef        = ref(null)
     const epgData       = ref({})
     const epgChannelMeta = ref({})
@@ -2109,7 +1960,7 @@ createApp({
     const sort       = reactive({ by: 'name', asc: true })
     const pagination    = reactive({ page: 1, limit: 100 })
     const selectedRows  = reactive(new Set())
-    const modal         = reactive({ import: false, edit: false, add: false, deleteConfirm: false, unsaved: false, autoDetect: false })
+    const modal         = reactive({ import: false, edit: false, add: false, deleteConfirm: false, unsaved: false, autoDetect: false, filter: false })
     const toast      = reactive({ show: false, message: '' })
     const editCh     = ref(null)
     const editSnapshot = ref(null)
@@ -2148,6 +1999,17 @@ createApp({
       circle:    '<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>',
       circleOff: '<circle cx="12" cy="12" r="5"/>',
       check:     '<polyline points="20 6 9 17 4 12"/>',
+      download:  '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+      upload:    '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+      edit:      '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+      filter:    '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
+      settings:  '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+      undo:      '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+      trash:     '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
+      unlink:    '<path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M5.17 11.75l-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71"/><line x1="8" y1="2" x2="8" y2="5"/><line x1="2" y1="8" x2="5" y2="8"/><line x1="16" y1="19" x2="16" y2="22"/><line x1="19" y1="16" x2="22" y2="16"/>',
+      list:      '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+      code:      '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+      fileText:  '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
       link:      '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
     }
 
@@ -2161,35 +2023,11 @@ createApp({
     const t = (key) => messages[lang.value]?.[key] ?? messages.en?.[key] ?? key
 
     /* ── Computed ── */
-    const visibleTabs = computed(() => [
-      { id: 'library', svgKey: 'tv',       labelKey: 'tabLibrary', descKey: 'tabLibraryDesc' },
-      { id: 'content', svgKey: 'barChart', labelKey: 'tabContent', descKey: 'tabContentDesc' },
-      { id: 'design',  svgKey: 'sliders',  labelKey: 'tabDesign',  descKey: 'tabDesignDesc'  },
-      { id: 'roadmap', svgKey: 'sparkles', labelKey: 'tabRoadmap', descKey: 'tabRoadmapDesc' },
-    ])
-
-
-    const roadmapItems = [
-      { priority: 'P0', key: 'mapping', titleKey: 'roadmapMappingTitle', descKey: 'roadmapMappingDesc' },
-      { priority: 'P0', key: 'preview', titleKey: 'roadmapPreviewTitle', descKey: 'roadmapPreviewDesc' },
-      { priority: 'P0', key: 'epgCountry', titleKey: 'roadmapEpgCountryTitle', descKey: 'roadmapEpgCountryDesc' },
-      { priority: 'P1', key: 'importWizard', titleKey: 'roadmapImportTitle', descKey: 'roadmapImportDesc' },
-      { priority: 'P1', key: 'streamValidator', titleKey: 'roadmapStreamTitle', descKey: 'roadmapStreamDesc' },
-      { priority: 'P1', key: 'profiles', titleKey: 'roadmapProfilesTitle', descKey: 'roadmapProfilesDesc' },
-      { priority: 'P1', key: 'exportPresets', titleKey: 'roadmapExportTitle', descKey: 'roadmapExportDesc' },
-      { priority: 'P2', key: 'channelPanel', titleKey: 'roadmapPanelTitle', descKey: 'roadmapPanelDesc' },
-      { priority: 'P2', key: 'mobileActions', titleKey: 'roadmapMobileTitle', descKey: 'roadmapMobileDesc' },
-      { priority: 'P2', key: 'androidOffline', titleKey: 'roadmapAndroidTitle', descKey: 'roadmapAndroidDesc' },
-      { priority: 'TECH', key: 'metadataCache', titleKey: 'roadmapCacheTitle', descKey: 'roadmapCacheDesc' },
-      { priority: 'TECH', key: 'buildStep', titleKey: 'roadmapBuildTitle', descKey: 'roadmapBuildDesc' },
-      { priority: 'TECH', key: 'testableEngine', titleKey: 'roadmapEngineTitle', descKey: 'roadmapEngineDesc' },
-      { priority: 'EPG', key: 'epgCoverage', titleKey: 'roadmapEpgCoverageTitle', descKey: 'roadmapEpgCoverageDesc' },
-      { priority: 'EPG', key: 'epgTimeline', titleKey: 'roadmapEpgTimelineTitle', descKey: 'roadmapEpgTimelineDesc' },
-      { priority: 'TVG', key: 'tvgDictionary', titleKey: 'roadmapTvgDictionaryTitle', descKey: 'roadmapTvgDictionaryDesc' },
-      { priority: 'LOGO', key: 'logoQuality', titleKey: 'roadmapLogoQualityTitle', descKey: 'roadmapLogoQualityDesc' },
-      { priority: 'LOGO', key: 'logoPreview', titleKey: 'roadmapLogoPreviewTitle', descKey: 'roadmapLogoPreviewDesc' },
-      { priority: 'META', key: 'bulkRules', titleKey: 'roadmapBulkRulesTitle', descKey: 'roadmapBulkRulesDesc' },
-      { priority: 'META', key: 'healthReport', titleKey: 'roadmapHealthReportTitle', descKey: 'roadmapHealthReportDesc' },
+    const exportFormats = [
+      { id: 'm3u',     label: 'M3U',      icon: 'list',     hintKey: 'exportHintM3U' },
+      { id: 'xspf',    label: 'XSPF',     icon: 'code',     hintKey: 'exportHintXSPF' },
+      { id: 'json',    label: 'JSON',     icon: 'fileText', hintKey: 'exportHintJSON' },
+      { id: 'enigma2', label: 'Enigma2',  icon: 'tv',       hintKey: 'exportHintEnigma2' },
     ]
 
     const groupOptions = computed(() =>
@@ -2279,6 +2117,11 @@ createApp({
         m[g] = (m[g] || 0) + 1
       })
       return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0]))
+    })
+
+    const groupFilterOptions = computed(() => {
+      const counts = Object.fromEntries(groupList.value)
+      return groupOptions.value.map(name => ({ name, count: counts[name] || 0 }))
     })
 
     const hasActiveFilters = computed(() =>
@@ -2556,6 +2399,8 @@ createApp({
     function triggerImport() { modal.import = true }
 
     const MAX_FILE_SIZE = 50 * 1024 * 1024  // 50 MB
+    const EPG_FETCH_TIMEOUT = 20000
+    const EPG_PROXY_ORIGIN  = 'https://iptvplaylistgen.pages.dev'  // serves functions/epg-proxy.js
 
     function importFromFile(e) {
       const file = e.target.files[0]; if (!file) return
@@ -2851,13 +2696,29 @@ createApp({
     }
 
     /* ── Keyboard ── */
+    function toggleMenu(name) {
+      openMenu.value = openMenu.value === name ? null : name
+    }
+
+    function closeMenuOnOutsideClick(e) {
+      if (openMenu.value && !e.target.closest?.('.menu-wrap')) openMenu.value = null
+    }
+
     function handleKeydown(e) {
       if (e.key !== 'Escape') return
+      if (openMenu.value)     { openMenu.value = null; return }
+      if (modal.filter)       { modal.filter = false; return }
       if (modal.unsaved)      { modal.unsaved = false; return }
       if (modal.deleteConfirm){ modal.deleteConfirm = false; return }
       if (modal.edit || modal.add) { closeEditSafe(); return }
       if (modal.import)       { modal.import = false; return }
       if (modal.autoDetect)   { modal.autoDetect = false; return }
+    }
+
+    recoverUiAfterRenderError = () => {
+      openMenu.value = null
+      Object.keys(modal).forEach(key => { modal[key] = false })
+      showToast(t('renderErrorRecovered'))
     }
 
     /* ── Lifecycle ── */
@@ -2881,6 +2742,7 @@ createApp({
       setLang(savedLang)
 
       document.addEventListener('keydown', handleKeydown)
+      document.addEventListener('click', closeMenuOnOutsideClick)
 
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {})
@@ -2889,6 +2751,7 @@ createApp({
 
     onUnmounted(() => {
       document.removeEventListener('keydown', handleKeydown)
+      document.removeEventListener('click', closeMenuOnOutsideClick)
     })
 
     watch(
@@ -2897,7 +2760,6 @@ createApp({
       () => { pagination.page = 1; selectedRows.clear() }
     )
 
-    watch(() => activeTab.value, () => { mobFilterOpen.value = false; selectedRows.clear() })
 
     /* ── EPG ── */
     function parseXMLTVDate(str) {
@@ -3026,38 +2888,70 @@ createApp({
       return /(?:mozilla\/|chrome\/|safari\/|gecko\)|group-title=|http-user-agent)/i.test(value || '')
     }
 
+    // open-epg.com sends no CORS headers, so it is read through our Cloudflare Pages proxy:
+    // same-origin on the deployed site, the public one from Android/desktop/local dev, and
+    // finally directly for environments that do not enforce CORS.
+    function epgXmlFetchUrls(url) {
+      if (!/^https:\/\/www\.open-epg\.com\//i.test(url)) return [url]
+      const viaProxy = origin => `${origin}/epg-proxy?url=${encodeURIComponent(url)}`
+      const deployedSite = /^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+      const urls = deployedSite ? [viaProxy(location.origin)] : []
+      if (location.origin !== EPG_PROXY_ORIGIN) urls.push(viaProxy(EPG_PROXY_ORIGIN))
+      return [...urls, url]
+    }
+
+    // Channel section of an XMLTV guide (everything before the first <programme>), or null
+    async function fetchEpgXmlHead(url) {
+      for (const candidate of epgXmlFetchUrls(url)) {
+        const ctrl  = new AbortController()
+        const timer = setTimeout(() => ctrl.abort(), EPG_FETCH_TIMEOUT)
+        try {
+          const res = await fetch(candidate, { signal: ctrl.signal })
+          if (!res.ok || !res.body) {
+            console.warn('[autodetect] EPG source HTTP', res.status, candidate)
+            continue
+          }
+          // Stream XML, stop at first <programme> — avoids downloading the full guide
+          const reader  = res.body.getReader()
+          const decoder = new TextDecoder()
+          let text = ''
+          while (true) {
+            const { value, done } = await reader.read()
+            if (value) text += decoder.decode(value, { stream: !done })
+            const stop = text.indexOf('<programme')
+            if (done || stop !== -1) {
+              if (!done) ctrl.abort()
+              if (stop !== -1) text = text.slice(0, stop)
+              break
+            }
+          }
+          // A host without the proxy answers with the app's own index.html (SPA fallback)
+          if (/<tv[\s>]/i.test(text) && !/<html[\s>]/i.test(text)) return text
+          console.warn('[autodetect] EPG source is not XMLTV:', candidate)
+        } catch (e) {
+          console.warn('[autodetect] EPG source failed:', candidate, e?.message || e)
+        } finally {
+          clearTimeout(timer)
+        }
+      }
+      return null
+    }
+
+    // Returns labels of the sources that could not be loaded
     async function fetchEnrichmentIndexes() {
       const sources = [
         ...ENRICHMENT_SOURCES.filter(s => enrichmentSelectedSources.has(s.id)),
         ...customEpgSources.value,
       ]
-      if (sources.length === 0) { enrichmentLoaded.value = true; return }
+      if (sources.length === 0) { enrichmentLoaded.value = true; return [] }
       enrichmentLoading.value = true
       enrichmentLoaded.value  = false
+      const failed = []
       await Promise.all(sources.map(async src => {
         try {
           if (src.type === 'epg-xml') {
-            // Stream XML, stop at first <programme> — avoids downloading the full guide
-            const ctrl = new AbortController()
-            // open-epg.com has no CORS headers — route through Cloudflare Pages proxy
-            const fetchUrl = /open-epg\.com/i.test(src.url)
-              ? `/epg-proxy?url=${encodeURIComponent(src.url)}`
-              : src.url
-            const res  = await fetch(fetchUrl, { signal: ctrl.signal })
-            if (!res.ok) return
-            const reader  = res.body.getReader()
-            const decoder = new TextDecoder()
-            let text = ''
-            while (true) {
-              const { value, done } = await reader.read()
-              if (value) text += decoder.decode(value, { stream: !done })
-              const stop = text.indexOf('<programme')
-              if (done || stop !== -1) {
-                if (!done) ctrl.abort()
-                if (stop !== -1) text = text.slice(0, stop)
-                break
-              }
-            }
+            const text = await fetchEpgXmlHead(src.url)
+            if (text === null) { failed.push(src.label || src.url); return }
             const canProvideTvgUrl = src.metadataOnly !== true
             const sourceTvgUrl = canProvideTvgUrl ? (allowedTvgUrl(src.url) || exportableTvgUrl(src.url)) : ''
             let m
@@ -3088,7 +2982,7 @@ createApp({
           const jsonCtrl = new AbortController()
           const jsonTimer = setTimeout(() => jsonCtrl.abort(), 15000)
           const res = await fetch(src.url, { signal: jsonCtrl.signal }).finally(() => clearTimeout(jsonTimer))
-          if (!res.ok) return
+          if (!res.ok) throw new Error('HTTP ' + res.status)
           const data = await res.json()
           if (src.type === 'epg') {
             const idx = {}, byName = {}, byNameCountry = {}
@@ -3174,10 +3068,14 @@ createApp({
             apiChannelMetaById.value = byMetaId
             apiNormMap.value         = nMap
           }
-        } catch {}
+        } catch (e) {
+          failed.push(src.label || src.url)
+          console.warn('[autodetect] enrichment source failed:', src.url, e?.message || e)
+        }
       }))
       enrichmentLoading.value = false
       enrichmentLoaded.value  = true
+      return failed
     }
 
     async function fetchAndRunAutoDetect() {
@@ -3210,21 +3108,35 @@ createApp({
       enrichmentLoaded.value     = false
       try {
         const all = []
-        await Promise.all([
-          urls.length > 0 ? Promise.all(urls.map(async source => {
+        const failed = []
+        const [, enrichmentFailed] = await Promise.all([
+          Promise.all(urls.map(async source => {
             const url = typeof source === 'string' ? source : source.url
-            const text = await fetchTextWithLimit(url, { timeout: 20000 })
-            all.push(...parseM3UforAutoDetect(text).map(item => ({ ...item, sourceId: source.id || 'custom' })))
-          })) : Promise.resolve(),
+            // One unreachable playlist must not discard the sources that did load
+            try {
+              const text = await fetchTextWithLimit(url, { timeout: 20000 })
+              all.push(...parseM3UforAutoDetect(text).map(item => ({ ...item, sourceId: source.id || 'custom' })))
+            } catch (e) {
+              failed.push(source.label || url)
+              console.warn('[autodetect] playlist source failed:', url, e?.message || e)
+            }
+          })),
           fetchEnrichmentIndexes(),
         ])
         if (runId !== _fetchRunId) return
+        failed.push(...enrichmentFailed)
         sourceIndex.value = all
         rebuildAutoDetectSearchIndex()
         sourceLoaded.value = true
-        showToast(t('autoDetectSourcesLoaded').replace('{n}', all.length))
+        const failedLabel = failed.length > 3 ? `${failed.slice(0, 3).join(', ')} +${failed.length - 3}` : failed.join(', ')
+        showToast(failed.length
+          ? t('autoDetectSourcesPartial').replace('{n}', all.length).replace('{failed}', failedLabel)
+          : t('autoDetectSourcesLoaded').replace('{n}', all.length))
         runAutoDetect()
-      } catch { showToast(t('importError')) }
+      } catch (e) {
+        console.error('[autodetect]', e)
+        showToast(t('autoDetectFailed'))
+      }
       finally { sourceLoading.value = false }
     }
 
@@ -4056,11 +3968,11 @@ createApp({
 
     return {
       icon,
-      channels, lang, theme, activeTab, selectedId,
+      channels, lang, theme, selectedId,
       importMode, importUrl, importLoading, importFileRef,
       filters, sort, pagination, modal, toast, editCh, editIsDirty, deleteTarget,
-      mobFilterOpen, hasActiveFilters, undoStack, themeOptions,
-      metadataHealth, confirmedMappings, stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, visibleTabs, roadmapItems,
+      openMenu, toggleMenu, exportFormats, hasActiveFilters, undoStack, themeOptions,
+      metadataHealth, confirmedMappings, stats, filteredChannels, paginatedChannels, totalPages, groupOptions, groupList, groupFilterOptions,
       selectedRows, selectedRowsCount, allPageSelected,
       t, setTheme, toggleTheme, setLang, setSort, prevPage, nextPage, resetFilters,
       undoLastChange, metadataScore, metadataTooltip,
@@ -4083,7 +3995,9 @@ createApp({
       toggleSourcesPanel, markAutoDetectManual, canApplyAutoDetectResult,
     }
   }
-}).mount('#app')
+})
+app.config.errorHandler = handleAppError
+app.mount('#app')
 </script>
 </body>
 </html>

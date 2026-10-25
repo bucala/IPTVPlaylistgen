@@ -1,7 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const { templateBindings, setupBindings } = require('./template-bindings');
 
 const root = path.resolve(__dirname, '..');
+const vendorFiles = fs.readdirSync(path.join(root, 'vendor')).filter((name) => name.endsWith('.js'));
 let failed = false;
 
 function fail(message) {
@@ -126,30 +128,56 @@ for (const rel of ['index.html', 'www/index.html']) {
     fail(`${rel} still blocks applying manual autodetect edits`);
   }
 
-  // Guard: every bare identifier used as `ident.toString()` in the template must
-  // be exposed from setup()'s return block, otherwise Vue crashes the render
-  // (blackscreen) when that branch mounts. See sourcesPanelOpen regression.
-  const returnMatch = html.match(/\n\s*return\s*\{([\s\S]*?)\n\s*\}\s*\n\s*\}\s*\)\.mount/);
-  const returnBlock = returnMatch ? returnMatch[1] : '';
-  const returnIdents = new Set(
-    returnBlock
-      .replace(/\/\/[^\n]*/g, '')
-      .split(/[\s,{}:]+/)
-      .filter(Boolean)
-  );
-  const toStringIdents = new Set();
-  for (const m of html.matchAll(/(?:[="]|\{\{)\s*([A-Za-z_$][\w$]*)\.toString\(\)/g)) {
-    toStringIdents.add(m[1]);
+  // Guard: every identifier the template reads must be returned from setup(). With the
+  // production Vue build a missing binding is silently undefined and dereferencing it crashes
+  // the whole render — the blank "black screen" (sourcesPanelOpen regression).
+  const exposed = setupBindings(html);
+  const templateNames = templateBindings(html);
+  const missingBindings = [...templateNames].filter((name) => !exposed.has(name));
+  if (templateNames.size < 50) fail(`${rel} template binding scan found only ${templateNames.size} names; scanner is broken`);
+  else if (missingBindings.length) fail(`${rel} template reads bindings that setup() does not return: ${missingBindings.join(', ')}`);
+  else ok(`${rel} template reads only bindings returned from setup() (${templateNames.size})`);
+
+  // Vue must be the vendored, pinned build: a CDN can be offline or silently ship a new release
+  if (/<script[^>]+src=["']https?:\/\//i.test(html)) fail(`${rel} loads a script from a remote origin`);
+  else ok(`${rel} loads no scripts from remote origins`);
+  const vueSrc = html.match(/<script src="\.\/(vendor\/vue-(\d+\.\d+\.\d+)\.global\.prod\.js)"><\/script>/);
+  const vueFile = vueSrc && path.join(path.dirname(rel), vueSrc[1]);
+  if (vueFile && fs.existsSync(path.join(root, vueFile)) && read(vueFile).slice(0, 80).includes(`vue v${vueSrc[2]}\n`)) {
+    ok(`${rel} loads vendored Vue ${vueSrc[2]}`);
+  } else {
+    fail(`${rel} must load an existing vendor/vue-<version>.global.prod.js`);
   }
-  for (const ident of toStringIdents) {
-    if (returnIdents.has(ident)) ok(`${rel} exposes template identifier ${ident}`);
-    else fail(`${rel} uses ${ident}.toString() in template but setup() does not return ${ident}`);
+  if (vueSrc && read('sw.js').includes(`'${vueSrc[1]}'`)) ok(`${rel} Vue runtime is precached by sw.js`);
+  else fail(`${rel} Vue runtime is not precached by sw.js (VUE_RUNTIME)`);
+
+  if (/app\.config\.errorHandler\s*=/.test(html) && /id="app-fatal"/.test(html) && /function showAppFatal\(/.test(html)) {
+    ok(`${rel} shows a fallback panel instead of a blank screen on render errors`);
+  } else {
+    fail(`${rel} has no render-error fallback (app.config.errorHandler + #app-fatal)`);
   }
 
-  // Targeted guard for the autodetect sources panel state that caused the blackscreen.
-  if (/\{\{\s*sourcesPanelSummary\s*\}\}/.test(html)) {
-    if (returnIdents.has('sourcesPanelSummary')) ok(`${rel} exposes sourcesPanelSummary to template`);
-    else fail(`${rel} renders sourcesPanelSummary but setup() does not return it`);
+  // On phones the channel cards must not form a nested scroller: with overscroll-behavior: contain
+  // a finger swipe that starts on a card is swallowed and the page does not scroll.
+  const mobileCss = html.match(/@media \(max-width: 640px\) \{[\s\S]*?\n    \}/)?.[0] || '';
+  if (/\.table-shell:not\(\.auto-detect-table\)\s*\{[^}]*overflow:\s*visible;[^}]*overscroll-behavior:\s*auto/.test(mobileCss)) {
+    ok(`${rel} lets finger swipes on mobile channel cards scroll the page`);
+  } else {
+    fail(`${rel} mobile channel cards may trap touch scrolling (need overflow: visible; overscroll-behavior: auto)`);
+  }
+
+  if (['import', 'export', 'edit', 'settings'].every((name) => html.includes(`toggleMenu('${name}')`))
+    && /modal\.filter = true/.test(html) && !/role="tablist"/.test(html)) {
+    ok(`${rel} groups header actions into Import/Export/Edit/Settings menus with a Filter window`);
+  } else {
+    fail(`${rel} header actions are not grouped into menus (or the tab bar is back)`);
+  }
+
+  const runAutoDetectFetch = html.match(/async function fetchAndRunAutoDetect\(\)[\s\S]*?\n    \}\n/)?.[0] || '';
+  if (/urls\.map\(async source => \{[\s\S]*?try \{[\s\S]*?fetchTextWithLimit[\s\S]*?\} catch/.test(runAutoDetectFetch)) {
+    ok(`${rel} isolates failures of individual autodetect sources`);
+  } else {
+    fail(`${rel} lets one failing autodetect source abort the whole run`);
   }
 
   const inlineScripts = html
@@ -175,10 +203,34 @@ for (const [left, right] of [
   ['_redirects', 'www/_redirects'],
   ['icons/icon.svg', 'www/icons/icon.svg'],
   ['icons/icon.png', 'www/icons/icon.png'],
+  ...vendorFiles.map((name) => [`vendor/${name}`, `www/vendor/${name}`]),
 ]) {
-  if (sameFile(left, right)) ok(`${right} matches ${left}`);
+  if (fs.existsSync(path.join(root, right)) && sameFile(left, right)) ok(`${right} matches ${left}`);
   else fail(`${right} differs from ${left}; run npm run sync:www`);
 }
+
+const staleWwwVendor = fs.existsSync(path.join(root, 'www/vendor'))
+  ? fs.readdirSync(path.join(root, 'www/vendor')).filter((name) => !vendorFiles.includes(name))
+  : [];
+if (staleWwwVendor.length) fail(`www/vendor has files no longer in vendor/: ${staleWwwVendor.join(', ')}`);
+else ok('www/vendor has no stale files');
+
+// Service worker: index.html must be network-first, otherwise visitors keep a cached
+// (possibly broken) app shell forever and never receive fixes
+const sw = read('sw.js');
+const swCacheName = sw.match(/const CACHE_NAME = '([^']+)'/)?.[1] || '';
+if (!swCacheName || /^iptv-playlistgen-v[1-4]-cache$/.test(swCacheName)) fail('sw.js must use a cache name newer than the cache-first v1–v4 shells');
+else ok(`sw.js cache ${swCacheName}`);
+const networkFirst = sw.match(/async function networkFirst[\s\S]*?\n\}/)?.[0] || '';
+if (/request\.mode === 'navigate'[\s\S]{0,80}networkFirst\(/.test(sw)
+  && networkFirst.includes('await fetch(')
+  && networkFirst.indexOf('await fetch(') < networkFirst.indexOf('cache.match(')) {
+  ok('sw.js serves the app shell network-first');
+} else {
+  fail('sw.js may serve a stale index.html from cache; navigations must be network-first');
+}
+if (/LEGACY_SHELL_CACHE[\s\S]*client\.navigate\(/.test(sw)) ok('sw.js reloads pages still running a legacy cached shell');
+else fail('sw.js does not reload pages that a legacy cache-first SW is still serving');
 
 
 for (const rel of ['_headers', 'www/_headers']) {

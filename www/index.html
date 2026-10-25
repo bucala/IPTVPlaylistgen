@@ -276,6 +276,9 @@
       -webkit-user-select: none; user-select: none;
     }
     .tool-btn:hover { filter: brightness(.93); }
+    .tool-btn:disabled { opacity: .38; cursor: not-allowed; }
+    .tool-btn-primary { background: var(--primary); color: #fff; }
+    .tool-label-short { display: none; }
     .tool-btn:active { transform: scale(.97); }
     .tool-btn[aria-expanded="true"] { background: var(--primary); color: #fff; filter: none; }
     .tool-btn .chev { display: inline-flex; opacity: .55; }
@@ -497,10 +500,12 @@
       header .hdr-kicker, header .hdr-subtitle { display: none; }
       header .app-icon { width: 38px; height: 38px; border-radius: 11px; }
       header h1 { font-size: 1.3rem !important; }
-      .hdr-tools { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; }
+      .hdr-tools { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .35rem; }
+      .tool-label-full { display: none; }
+      .tool-label-short { display: inline; }
       .hdr-tools .menu-wrap { position: static; }  /* menus span the whole toolbar width */
       .hdr-tools .menu-pop { left: 0; right: 0; min-width: 0; max-width: none; }
-      .tool-btn { width: 100%; flex-direction: column; gap: 4px; padding: 9px 4px; font-size: 12px; }
+      .tool-btn { width: 100%; flex-direction: column; gap: 4px; padding: 9px 2px; font-size: 11.5px; }
       .tool-btn .chev { display: none; }
       .icon-btn { width: 38px; height: 38px; }
       /* Cards are not a scroll container: a nested scroller with overscroll-behavior: contain
@@ -671,10 +676,6 @@
             <span v-if="selectedRowsCount > 0" class="tool-badge" :aria-label="selectedRowsCount + ' ' + t('selectedCount')">{{ selectedRowsCount }}</span>
           </button>
           <div v-if="openMenu === 'edit'" class="menu-pop" role="menu" :aria-label="t('menuEdit')" @keydown="menuKeydown">
-            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="closeMenu(); openAutoDetect()">
-              <span class="mi-icon" v-html="icon('search', 16)"></span>
-              <span class="mi-text">{{ t('autoDetectBtn') }}<small class="mi-hint">{{ t('menuAutoDetectHint') }}</small></span>
-            </button>
             <button type="button" class="menu-item" role="menuitem" @click="closeMenu(); openAddChannel()">
               <span class="mi-icon" v-html="icon('plus', 16)"></span>
               <span class="mi-text">{{ t('addChannel') }}</span>
@@ -704,6 +705,9 @@
           </div>
         </div>
 
+        <button type="button" class="tool-btn tool-btn-primary" :disabled="stats.total === 0" @click="openMenu = null; openAutoDetect()" :title="t('menuAutoDetectHint')">
+          <span v-html="icon('search', 17)"></span><span class="tool-label-full">{{ t('autoDetectBtn') }}</span><span class="tool-label-short">{{ t('autoDetectShort') }}</span>
+        </button>
         <button type="button" class="tool-btn" @click="openMenu = null; modal.filter = true" :aria-label="t('filterSet') + (hasActiveFilters ? ' (' + t('filterActive') + ')' : '')">
           <span v-html="icon('filter', 17)"></span><span>{{ t('filterSet') }}</span>
           <span v-if="hasActiveFilters" class="tool-dot" aria-hidden="true"></span>
@@ -1450,7 +1454,7 @@ const ENRICHMENT_SOURCES = [
 ]
 
 const CHANNEL_TVG_ALIASES = [
-  { re: /\bdoma\b/i, ids: ['Doma.sk', 'Doma.cz'] },
+  { re: /\b(?:mark[ií]za\s*)?doma\b/i, ids: ['Doma.sk', 'Doma.cz'] },
   { re: /\bdaj\s*to\b|\bdajto\b/i, ids: ['Dajto.sk', 'Dajto.cz'] },
   { re: /\bjoj\s*cinema\b|\bjojcinema\b/i, ids: ['JOJCinema.sk'] },
   { re: /\bjoj\s*svet\b/i, ids: ['JOJSvet.sk', 'JOJSvet.cz'] },
@@ -1514,6 +1518,7 @@ const app = createApp({
     /* ── i18n ── */
     const messages = {
       sk: {
+        autoDetectShort:  'Detekcia',
         menuImport:       'Import',
         menuExport:       'Export',
         menuEdit:         'Úpravy',
@@ -1714,6 +1719,7 @@ const app = createApp({
         channelsDeletedN:    'Vymazaných {n} kanálov',
       },
       en: {
+        autoDetectShort:  'Detect',
         menuImport:       'Import',
         menuExport:       'Export',
         menuEdit:         'Edit',
@@ -3423,10 +3429,15 @@ const app = createApp({
       return null
     }
 
+    // Aliases must match the whole normalized name: "Premier Sport 1" or "JOJ Sport 2"
+    // are different channels than "Sport 1" or "JOJ" and must not inherit their ID/logo.
+    const CHANNEL_TVG_ALIASES_FULL = CHANNEL_TVG_ALIASES.map(a => ({ ids: a.ids, re: new RegExp(`^(?:${a.re.source})$`, 'i') }))
+
     function aliasTvgIdVariants(ch) {
       for (const text of [ch?.name, ch?.tvg_id, ch?.tvg_name]) {
-        if (!text) continue
-        const hit = CHANNEL_TVG_ALIASES.find(a => a.re.test(text))
+        const name = normName(text || '')
+        if (!name) continue
+        const hit = CHANNEL_TVG_ALIASES_FULL.find(a => a.re.test(name))
         if (hit) return hit.ids
       }
       return []
@@ -3556,14 +3567,19 @@ const app = createApp({
         base = (2 * inter) / (ta.size + tb.size)
       }
 
+      // Channel numbers identify different channels: "Nova Sport 1" is not "Nova Sport 2"
+      const numbers = s => (s.match(/\d+/g) || []).join(' ')
+      const na_n = numbers(na), nb_n = numbers(nb)
+      const numberFactor = na_n === nb_n ? 1 : (na_n && nb_n ? 0.2 : 0.7)
+
       // Penalize when the longer string has unmatched significant words
       const lw = longer.split(' ').filter(w => w.length > 1)
       const sw = new Set(shorter.split(' ').filter(w => w.length > 1))
       if (lw.length >= 2 && sw.size > 0) {
         const coverage = lw.filter(w => sw.has(w)).length / lw.length
-        return base * (coverage * 0.6 + 0.4)
+        return base * (coverage * 0.6 + 0.4) * numberFactor
       }
-      return base
+      return base * numberFactor
     }
 
     function searchKeysFor(nName, nId = '') {

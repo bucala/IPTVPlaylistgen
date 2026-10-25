@@ -157,6 +157,22 @@ for (const rel of ['index.html', 'www/index.html']) {
     fail(`${rel} has no render-error fallback (app.config.errorHandler + #app-fatal)`);
   }
 
+  // On phones the channel cards must not form a nested scroller: with overscroll-behavior: contain
+  // a finger swipe that starts on a card is swallowed and the page does not scroll.
+  const mobileCss = html.match(/@media \(max-width: 640px\) \{[\s\S]*?\n    \}/)?.[0] || '';
+  if (/\.table-shell:not\(\.auto-detect-table\)\s*\{[^}]*overflow:\s*visible;[^}]*overscroll-behavior:\s*auto/.test(mobileCss)) {
+    ok(`${rel} lets finger swipes on mobile channel cards scroll the page`);
+  } else {
+    fail(`${rel} mobile channel cards may trap touch scrolling (need overflow: visible; overscroll-behavior: auto)`);
+  }
+
+  if (['import', 'export', 'edit', 'settings'].every((name) => html.includes(`toggleMenu('${name}')`))
+    && /modal\.filter = true/.test(html) && !/role="tablist"/.test(html)) {
+    ok(`${rel} groups header actions into Import/Export/Edit/Settings menus with a Filter window`);
+  } else {
+    fail(`${rel} header actions are not grouped into menus (or the tab bar is back)`);
+  }
+
   const runAutoDetectFetch = html.match(/async function fetchAndRunAutoDetect\(\)[\s\S]*?\n    \}\n/)?.[0] || '';
   if (/urls\.map\(async source => \{[\s\S]*?try \{[\s\S]*?fetchTextWithLimit[\s\S]*?\} catch/.test(runAutoDetectFetch)) {
     ok(`${rel} isolates failures of individual autodetect sources`);

@@ -61,7 +61,7 @@
 
 ### Autodetekcia metadát (EPG Enrichment)
 
-Tlačidlo **Autodetekcia** (aktívne po načítaní EPG) otvorí modálne okno s automatickým priradením TVG metadát.
+Položka **Úpravy → Autodetekcia** otvorí modálne okno s automatickým priradením TVG metadát.
 
 Podrobnosti pozri v sekcii [EPG Autodetekcia — technické detaily](#-epg-autodetekcia--technické-detaily).
 
@@ -79,7 +79,7 @@ Podrobnosti pozri v sekcii [EPG Autodetekcia — technické detaily](#-epg-autod
 
 - Tabuľka so **radením podľa stĺpcov** (↑ / ↓, kliknutím na záhlavie)
 - Raditeľné: Názov, Skupina, Kvalita, Krajina, Stav
-- Filtrovanie: textové hľadanie, skupina, kvalita, krajina, aktívny/vypnutý
+- Filtrovanie v okne **Filter** (tlačidlo v hornom paneli): textové hľadanie, skupina (s počtom kanálov), kvalita, krajina, aktívny/vypnutý, počet na stránku; aktívny filter zobrazuje lištu nad tabuľkou
 - Stránkovanie: 50 / 100 / 200 / 500 kanálov na stránku
 - Pridanie, úprava, zmazanie kanálu s potvrdením
 - Aktivovanie / deaktivovanie priamo z tabuľky
@@ -95,10 +95,9 @@ Podrobnosti pozri v sekcii [EPG Autodetekcia — technické detaily](#-epg-autod
 ### UI / UX
 
 - **Apple HIG** dizajn — glass morphism, dynamické CSS premenné, smooth animácie
-- **Svetlá / tmavá téma** — persist v `localStorage`, anti-FOUC inline skript
-- **Slovenčina / Angličtina** — persist v `localStorage`, kompletný preklad
-- Mobilný layout s horizontálnou **tab-bar navigáciou** (breakpoint ≤ 1024px)
-- Kolapsovateľný **filter panel** na mobile s indikátorom aktívnych filtrov (●)
+- Horný panel so zoskupenými menu **Import** (playlist, EPG) · **Export** (M3U, XSPF, JSON, Enigma2) · **Úpravy** (autodetekcia, pridať kanál, späť, pravidlá metadát, odpojiť TVG URL, report kvality, vymazať vybrané) · **Filter** a kompaktným info panelom (počty kanálov, skupín, kvalít)
+- **Nastavenia** (⚙ vpravo hore): jazyk SK/EN a téma (Svetlá, Tmavá, Aurora, Grape, Forest) — persist v `localStorage`, anti-FOUC inline skript
+- Mobilný layout: karty kanálov, menu cez celú šírku panela, plynulé posúvanie prstom
 - **PWA** — inštalovateľná na iOS / Android home screen (manifest + SW)
 - Klávesová skratka **Escape** — zatvorenie modalných okien v poradí priority
 
@@ -114,11 +113,11 @@ https://iptvplaylistgen.pages.dev
 
 ### Prvé kroky
 
-1. Klikni **Import Playlist** → vyber `.m3u` alebo `.m3u8` súbor
+1. Klikni **Import → Playlist** → vyber `.m3u` alebo `.m3u8` súbor
 2. Kanály sa zobrazia v tabuľke s automaticky detegovanými kvalitami
 3. Voliteľne načítaj EPG metadáta cez **Obohatiť metadáta** (EPG Enrichment)
-4. Po načítaní EPG aktivuj **Autodetekcia** pre priradenie TVG metadát
-5. Exportuj upravený playlist cez **Export M3U** alebo **Export XSPF**
+4. Spusti **Úpravy → Autodetekcia** pre priradenie TVG metadát
+5. Exportuj upravený playlist cez **Export → M3U** alebo **Export → XSPF**
 
 ---
 

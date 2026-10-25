@@ -159,18 +159,27 @@ for (const rel of ['index.html', 'www/index.html']) {
 
   // On phones the channel cards must not form a nested scroller: with overscroll-behavior: contain
   // a finger swipe that starts on a card is swallowed and the page does not scroll.
-  const mobileCss = html.match(/@media \(max-width: 640px\) \{[\s\S]*?\n    \}/)?.[0] || '';
-  if (/\.table-shell:not\(\.auto-detect-table\)\s*\{[^}]*overflow:\s*visible;[^}]*overscroll-behavior:\s*auto/.test(mobileCss)) {
-    ok(`${rel} lets finger swipes on mobile channel cards scroll the page`);
+  const mobileCss = [...html.matchAll(/@media \(max-width: 640px\) \{[\s\S]*?\n    \}/g)].map((m) => m[0]).join('\n');
+  const coarseCss = html.match(/@media \(pointer: coarse\) \{[\s\S]*?\n    \}/)?.[0] || '';
+  if (/\.table-shell:not\(\.auto-detect-table\)\s*\{[^}]*overflow:\s*visible;[^}]*overscroll-behavior:\s*auto/.test(mobileCss)
+    && /\.table-shell:not\(\.auto-detect-table\)\s*\{[^}]*max-height:\s*none;[^}]*overscroll-behavior:\s*auto/.test(coarseCss)) {
+    ok(`${rel} lets finger swipes on the channel list scroll the page (phones, landscape, tablets)`);
   } else {
     fail(`${rel} mobile channel cards may trap touch scrolling (need overflow: visible; overscroll-behavior: auto)`);
   }
 
-  if (['import', 'export', 'edit', 'settings'].every((name) => html.includes(`toggleMenu('${name}')`))
+  if (['import', 'export', 'edit', 'settings'].every((name) => html.includes(`toggleMenu('${name}'`))
     && /modal\.filter = true/.test(html) && !/role="tablist"/.test(html)) {
     ok(`${rel} groups header actions into Import/Export/Edit/Settings menus with a Filter window`);
   } else {
     fail(`${rel} header actions are not grouped into menus (or the tab bar is back)`);
+  }
+
+  if (/v-if="modal\.autoDetect" class="modal-overlay modal-fullscreen"/.test(html)
+    && /\.modal-overlay\.modal-fullscreen > \.modal-card \{[^}]*height: 100dvh/.test(html)) {
+    ok(`${rel} opens autodetect as a full-screen window`);
+  } else {
+    fail(`${rel} autodetect window is not full-screen`);
   }
 
   const runAutoDetectFetch = html.match(/async function fetchAndRunAutoDetect\(\)[\s\S]*?\n    \}\n/)?.[0] || '';

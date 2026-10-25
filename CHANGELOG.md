@@ -12,6 +12,8 @@ Všetky významné zmeny v projekte sú dokumentované v tomto súbore.
 ### Spoľahlivý štart — žiadna čierna obrazovka
 
 #### Fixed
+- **Autodetekcia párovala kanály podľa kratšieho názvu** — aliasy typu „obsahuje slovo" priradili *Premier/Oneplay/Nova Sport 1* ID a logo kanála *Sport 1*, *JOJ Sport 2* dostal `JOJ.sk`. Aliasy teraz musia sedieť na celý názov; rozdielne číslo kanála (Nova Sport 1 vs 2) znižuje skóre zhody pod prah.
+- **Logá SK/CZ staníc** — nový zdroj [tv-logo/tv-logos](https://github.com/tv-logo/tv-logos) (priehľadné PNG cez jsDelivr, ~150 SK/CZ log) sa páruje podľa celého názvu kanála s preferenciou krajiny (napr. *Premier Sport 3* → `premier-sport-3-cz.png`).
 - **Export bez vybraných kanálov** — Export (M3U/XSPF/JSON/Enigma2) a „Odpojiť TVG URL" padali s `ReferenceError: isFiltered is not defined`, keď nebol vybraný žiadny riadok.
 - **Autodetekcia na celú obrazovku** — tabuľka výsledkov využíva celú výšku, tlačidlá Zrušiť/Aplikovať sú vždy viditeľné (na nízkych obrazovkách boli orezané).
 - **Telefón na šírku a tablet** — zoznam kanálov sa na šírku zrútil na 0 px a pohlcoval swipe; na dotykových zariadeniach sa posúva stránka.
@@ -26,6 +28,7 @@ Všetky významné zmeny v projekte sú dokumentované v tomto súbore.
 - **Kompaktný horný panel** — tlačidlá sú zoskupené do menu **Import**, **Export** a **Úpravy** s ikonami a popismi; štatistiky sú v malom info paneli. Na mobile zaberá hlavička ~195 px namiesto ~800 px.
 - **Bez tab panelu a bočného panela** — záložky Knižnica / Obsah / Dizajn zrušené; filtre sú v okne **Filter** z horného panela (skupiny s počtami, lišta aktívneho filtra nad tabuľkou), hromadné pravidlá a report kvality v menu **Úpravy**.
 - **Jazyk a téma** v menu ⚙ vpravo hore.
+- **Autodetekcia** je zvýraznené tlačidlo priamo v hornom paneli.
 - **Vue 3.5.44 je vendorovaný** v `vendor/` (overená npm integrita) namiesto plávajúceho `unpkg.com/vue@3` — aplikácia štartuje offline a nová verzia Vue ju nezmení bez commitu. CSP už nepovoľuje skripty z `unpkg.com`.
 - `npm test` kontroluje, že šablóna číta len väzby vrátené zo `setup()`, že `index.html` nenačítava skripty z cudzích domén a že SW servíruje shell network-first.
 

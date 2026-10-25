@@ -276,6 +276,9 @@
       -webkit-user-select: none; user-select: none;
     }
     .tool-btn:hover { filter: brightness(.93); }
+    .tool-btn:disabled { opacity: .38; cursor: not-allowed; }
+    .tool-btn-primary { background: var(--primary); color: #fff; }
+    .tool-label-short { display: none; }
     .tool-btn:active { transform: scale(.97); }
     .tool-btn[aria-expanded="true"] { background: var(--primary); color: #fff; filter: none; }
     .tool-btn .chev { display: inline-flex; opacity: .55; }
@@ -497,10 +500,12 @@
       header .hdr-kicker, header .hdr-subtitle { display: none; }
       header .app-icon { width: 38px; height: 38px; border-radius: 11px; }
       header h1 { font-size: 1.3rem !important; }
-      .hdr-tools { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; }
+      .hdr-tools { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .35rem; }
+      .tool-label-full { display: none; }
+      .tool-label-short { display: inline; }
       .hdr-tools .menu-wrap { position: static; }  /* menus span the whole toolbar width */
       .hdr-tools .menu-pop { left: 0; right: 0; min-width: 0; max-width: none; }
-      .tool-btn { width: 100%; flex-direction: column; gap: 4px; padding: 9px 4px; font-size: 12px; }
+      .tool-btn { width: 100%; flex-direction: column; gap: 4px; padding: 9px 2px; font-size: 11.5px; }
       .tool-btn .chev { display: none; }
       .icon-btn { width: 38px; height: 38px; }
       /* Cards are not a scroll container: a nested scroller with overscroll-behavior: contain
@@ -671,10 +676,6 @@
             <span v-if="selectedRowsCount > 0" class="tool-badge" :aria-label="selectedRowsCount + ' ' + t('selectedCount')">{{ selectedRowsCount }}</span>
           </button>
           <div v-if="openMenu === 'edit'" class="menu-pop" role="menu" :aria-label="t('menuEdit')" @keydown="menuKeydown">
-            <button type="button" class="menu-item" role="menuitem" :disabled="stats.total === 0" @click="closeMenu(); openAutoDetect()">
-              <span class="mi-icon" v-html="icon('search', 16)"></span>
-              <span class="mi-text">{{ t('autoDetectBtn') }}<small class="mi-hint">{{ t('menuAutoDetectHint') }}</small></span>
-            </button>
             <button type="button" class="menu-item" role="menuitem" @click="closeMenu(); openAddChannel()">
               <span class="mi-icon" v-html="icon('plus', 16)"></span>
               <span class="mi-text">{{ t('addChannel') }}</span>
@@ -704,6 +705,9 @@
           </div>
         </div>
 
+        <button type="button" class="tool-btn tool-btn-primary" :disabled="stats.total === 0" @click="openMenu = null; openAutoDetect()" :title="t('menuAutoDetectHint')">
+          <span v-html="icon('search', 17)"></span><span class="tool-label-full">{{ t('autoDetectBtn') }}</span><span class="tool-label-short">{{ t('autoDetectShort') }}</span>
+        </button>
         <button type="button" class="tool-btn" @click="openMenu = null; modal.filter = true" :aria-label="t('filterSet') + (hasActiveFilters ? ' (' + t('filterActive') + ')' : '')">
           <span v-html="icon('filter', 17)"></span><span>{{ t('filterSet') }}</span>
           <span v-if="hasActiveFilters" class="tool-dot" aria-hidden="true"></span>
@@ -1450,7 +1454,7 @@ const ENRICHMENT_SOURCES = [
 ]
 
 const CHANNEL_TVG_ALIASES = [
-  { re: /\bdoma\b/i, ids: ['Doma.sk', 'Doma.cz'] },
+  { re: /\b(?:mark[ií]za\s*)?doma\b/i, ids: ['Doma.sk', 'Doma.cz'] },
   { re: /\bdaj\s*to\b|\bdajto\b/i, ids: ['Dajto.sk', 'Dajto.cz'] },
   { re: /\bjoj\s*cinema\b|\bjojcinema\b/i, ids: ['JOJCinema.sk'] },
   { re: /\bjoj\s*svet\b/i, ids: ['JOJSvet.sk', 'JOJSvet.cz'] },
@@ -1484,6 +1488,36 @@ const CHANNEL_TVG_ALIASES = [
   { re: /\bsport\s*5\b/i, ids: ['Sport5.sk'] },
 ]
 
+// Snapshot of github.com/tv-logo/tv-logos countries/slovakia and countries/czech-republic (2026-10-25):
+// transparent PNGs named after the full channel name, e.g. premier-sport-3-cz.png. Files are served by jsDelivr.
+// To refresh, copy the file names (without .png) from those two GitHub folders.
+const TV_LOGOS_BASE = 'https://cdn.jsdelivr.net/gh/tv-logo/tv-logos@main/countries/'
+const TV_LOGOS = {
+  slovakia: `
+    arena-sport-1-sk arena-sport-2-sk canal-plus-sport-2-sk canal-plus-sport-sk cnn-prima-news-sk cs-film-sk
+    cs-history-sk cs-horror-sk cs-mystery-sk dvojka-sk folklorika-sk jednotka-sk joj-24-sk joj-cinema-plus-sk
+    joj-cinema-sk joj-plus-sk joj-sk joj-sport-2-sk joj-sport-sk joj-svet-sk joj-wau-sk jojko-sk kanal1-sk
+    markiza-dajto-sk markiza-doma-sk markiza-krimi-sk markiza-sk nova-international-sk nova-sport-1-sk
+    nova-sport-2-sk nova-sport-3-sk-sk nova-sport-4-sk-sk park-tv-sk prima-cool-sk prima-krimi-sk
+    prima-love-sk prima-sk rtvs-24-sk rtvs-sport-sk senzi-sk skylink-7-sk sport1-sk sport2-sk ta3-sk
+    tuki-tv-sk tv-lux-sk tv-osem-sk`,
+  'czech-republic': `
+    amc-cz axn-black-cz axn-cz axn-white-cz barrandov-kino-cz barrandov-krimi-cz barrandov-tv-cz
+    canal-plus-sport-2-cz cnn-prima-news-cz cs-history-cz cs-mystery-cz ct-art-cz ct-d-ct-art-cz ct-d-cz
+    ct-sport-cz ct1-cz ct2-cz ct24-cz erox-cz eroxxx-cz extasy-cz film-europe-cz film-europe-plus-cz
+    film-plus-cz filmbox-cz filmbox-extra-cz filmbox-family-cz filmbox-premium-cz filmbox-stars-cz hbo-cz
+    hbo2-cz hbo3-cz hobby-tv-cz hustler-hd-cz inultra-cz joj-cinema-cz joj-cinema-plus-cz joj-family-cz
+    joj-svet-cz jtv-cz kanal1-cz lala-tv-cz leo-tv-cz leo-tv-gold-cz love-nature-4k-cz minimax-cz mnam-cz
+    mnau-tv-cz nas-region-cz nova-action-cz nova-cinema-cz nova-cz nova-fun-cz nova-gold-cz nova-krimi-cz
+    nova-lady-cz nova-sport-1-cz nova-sport-2-cz nova-sport-3-cz nova-sport-4-cz nova-sport-5-cz
+    nova-sport-6-cz ocko-black-cz ocko-cz ocko-expres-cz ocko-star-cz oneplay-sport-1-cz oneplay-sport-2-cz
+    oneplay-sport-3-cz oneplay-sport-4-cz oneplay-sport-4k-cz paramount-network-cz paramount-network-hz-cz
+    passion-xxx-cz polar-cz praha-tv-cz premier-sport-1-cz premier-sport-2-cz premier-sport-3-cz prima-cool-cz
+    prima-cz prima-krimi-cz prima-love-cz prima-max-cz prima-plus-cz prima-show-cz prima-star-cz prima-zoom-cz
+    rebel-cz regiony-plus-cz relax-cz retro-cz rtm-plus-cz seznam-tv-cz slagr-muzika-cz slagr-original-cz
+    slagr-premium-cz spektrum-cz spektrum-home-cz tv-brno-1-cz tv-noe-cz tv-paprika-cz tv-v1-cz tvs-cz`,
+}
+
 // A render error makes Vue replace the whole UI with an empty node (the "black screen").
 // setup() registers a recovery that closes dialogs; if the UI stays empty, #app-fatal is shown.
 let recoverUiAfterRenderError = null
@@ -1514,6 +1548,7 @@ const app = createApp({
     /* ── i18n ── */
     const messages = {
       sk: {
+        autoDetectShort:  'Detekcia',
         menuImport:       'Import',
         menuExport:       'Export',
         menuEdit:         'Úpravy',
@@ -1714,6 +1749,7 @@ const app = createApp({
         channelsDeletedN:    'Vymazaných {n} kanálov',
       },
       en: {
+        autoDetectShort:  'Detect',
         menuImport:       'Import',
         menuExport:       'Export',
         menuEdit:         'Edit',
@@ -2699,7 +2735,8 @@ const app = createApp({
         if (!ch.tvg_logo) {
           const logoId = [...tvgIdVariants(ch.tvg_id), ...nameTvgIdVariants(ch.tvg_name || ch.name)]
             .map(id => id.toLowerCase()).find(id => logoChannelIndexById.value[id])
-          ch.tvg_logo = (logoId ? logoChannelIndexById.value[logoId] : '') || logoChannelIndex.value[normName(ch.tvg_name || ch.name)] || ''
+          ch.tvg_logo = tvLogoFor([ch.name, ch.tvg_name, ch.tvg_id], tvgCountry(ch.tvg_id))
+            || (logoId ? logoChannelIndexById.value[logoId] : '') || logoChannelIndex.value[normName(ch.tvg_name || ch.name)] || ''
         }
         if (before !== JSON.stringify([ch.tvg_id, ch.tvg_name, ch.tvg_logo, ch.tvg_url])) changed++
       })
@@ -3407,6 +3444,37 @@ const app = createApp({
       return [`${compact}.sk`, `${compact}.cz`]
     }
 
+    // tv-logos lookup by the full channel name: compact key ("premiersport3") → { sk, cz } logo URL
+    const TV_LOGO_SHORT_NAMES = { dajto: 'markizadajto', doma: 'markizadoma', wau: 'jojwau' }
+    const tvLogoIndex = (() => {
+      const index = {}
+      for (const [folder, list] of Object.entries(TV_LOGOS)) {
+        const country = folder === 'slovakia' ? 'sk' : 'cz'
+        for (const file of list.split(/\s+/).filter(Boolean)) {
+          const key = file.replace(/(?:-(?:sk|cz))+$/, '').replace(/-/g, '')
+          for (const k of new Set([key, key.replace(/hd$/, '')])) {
+            index[k] = index[k] || {}
+            index[k][country] = index[k][country] || `${TV_LOGOS_BASE}${folder}/${file}.png`
+          }
+        }
+      }
+      for (const [short, key] of Object.entries(TV_LOGO_SHORT_NAMES)) if (index[key]) index[short] = index[key]
+      return index
+    })()
+
+    function tvLogoKey(name) {
+      return normName(String(name || '').replace(/\+/g, ' plus ')).replace(/[^a-z0-9]/g, '')
+    }
+
+    // First name with a logo wins; the channel's own country is preferred, then the other one
+    function tvLogoFor(names, country = '') {
+      for (const name of names) {
+        const hit = tvLogoIndex[tvLogoKey(name)]
+        if (hit) return hit[country] || hit.sk || hit.cz
+      }
+      return ''
+    }
+
     function preferredCandidateHit(ids, indexes) {
       const unique = [...new Set(ids.filter(Boolean))]
       const ordered = [
@@ -3423,10 +3491,15 @@ const app = createApp({
       return null
     }
 
+    // Aliases must match the whole normalized name: "Premier Sport 1" or "JOJ Sport 2"
+    // are different channels than "Sport 1" or "JOJ" and must not inherit their ID/logo.
+    const CHANNEL_TVG_ALIASES_FULL = CHANNEL_TVG_ALIASES.map(a => ({ ids: a.ids, re: new RegExp(`^(?:${a.re.source})$`, 'i') }))
+
     function aliasTvgIdVariants(ch) {
       for (const text of [ch?.name, ch?.tvg_id, ch?.tvg_name]) {
-        if (!text) continue
-        const hit = CHANNEL_TVG_ALIASES.find(a => a.re.test(text))
+        const name = normName(text || '')
+        if (!name) continue
+        const hit = CHANNEL_TVG_ALIASES_FULL.find(a => a.re.test(name))
         if (hit) return hit.ids
       }
       return []
@@ -3556,14 +3629,19 @@ const app = createApp({
         base = (2 * inter) / (ta.size + tb.size)
       }
 
+      // Channel numbers identify different channels: "Nova Sport 1" is not "Nova Sport 2"
+      const numbers = s => (s.match(/\d+/g) || []).join(' ')
+      const na_n = numbers(na), nb_n = numbers(nb)
+      const numberFactor = na_n === nb_n ? 1 : (na_n && nb_n ? 0.2 : 0.7)
+
       // Penalize when the longer string has unmatched significant words
       const lw = longer.split(' ').filter(w => w.length > 1)
       const sw = new Set(shorter.split(' ').filter(w => w.length > 1))
       if (lw.length >= 2 && sw.size > 0) {
         const coverage = lw.filter(w => sw.has(w)).length / lw.length
-        return base * (coverage * 0.6 + 0.4)
+        return base * (coverage * 0.6 + 0.4) * numberFactor
       }
-      return base
+      return base * numberFactor
     }
 
     function searchKeysFor(nName, nId = '') {
@@ -3859,7 +3937,9 @@ const app = createApp({
           ...aliases, ...nameTvgIdVariants(editName || ch.tvg_name || ch.name),
         ].map(id => id.toLowerCase())
         const logoFromCandidateId = logoCandidateIds.find(id => logoChannelIndexById.value[id])
-        const editLogo = (canonicalMeta?.logo || '')
+        // Exact full-name match in the SK/CZ logo set first: "Premier Sport 3" must not get a "Sport" logo
+        const editLogo = tvLogoFor([ch.name, editName, ch.tvg_name, editId, ch.tvg_id], chCountry || tvgCountry(editId))
+          || (canonicalMeta?.logo || '')
           || (logoFromCandidateId ? logoChannelIndexById.value[logoFromCandidateId] : '')
           || logoChannelIndexById.value[fullIdLow]
           || logoChannelIndexById.value[cleanIdLow]

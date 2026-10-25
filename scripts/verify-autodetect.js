@@ -31,6 +31,7 @@ function extract(start, end) {
 
 const aliasBlock = extract('const ALLOWED_TVG_URLS = new Set([', 'const app = createApp({');
 const autodetectFunctions = extract('function stripChannelDecorations', 'function strSimilarity');
+const similarityFunction = extract('function strSimilarity', 'function searchKeysFor');
 const parseFunctions = extract('function parseExtinf', 'function detectQuality');
 const detectQualityBlock = extract('function detectQuality', 'function exportPlaylist');
 
@@ -57,6 +58,7 @@ vm.createContext(sandbox);
 vm.runInContext(`
 ${aliasBlock}
 ${autodetectFunctions}
+${similarityFunction}
 ${parseFunctions}
 ${detectQualityBlock}
 module.exports = {
@@ -82,6 +84,8 @@ module.exports = {
   parseExtinf,
   detectQuality,
   cleanDisplayNameQuality,
+  strSimilarity,
+  tvLogoFor,
 };
 `, sandbox, { filename: 'autodetect-regressions.vm.js' });
 
@@ -108,6 +112,8 @@ const {
   parseExtinf,
   detectQuality,
   cleanDisplayNameQuality,
+  strSimilarity,
+  tvLogoFor,
 } = sandbox.module.exports;
 
 const dirtyNames = [
@@ -211,6 +217,14 @@ for (const [name, expected] of aliasCases) {
   assert(ids[0] === expected, `maps ${name} to primary ${expected}`);
 }
 
+// Aliases match the whole name: a longer name is a different channel with its own ID and logo
+for (const [name, expected] of [['Sport 1 HD', 'Sport1.sk'], ['SK: Sport 2', 'Sport2.sk'], ['TV JOJ', 'JOJ.sk'], ['Markíza Doma', 'Doma.sk']]) {
+  assert(aliasTvgIdVariants({ name, tvg_name: '', tvg_id: '' })[0] === expected, `alias still maps "${name}" to ${expected}`);
+}
+for (const name of ['Premier Sport 1', 'Oneplay Sport 1', 'NOVA SPORT 2', 'JOJ Sport 2', 'JOJ Šport', 'HBO Max', 'Markíza Krimi Plus']) {
+  assert(aliasTvgIdVariants({ name, tvg_name: '', tvg_id: '' }).length === 0, `no alias for "${name}" (not a substring match of a shorter channel)`);
+}
+
 const staleDomaAliases = aliasTvgIdVariants({ name: 'Doma', tvg_name: 'MarkizaDoma.sk', tvg_id: 'MarkizaDoma.sk' });
 assert(staleDomaAliases[0] === 'Doma.sk', 'prefers visible channel name before stale TVG metadata for aliases');
 
@@ -295,5 +309,32 @@ assert(sport1Ids[0] === 'Sport1.sk', 'maps Sport 1 to Sport1.sk');
 
 const sport2Ids = aliasTvgIdVariants({ name: 'Sport 2', tvg_name: '', tvg_id: '' });
 assert(sport2Ids[0] === 'Sport2.sk', 'maps Sport 2 to Sport2.sk');
+
+// Different channel numbers must not reach the balanced-mode threshold (0.65)
+for (const [a, b] of [['nova sport 1', 'nova sport 2'], ['premier sport 3', 'premier sport 1'], ['hbo 2', 'hbo 3']]) {
+  assert(strSimilarity(a, b) < 0.65, `"${a}" vs "${b}" stays below the match threshold (${strSimilarity(a, b).toFixed(2)})`);
+}
+assert(strSimilarity('premier sport 3', 'premier sport 3') === 1, 'identical numbered names still match');
+
+// SK/CZ logos are looked up by the full channel name, preferring the channel's country
+const logo = (names, country) => (tvLogoFor(names, country) || '').replace(/^.*\/countries\//, '');
+for (const [names, country, expected] of [
+  [['PREMIER SPORT 3.sk'], 'sk', 'czech-republic/premier-sport-3-cz.png'],
+  [['Premier Sport 1'], 'sk', 'czech-republic/premier-sport-1-cz.png'],
+  [['Sport 1 HD'], 'sk', 'slovakia/sport1-sk.png'],
+  [['Nova Sport 3'], 'sk', 'slovakia/nova-sport-3-sk-sk.png'],
+  [['Nova Sport 3'], 'cz', 'czech-republic/nova-sport-3-cz.png'],
+  [['Oneplay Sport 3'], 'sk', 'czech-republic/oneplay-sport-3-cz.png'],
+  [['JOJ Šport'], 'sk', 'slovakia/joj-sport-sk.png'],
+  [['TV JOJ HD'], 'sk', 'slovakia/joj-sk.png'],
+  [['Dajto'], 'sk', 'slovakia/markiza-dajto-sk.png'],
+  [['Canal+ Sport 2'], 'cz', 'czech-republic/canal-plus-sport-2-cz.png'],
+  [['ČT1 HD'], 'sk', 'czech-republic/ct1-cz.png'],
+  [['Bez názvu', 'PremierSport2.sk'], 'sk', 'czech-republic/premier-sport-2-cz.png'],
+  [['Nova Sport 7'], 'cz', ''],
+  [['Markíza Klasik'], 'sk', ''],
+]) {
+  assert(logo(names, country) === expected, `logo for ${JSON.stringify(names)} (${country}) is ${expected || 'none'} (got ${logo(names, country) || 'none'})`);
+}
 
 process.exit(failed ? 1 : 0);
